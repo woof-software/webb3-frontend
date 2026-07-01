@@ -1,4 +1,5 @@
 import '../styles/main.scss';
+import { SafeAutoConnect } from '@components/SafeAutoConnect';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
@@ -161,6 +162,7 @@ function App({ Component, pageProps }: any) {
       <RewardsStateContext.Provider value={rewardsState}>
         <ActionQueueContext.Provider value={actionQueue}>
           <CurrencyContextProvider>
+            <SafeAutoConnect/>
             <AlertBanner web3={web3} />
             <Header
               web3={web3}
