@@ -1,29 +1,22 @@
-import { useSafeAppsSDK, SafeProvider } from '@safe-global/safe-apps-react-sdk';
+import { useSafeAppsSDK } from '@safe-global/safe-apps-react-sdk';
 import { useEffect } from 'react';
 import { useConnect, useAccount } from 'wagmi';
 
 export const SafeAutoConnect = () => {
-  const Content = () => {
-    const { connectors, connect } = useConnect();
-    const { isConnected } = useAccount();
-    const { connected } = useSafeAppsSDK();
+  const { connectors, connect, status } = useConnect();
+  const { isConnected, connector } = useAccount();
+  const { connected: isSafeContext } = useSafeAppsSDK();
 
-    useEffect(() => {
-      if (isConnected || !connected) return;
+  useEffect(() => {
+    if (!isSafeContext) return;
+    if (isConnected && connector?.id === 'safe') return;
+    if (status === 'pending') return;
 
-      const safeConnector = connectors.find((c) => c.id === 'safe');
+    const safeConnector = connectors.find((c) => c.id === 'safe');
+    if (!safeConnector) return;
 
-      if (!safeConnector) return;
+    connect({ connector: safeConnector });
+  }, [isSafeContext, isConnected, connector, connectors, connect]);
 
-      connect({ connector: safeConnector });
-    }, [isConnected, connected]);
-
-    return null;
-  }
-
-  return (
-    <SafeProvider>
-      <Content />
-    </SafeProvider>
-  )
+  return null;
 };
