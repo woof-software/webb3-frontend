@@ -1,5 +1,4 @@
 import '../styles/main.scss';
-import { SafeAutoConnect } from '@components/SafeAutoConnect';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
@@ -8,6 +7,7 @@ import ConnectWalletModal from '@components/ConnectWalletModal';
 import Footer from '@components/Footer';
 import Header from '@components/Header';
 import NetworkSwitchModal, { NetworkSwitchModalState } from '@components/NetworkSwitchModal';
+import { SafeAutoConnect } from '@components/SafeAutoConnect';
 import ScreeningErrorOverlay from '@components/ScreeningErrorOverlay';
 import * as ActionQueueContextHelpers from '@contexts/ActionQueueContext';
 import { CurrencyContextProvider } from '@contexts/CurrencyContext';
