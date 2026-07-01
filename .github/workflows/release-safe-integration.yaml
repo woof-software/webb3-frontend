@@ -10,17 +10,17 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-access-key-id: ${{ secrets.WOOF_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.WOOF_AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-central-1
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 20
 
@@ -32,7 +32,7 @@ jobs:
         env:
           VITE_ANKR_KEY: ${{ vars.WOOF_ANKR_KEY }}
           VITE_V3_WALLET_CONNECT_PROJECT_ID: ${{ vars.WOOF_WALLET_ID }}
-          VITE_V3_API_HOST: ${{ secrets.VITE_V3_API_HOST }}
+          VITE_V3_API_HOST: ${{ vars.VITE_V3_API_HOST }}
 
       - name: Deploy static site to S3 bucket
         run: aws s3 sync ./dist/ s3://compound-safe-integration/ --delete
