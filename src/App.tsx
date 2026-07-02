@@ -23,6 +23,7 @@ import { useTransactionManager } from '@hooks/useTransactionManager';
 import { Action, MarketDataLoaded, StateType } from '@types';
 
 import { allExtensions } from './pages/extensions/helpers/list';
+import { SafeAutoConnect } from "@components/SafeAutoConnect";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function App({ Component, pageProps }: any) {
@@ -161,6 +162,7 @@ function App({ Component, pageProps }: any) {
       <RewardsStateContext.Provider value={rewardsState}>
         <ActionQueueContext.Provider value={actionQueue}>
           <CurrencyContextProvider>
+            <SafeAutoConnect/>
             <AlertBanner web3={web3} />
             <Header
               web3={web3}
