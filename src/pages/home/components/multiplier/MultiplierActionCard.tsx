@@ -109,6 +109,7 @@ export const MultiplierActionCard = () => {
         onChange={setSupply}
         error={error}
       />
+      <span>Hello</span>
       <div className={'multiplier-action-card__details'}>
         <FactorSlider
           value={multiplierValue}

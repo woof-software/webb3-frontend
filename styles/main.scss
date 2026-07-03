@@ -4,6 +4,7 @@
 @use 'base/scaffolding';
 @use 'base/theme';
 @use 'base/typography';
+@use 'base/animations';
 
 @use 'components/action-input-view';
 @use 'components/action-queue-item';
@@ -67,6 +68,19 @@
 @use 'components/vote-transaction-modal';
 @use 'components/vote-wallet';
 @use 'components/wallet-trx-history-row';
+@use 'components/factor-slider';
+@use 'components/position-card-no-asset';
+@use 'components/multiplier-collateral-input';
+@use 'components/multiplier-action-card';
+@use 'components/helper-modal';
+@use 'components/slippage_dropdown';
+@use 'components/alert';
+@use 'components/multiplier-send-button';
+@use 'components/custom-tooltip';
+@use 'components/pulse-loader';
+@use "components/action-card-exchange-rate";
+@use "components/action-card-row";
+@use "components/unsupported-token";
 
 @use 'pages/home';
 @use 'pages/markets';
