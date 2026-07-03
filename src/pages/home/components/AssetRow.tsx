@@ -1,14 +1,18 @@
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { clsx } from 'clsx';
+import { Dispatch, ReactNode, SetStateAction, useEffect, useRef, useState } from 'react';
 
 import DetailSheet from '@components/DetailSheet';
 import { ArrowDown, ArrowUp, Close, Minus, Plus } from '@components/Icons';
+import { MultiplierIcon } from '@components/Icons/MultiplierIcon';
 import Tooltip from '@components/Tooltip';
 import AssetTooltipContent from '@components/Tooltips/AssetTooltipContent';
 import UnwrappedAssetTooltipContent from '@components/Tooltips/UnwrappedAssetTooltipContent';
 import { useCurrencyContext } from '@contexts/CurrencyContext';
+import MultiplierContext from '@contexts/MultiplierContext';
 import { displayTextForActionType } from '@helpers/actions';
 import { assetIconForAssetSymbol } from '@helpers/assets';
 import { formatTokenBalance, PRICE_PRECISION, getTokenValue, formatValue, displayValue } from '@helpers/numbers';
+import { useMediaQuery } from '@hooks/useMediaQuery'
 import {
   Action,
   ActionType,
@@ -80,6 +84,7 @@ const LoadingAssetRow = () => {
 
 export type AssetRowProps = {
   state: AssetRowState;
+  isMultiplierAvailable?: boolean;
 };
 
 type Content = {
@@ -93,8 +98,25 @@ type Content = {
   onIconClick: () => void;
 };
 
-function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, currency: Currency): Content {
+type Context = {
+  currency: Currency;
+  isMultiplierAvailable: boolean;
+  isMultiplierActive: boolean
+  collateralToBeMultiplied: string | null;
+  onMultiplierCollateralSelect: Dispatch<SetStateAction<string | null>>;
+}
+
+function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, ctx: Context): Content {
   const [stateType, { asset }] = state;
+  
+  const {
+    currency,
+    isMultiplierAvailable,
+    isMultiplierActive,
+    collateralToBeMultiplied,
+    onMultiplierCollateralSelect,
+  } = ctx;
+  
   const tooltipContent = getTooltipContent(state, currency);
 
   if (stateType === StateType.NoWallet) {
@@ -162,7 +184,31 @@ function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, currency:
 
   let buttons: ReactNode;
 
-  if (pendingAction !== undefined) {
+  if (isMultiplierActive) {
+    const onClick = () => {
+      onMultiplierCollateralSelect((address) => {
+        if (address === asset.address) return null;
+
+        return asset.address;
+      });
+    };
+
+    buttons = (
+      <>
+        <button
+          key={'multiplier-button'}
+          className={clsx("button button--multiplier-row mobile-hide", {
+            "button--selected": collateralToBeMultiplied === asset.address,
+          })}
+          disabled={!isMultiplierAvailable}
+          onClick={onClick}
+        >
+          {collateralToBeMultiplied === asset.address && <Close />}
+          <span>Multiply</span>
+        </button>
+      </>
+    )
+  } else if (pendingAction !== undefined) {
     buttons = (
       <button
         className="button button--selected"
@@ -304,12 +350,15 @@ function balanceDifferenceFromActions(pendingAction?: PendingAction, actionAmoun
   return amount;
 }
 
-const AssetRow = ({ state }: AssetRowProps) => {
+const AssetRow = ({ state, isMultiplierAvailable = false }: AssetRowProps) => {
   const [stateType] = state;
   const [hoverModifier, setHoverModifier] = useState('');
   const [detailsActive, setDetailsActive] = useState(false);
   const { currency } = useCurrencyContext();
   const prevActionAmount = useRef<bigint | undefined>();
+  const isLargeScreen = useMediaQuery('(min-width: 1121px)')
+
+  const multiplier = MultiplierContext.use();
 
   useEffect(() => {
     if (stateType === StateType.Hydrated) {
@@ -334,7 +383,13 @@ const AssetRow = ({ state }: AssetRowProps) => {
     buttons,
     tooltipContent,
     onIconClick,
-  } = getFormattedState(state, currency);
+  } = getFormattedState(state, {
+    currency,
+    isMultiplierAvailable,
+    isMultiplierActive: multiplier.isActivated,
+    collateralToBeMultiplied: multiplier.collateral,
+    onMultiplierCollateralSelect: multiplier.setCollateral,
+  });
 
   const closeDetails = () => {
     setDetailsActive(false);
@@ -342,12 +397,29 @@ const AssetRow = ({ state }: AssetRowProps) => {
 
   const abbrSymbol = asset.symbol === 'wsuperOETHb' ? '...OETHb' : asset.symbol;
 
+  // Mobile multiplier logic
+  const handleRowClick = () => {
+    if (multiplier.isActivated && !isLargeScreen) {
+      if (!isMultiplierAvailable) return;
+
+    return multiplier.setCollateral((address) => {
+      if (address === asset.address) return null;
+
+      return asset.address;
+    });
+  }
+
+    setDetailsActive(true);
+  }
+
+  const isMultiplierSelected = multiplier.collateral === asset.address;
+  const rowModifier = isMultiplierSelected ? ' asset-row--active' : assetRowModifier;
+  //
+
   return (
     <div
-      className={`asset-row${assetRowModifier} L3`}
-      onClick={() => {
-        setDetailsActive(true);
-      }}
+      className={`asset-row${rowModifier} L3`}
+      onClick={handleRowClick}
     >
       <div className={`asset-row__hover${hoverModifier}`}></div>
       <Tooltip content={tooltipContent} width={340} hideArrow={true} yOffset={30}>
@@ -360,7 +432,12 @@ const AssetRow = ({ state }: AssetRowProps) => {
             setHoverModifier('');
           }}
         >
-          <span className={`asset asset--${assetIconForAssetSymbol(asset.symbol)}`} onClick={onIconClick}></span>
+          {!isLargeScreen && multiplier.isActivated && multiplier.collateral === asset.address
+            ? <span className={'asset asset-row__mobile-multiplier'}>
+               <MultiplierIcon width={16} />
+              </span>
+            : <span className={`asset asset--${assetIconForAssetSymbol(asset.symbol)}`} onClick={onIconClick}></span>
+          }
           <div className="asset-row__info">
             <p className="body">{asset.name}</p>
             <div className="asset-row__info__details meta L2">
@@ -374,7 +451,9 @@ const AssetRow = ({ state }: AssetRowProps) => {
         {assetBalance}
         {collateralValue}
       </div>
-      <div className="asset-row__actions">{buttons}</div>
+      <div className={clsx("asset-row__actions", {
+        "multiplier": multiplier.isActivated,
+      })}>{buttons}</div>
       <DetailSheet active={detailsActive} onClickOutside={closeDetails}>
         <>
           {tooltipContent}

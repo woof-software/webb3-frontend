@@ -1,0 +1,46 @@
+@use '../abstracts/variables' as *;
+
+.multiplier-send-button {
+  width: 100%;
+  background-color: $purple--70;
+  padding: 19px;
+  border-radius: 6.25rem;
+  margin-top: 1.25rem;
+  font-size: 13px;
+  line-height: 18px;
+
+  &:disabled {
+    background-color: $neutral--90;
+    border: none !important;
+    cursor: not-allowed;
+  }
+
+  &.placeholder-content {
+    color: transparent;
+
+    &:before {
+      border-radius: 6.25rem;
+      top: 0;
+      bottom: 0;
+    }
+  }
+}
+
+.multiplier-counter-hint {
+  width: 100%;
+  padding: 1rem 0 0 0;
+  text-align: center;
+  font-size: 12px;
+  line-height: normal;
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+}
+
+.theme--light {
+  .multiplier-send-button {
+    color: $neutral--00;
+    &:disabled {
+      background-color: $neutral--15;
+    }
+  }
+}

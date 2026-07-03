@@ -194,3 +194,24 @@ export function isValidAddress(address: string): boolean {
 export function noop(): void {
   // silence linter error
 }
+
+/**
+ * Compares two given address strings in their BigInt representations.
+ *
+ * @param a - The first address string to be compared.
+ * @param b - The second address string to be compared.
+ * 
+ * @return Returns 1 if the first address is greater, -1 if the second address is greater, or 0 if they are equal or if an error occurs.
+ */
+export function compareAddresses(a: string, b: string): 1 | 0 | -1 {
+  try {
+    const aBn = BigInt(a);
+    const bBn = BigInt(b);
+    
+    if (aBn === bBn) return 0;
+    
+    return BigInt(a) > BigInt(b) ? 1 : -1;
+  } catch {
+    return 0;
+  }
+}

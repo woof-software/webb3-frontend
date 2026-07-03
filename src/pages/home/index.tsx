@@ -2,6 +2,7 @@ import { ReactNode, useContext, useEffect, useState } from 'react';
 
 import { isUnwrappedCollateralAsset } from '@constants/chains';
 import { getActionQueueContext } from '@contexts/ActionQueueContext';
+import MultiplierContext from '@contexts/MultiplierContext';
 import RewardsStateContext from '@contexts/RewardsStateContext';
 import { getSelectedMarketContext } from '@contexts/SelectedMarketContext';
 import type { Web3 } from '@contexts/Web3Context';
@@ -17,6 +18,7 @@ import { DEFAULT_MARKET } from '@helpers/markets';
 import { MAX_UINT256 } from '@helpers/numbers';
 import { getRewardsForSelectedMarket } from '@helpers/rewards';
 import { isStETH, isWrappedStETH } from '@helpers/steth';
+import { useMarketFlashLoan } from '@hooks/flash-loan/useMarketFlashLoan';
 import { Theme } from '@hooks/useThemeManager';
 import { AddTransaction } from '@hooks/useTransactionManager';
 import { useWriteCometState, WriteCometState } from '@hooks/useWriteCometState';
@@ -42,6 +44,8 @@ import {
 import ActionModal from './components/ActionModal';
 import AssetRow from './components/AssetRow';
 import Masthead, { MastheadState } from './components/Masthead';
+import { MultiplierActionCard } from './components/multiplier/MultiplierActionCard';
+import { PositionCardNoAsset } from './components/multiplier/PositionCardNoAsset';
 import PositionCard, { PositionCardState } from './components/PositionCard';
 
 const sortTokensAlphabetically = (a: Token, b: Token): number => (a.name > b.name ? 1 : a.name === b.name ? 0 : -1);
@@ -68,9 +72,18 @@ const Home = ({
 }: HomeProps) => {
   // when V2 market was selected from market page and open up a new window default dashboard with default market
   const { selectedMarket, selectMarket } = useContext(getSelectedMarketContext());
+  
+  const multiplier = MultiplierContext.use();
+
+  const { data: marketFlashLoan } = useMarketFlashLoan();
+
+  const isMultiplierReservesEnough = (marketFlashLoan?.reserves ?? 0) > 0;
 
   // We use a useEffect here to prevent infinite renders by the state update in selectMarket
   useEffect(() => {
+    // stop multiplier journey when market is changed
+    multiplier.setIsActivated(false);
+    
     if (selectedMarket[0] === 'hydrated' && selectedMarket[1].baseAsset.symbol == 'Compound V2') {
       selectMarket(DEFAULT_MARKET);
     }
@@ -270,6 +283,7 @@ const Home = ({
           }
         },
         setCompare,
+        isMultiplierReservesEnough,
       },
     ];
     positionCardState = [
@@ -414,6 +428,7 @@ const Home = ({
         (action) =>
           action[0] === ActionType.SupplyCollateral && isStETH(action[1].symbol) && isWrappedStETH(token.symbol)
       );
+
       return (
         <AssetRow
           key={index}
@@ -451,6 +466,7 @@ const Home = ({
               },
             },
           ]}
+          isMultiplierAvailable={token.walletBalance > 0n}
         />
       );
     });
@@ -535,7 +551,9 @@ const Home = ({
           )}
         </div>
         <div className="grid-column--5">
-          <PositionCard state={positionCardState} />
+          {multiplier.isActivated && !!multiplier.collateral && <MultiplierActionCard />}
+          {multiplier.isActivated && !multiplier.collateral && <PositionCardNoAsset/>}
+          {!multiplier.isActivated && <PositionCard state={positionCardState} />}
         </div>
       </div>
     </div>

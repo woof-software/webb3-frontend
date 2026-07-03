@@ -1,0 +1,26 @@
+@use '../abstracts/variables' as *;
+
+.alert-container {
+  padding: 0.625rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  border-radius: 0.5rem;
+}
+
+.alert-container__warning {
+  background-color: rgba($gold--50, 0.2);;
+  color: $gold--50;
+
+  svg {
+    fill: $gold--50;
+    min-width: 1rem;
+    min-height: 1rem;
+  }
+}
+
+.alert-container-content {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
+}

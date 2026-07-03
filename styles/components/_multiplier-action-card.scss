@@ -1,0 +1,125 @@
+@use '../abstracts/variables' as *;
+
+.multiplier-action-card {
+  background-color: var(--ui--foreground--1);
+  border-radius: 0.5rem;
+  position: relative;
+
+  @media (max-width: $device--sm) {
+    margin: 0 calc(-50vw + 50% + 0.5rem);
+  }
+}
+
+.multiplier-action-card__details {
+  padding: 2.5rem;
+  
+  @media (max-width: 480px) {
+    padding: 1.25rem;
+  }
+}
+
+.multiplier-action-card-summary {
+  &__divider {
+    margin: 1.25rem 0;
+  }
+
+  &__list {
+    margin: 0;
+    list-style: none;
+  }
+}
+
+.multiplier-action-card-summary__compare-row {
+  display: flex;
+  flex-direction: column;
+
+  &-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+  }
+
+  &-title {
+    font-size: 11px;
+    line-height: 16px;
+    color: $green--30;
+  }
+
+  &-loader {
+    margin-top: -0.188rem;
+  }
+
+  &-exchange-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  &-exchange {
+    display: flex;
+    align-items: center;
+    font-size: 11px;
+    line-height: 16px;
+    font-weight: 500;
+    gap: 0.375rem;
+
+    svg {
+      fill: $neutral--00;
+      margin-top: -2px;
+    }
+  }
+
+  &-arrow {
+    width: 11px;
+    height: 11px;
+    margin-top: -1px;
+    fill: var(--text--2);
+  }
+}
+
+.multiplier-action-card-summary__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  font-size: 15px;
+
+  &-title {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: var(--text--1);
+  }
+
+  &-info {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: var(--text--2);
+    font-weight: 500;
+  }
+
+  &-arrow {
+    width: 14px;
+    height: 14px;
+    fill: var(--text--2);
+  }
+}
+
+.multiplier-summary-asset {
+  width: 1.25rem;
+  height: 1.25rem;
+  background-size: 20px 20px;
+}
+
+.multiplier-slippage-low-alert {
+  margin-top: 0.75rem;
+
+  button {
+    width: fit-content;
+    min-width: fit-content;
+    padding: 0.25rem 0.5rem;
+    display: contents;
+  }
+}

@@ -42,6 +42,112 @@ button,
     border-color: var(--button--borrow);
     color: var(--text--button-label--emphasized);
   }
+  
+  &--multiplier-animated {
+    background-color: var(--button--multiplier);
+    justify-content: center;
+    min-width: 2.75rem;
+    padding: 0 !important;
+
+    .svg:not(:only-child) {
+      min-width: 16px;
+      margin-right: 0;
+      transition: margin-right .15s ease;
+      stroke: var(--button--multiplier--emphasized);
+    }
+    
+    .label {
+      opacity: 0;
+      width: 0;
+      overflow: hidden;
+      color: var(--button--multiplier--emphasized);
+      transition: width .15s ease;
+    }
+    
+    &:hover {
+      width: auto;
+      padding: 0 12px !important;
+
+      .label {
+        opacity: 1;
+        width: 3.75rem; // 60px
+      }
+
+      .svg:not(:only-child) {
+        margin-right: 0.5rem;
+      }
+    }
+
+    &:disabled {
+      .svg:not(:only-child) {
+        stroke: var(--text--button-label--disabled);
+      }
+
+      &:hover {
+        .label {
+          width: 0;
+        }
+
+        .svg:not(:only-child) {
+          margin-right: 0;
+        }
+      }
+    }
+  }
+
+  @media (max-width: $device--sm) {
+    &--multiplier-animated {
+      display: flex;
+      justify-content: center;
+      width: auto;
+
+      .svg:not(:only-child) {
+        margin-right: 0.5rem;
+      }
+
+      .label {
+        opacity: 1;
+        width: 3.75rem; // 60px
+      }
+
+      &:disabled {
+        .svg:not(:only-child) {
+          stroke: var(--text--button-label--disabled);
+        }
+
+        .label {
+          color: $neutral--60;
+        }
+
+        &:hover {
+          .label {
+            width: auto;
+          }
+
+          .svg:not(:only-child) {
+            margin-right: 0.5rem;
+          }
+        }
+      }
+    }
+  }
+
+  &--multiplier {
+    background-color: var(--button--multiplier);
+
+    .svg:not(:only-child) {
+      min-width: 16px;
+      stroke: var(--button--multiplier--emphasized);
+    }
+
+    .label {
+      color: var(--button--multiplier--emphasized);
+    }
+  }
+
+  &--multiplier-row:disabled {
+    opacity: 0.3;
+  }
 
   &--supply {
     background-color: var(--button--supply);
@@ -119,6 +225,14 @@ button,
     &:hover {
       --background-color: #{color.adjust($neutral--95, $lightness: 15%)};
     }
+  }
+  
+  &--plain {
+    background-color: transparent;
+    border: 0;
+    color: var(--text--button-label);
+    padding: 0;
+    min-width: unset;
   }
 
   &--small {
@@ -219,5 +333,13 @@ button,
 .theme--light {
   .button--large {
     border-color: transparent;
+  }
+
+  .button--multiplier-animated {
+    &:disabled {
+      .label {
+        color: var(--text--button-label--disabled);
+      }
+    }
   }
 }

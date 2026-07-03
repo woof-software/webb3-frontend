@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
 
+import Portal from '@components/Portal';
 import { CHAINS } from '@constants/chains';
 import { iconNameForChainId } from '@helpers/assets';
 
 import { CircleClose } from './Icons';
 
-type NetworkSwitchModalStateHydrated = {
+export type NetworkSwitchModalStateHydrated = {
   fromChainId: number;
   toChainId: number;
   description?: string;
@@ -47,30 +48,32 @@ const NetworkSwitchModal = ({ state, onSwitchNetwork }: NetworkSwitchModalProps)
   }
 
   return (
-    <div className={`modal${modifier}`}>
-      <div className="modal__backdrop" onClick={_onRequestClose}></div>
-      <div className="modal__content L4">
-        <div className="modal__content__header">
-          <div className="modal__content__header__left"></div>
-          <h4 className="heading heading--emphasized heading">Confirm Network Switch</h4>
-          <div className="modal__content__header__right" onClick={_onRequestClose}>
-            <CircleClose />
+    <Portal>
+      <div className={`modal${modifier}`}>
+        <div className="modal__backdrop" onClick={_onRequestClose}></div>
+        <div className="modal__content L4">
+          <div className="modal__content__header">
+            <div className="modal__content__header__left"></div>
+            <h4 className="heading heading--emphasized heading">Confirm Network Switch</h4>
+            <div className="modal__content__header__right" onClick={_onRequestClose}>
+              <CircleClose />
+            </div>
+          </div>
+          {icons}
+          <div className="modal__content__paragraph">
+            <p className="body">
+              Your wallet is currently connected to {fromNetwork ? `the ${fromNetwork}` : 'an unsupported'} network.
+              Please switch your wallet over to {toNetwork} to {description ? description : 'complete the transaction'}.
+            </p>
+          </div>
+          <div className="modal__content__action-row">
+            <button className="button button--x-large" onClick={onSwitchNetwork}>
+              Switch Network
+            </button>
           </div>
         </div>
-        {icons}
-        <div className="modal__content__paragraph">
-          <p className="body">
-            Your wallet is currently connected to {fromNetwork ? `the ${fromNetwork}` : 'an unsupported'} network.
-            Please switch your wallet over to {toNetwork} to {description ? description : 'complete the transaction'}.
-          </p>
-        </div>
-        <div className="modal__content__action-row">
-          <button className="button button--x-large" onClick={onSwitchNetwork}>
-            Switch Network
-          </button>
-        </div>
       </div>
-    </div>
+    </Portal>
   );
 };
 

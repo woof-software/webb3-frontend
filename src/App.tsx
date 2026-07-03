@@ -7,9 +7,10 @@ import ConnectWalletModal from '@components/ConnectWalletModal';
 import Footer from '@components/Footer';
 import Header from '@components/Header';
 import NetworkSwitchModal, { NetworkSwitchModalState } from '@components/NetworkSwitchModal';
-import ScreeningErrorOverlay from '@components/ScreeningErrorOverlay';
 import * as ActionQueueContextHelpers from '@contexts/ActionQueueContext';
 import { CurrencyContextProvider } from '@contexts/CurrencyContext';
+import LeveragedPositionContext from '@contexts/LeveragedPositionContext';
+import MultiplierContext from '@contexts/MultiplierContext';
 import RewardsStateContext from '@contexts/RewardsStateContext';
 import { initializeContext, getSelectedMarketContext } from '@contexts/SelectedMarketContext';
 import { useWeb3Context } from '@contexts/Web3Context';
@@ -72,6 +73,7 @@ function App({ Component, pageProps }: any) {
   }, [location.pathname]);
 
   const cometState = useCometState(web3, selectedMarketState.selectedMarket, transactions);
+
   initializeContext(selectedMarketState);
 
   const handleRequestNetworkSwitch = (fromChainId: number, toChainId: number, description?: string) => {
@@ -161,56 +163,61 @@ function App({ Component, pageProps }: any) {
       <RewardsStateContext.Provider value={rewardsState}>
         <ActionQueueContext.Provider value={actionQueue}>
           <CurrencyContextProvider>
-            <AlertBanner web3={web3} />
-            <Header
-              web3={web3}
-              transactions={transactions}
-              clearTransactions={() => {
-                clearTransactions();
-                actionQueue.clearActions();
-              }}
-              onConnectWalletClick={() => {
-                setShowConnectWalletModal(true);
-              }}
-              onWalletDisconnect={() => {
-                web3.disconnectWallet();
-              }}
-            />
-            <ConnectWalletModal
-              isOpen={showConnectWalletModal}
-              onRequestClose={() => {
-                setNetworkSwitchState(undefined);
-                setShowConnectWalletModal(false);
-              }}
-              onSelectConnector={(connector) => {
-                web3.connectWallet(connector);
-                setShowConnectWalletModal(false);
-              }}
-            />
-            <NetworkSwitchModal state={networkSwitchState} onSwitchNetwork={handleSwitchNetwork} />
-            <div className="app-content">
-              <Component
-                transactions={transactions}
-                web3={web3}
-                addTransaction={addTransaction}
-                theme={theme}
-                cometState={cometState}
-                setShowConnectWalletModal={setShowConnectWalletModal}
-                switchWriteNetwork={(chainId: number, description?: string) => {
-                  if (web3.write.chainId) {
-                    handleRequestNetworkSwitch(web3.write.chainId, chainId, description);
-                    return;
-                  }
+            <LeveragedPositionContext.Provider
+              theme={theme}
+              cometState={cometState}
+              addTransaction={addTransaction}
+            >
+              <MultiplierContext.Provider>
+                <AlertBanner web3={web3} />
+                <Header
+                  web3={web3}
+                  transactions={transactions}
+                  clearTransactions={() => {
+                    clearTransactions();
+                    actionQueue.clearActions();
+                  }}
+                  onConnectWalletClick={() => {
+                    setShowConnectWalletModal(true);
+                  }}
+                  onWalletDisconnect={() => {
+                    web3.disconnectWallet();
+                  }}
+                />
+                <ConnectWalletModal
+                  isOpen={showConnectWalletModal}
+                  onRequestClose={() => {
+                    setNetworkSwitchState(undefined);
+                    setShowConnectWalletModal(false);
+                  }}
+                  onSelectConnector={(connector) => {
+                    web3.connectWallet(connector);
+                    setShowConnectWalletModal(false);
+                  }}
+                />
+                <NetworkSwitchModal state={networkSwitchState} onSwitchNetwork={handleSwitchNetwork} />
+                <Component
+                  transactions={transactions}
+                  web3={web3}
+                  addTransaction={addTransaction}
+                  theme={theme}
+                  cometState={cometState}
+                  setShowConnectWalletModal={setShowConnectWalletModal}
+                  switchWriteNetwork={(chainId: number, description?: string) => {
+                    if (web3.write.chainId) {
+                      handleRequestNetworkSwitch(web3.write.chainId, chainId, description);
+                      return;
+                    }
 
-                  web3.switchWriteNetwork(chainId);
-                }}
-                estimatedGasMap={estimatedGasMap}
-                {...pageProps}
-              />
-              <ScreeningErrorOverlay screeningStatus={web3.screeningStatus} />
-            </div>
-            <Footer theme={theme} setTheme={setTheme} />
-            <div id="overlay"></div>
+                    web3.switchWriteNetwork(chainId);
+                  }}
+                  estimatedGasMap={estimatedGasMap}
+                  {...pageProps}
+                />
+                <Footer theme={theme} setTheme={setTheme} />
+                <div id="overlay"></div>
+              </MultiplierContext.Provider>
+            </LeveragedPositionContext.Provider>
           </CurrencyContextProvider>
         </ActionQueueContext.Provider>
       </RewardsStateContext.Provider>

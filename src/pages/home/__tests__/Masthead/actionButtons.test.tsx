@@ -1,11 +1,16 @@
+
 import { render, screen } from '@testing-library/react';
+
 import '@testing-library/jest-dom';
 
+import LeveragedPositionContext from '@contexts/LeveragedPositionContext';
+import MultiplierContext from '@contexts/MultiplierContext';
 import { Theme } from '@hooks/useThemeManager';
-import { Action, ActionType, BaseAssetWithAccountState, PendingAction, StateType } from '@types';
+import { Action, ActionType, BaseAssetWithAccountState, CometState, PendingAction, StateType } from '@types';
 
 import { MockBaseAssetWithAccountState, MockBaseAssetWithState } from '../../../../../__tests__/mocks/mockTokens';
 import Masthead, { MastheadState } from '../../components/Masthead';
+
 
 type HydratedMastheadState = {
   baseAssetToUse: BaseAssetWithAccountState;
@@ -14,35 +19,51 @@ type HydratedMastheadState = {
   actions?: Action[];
 };
 
-const hydratedMasthead = ({ baseAssetToUse, baseAssetPost, pendingAction, actions }: HydratedMastheadState) => {
+const mockCometState = {} as CometState;
+const mockAddTransaction = jest.fn();
+
+const hydratedMasthead = ({
+  baseAssetToUse,
+  baseAssetPost,
+  pendingAction,
+  actions
+}: HydratedMastheadState) => {
   return (
     <div>
       <div id="overlay"></div>
-      <Masthead
-        state={[
-          StateType.Hydrated,
-          {
-            actions: actions ? actions : [],
-            baseAsset: baseAssetToUse,
-            baseAssetPost: baseAssetPost ? baseAssetPost : baseAssetToUse,
-            borrowAPR: 0n,
-            borrowRewardsAPR: 0n,
-            collateralAssets: [],
-            collateralValue: 0n,
-            collateralValuePost: 0n,
-            compare: false,
-            earnAPR: 0n,
-            earnRewardsAPR: 0n,
-            liquidationCapacity: 0n,
-            liquidationCapacityPost: 0n,
-            onSupplyAction: () => undefined,
-            onWithdrawAction: () => undefined,
-            setCompare: () => undefined,
-            pendingAction: pendingAction,
-            theme: Theme.Dark,
-          },
-        ]}
-      />
+      <LeveragedPositionContext.Provider
+        theme={Theme.Dark}
+        cometState={mockCometState}
+        addTransaction={mockAddTransaction}
+      >
+        <MultiplierContext.Provider>
+          <Masthead
+            state={[
+              StateType.Hydrated,
+              {
+                actions: actions ? actions : [],
+                baseAsset: baseAssetToUse,
+                baseAssetPost: baseAssetPost ? baseAssetPost : baseAssetToUse,
+                borrowAPR: 0n,
+                borrowRewardsAPR: 0n,
+                collateralAssets: [],
+                collateralValue: 0n,
+                collateralValuePost: 0n,
+                compare: false,
+                earnAPR: 0n,
+                earnRewardsAPR: 0n,
+                liquidationCapacity: 0n,
+                liquidationCapacityPost: 0n,
+                onSupplyAction: () => undefined,
+                onWithdrawAction: () => undefined,
+                setCompare: () => undefined,
+                pendingAction: pendingAction,
+                theme: Theme.Dark,
+              },
+            ]}
+          />
+        </MultiplierContext.Provider>
+      </LeveragedPositionContext.Provider>
     </div>
   );
 };
@@ -52,14 +73,28 @@ const hydratedMasthead = ({ baseAssetToUse, baseAssetPost, pendingAction, action
 // All states are enumerated in the Figma here:
 // https://www.figma.com/file/L8pLVK8WgaB45Aag22HX4q/%5BARCHIVED%5D-V3-Interface-(fka-Bulker)?node-id=1475-59446&t=GOPyCADtLlAqx6Oj-0
 
+jest.mock('@hooks/leveraged-position/usePlatformFee', () => ({
+  usePlatformFee: () => ({ data: 0 })
+}));
+
 describe('Loading State', () => {
   it('both buttons are disabled', () => {
     const mastheadState: MastheadState = [StateType.Loading];
 
-    render(<Masthead state={mastheadState} />);
+    render(
+      <LeveragedPositionContext.Provider
+        theme={Theme.Dark}
+        cometState={mockCometState}
+        addTransaction={mockAddTransaction}
+      >
+        <MultiplierContext.Provider>
+          <Masthead state={mastheadState} />
+        </MultiplierContext.Provider>
+      </LeveragedPositionContext.Provider>
+    );
 
     const buttons = screen.getAllByRole('button');
-    expect(buttons.length).toBe(2);
+    expect(buttons.length).toBe(3);
     buttons.forEach((x) => expect(x).toBeDisabled());
   });
 });
@@ -68,13 +103,23 @@ describe('No Wallet State', () => {
   it('both buttons are disabled', () => {
     const mastheadState: MastheadState = [StateType.NoWallet, { baseAsset: MockBaseAssetWithState, earnAPR: 0n }];
 
-    render(<Masthead state={mastheadState} />);
+    render(
+      <LeveragedPositionContext.Provider
+        theme={Theme.Dark}
+        cometState={mockCometState}
+        addTransaction={mockAddTransaction}
+      >
+        <MultiplierContext.Provider>
+          <Masthead state={mastheadState} />
+        </MultiplierContext.Provider>
+      </LeveragedPositionContext.Provider>
+    );
 
     const supplyButton = screen.getByRole('button', { name: 'Supply USDC' });
     const borrowButton = screen.getByRole('button', { name: 'Borrow USDC' });
     expect(supplyButton).toBeDisabled();
     expect(borrowButton).toBeDisabled();
-    expect(screen.getAllByRole('button').length).toBe(2);
+    expect(screen.getAllByRole('button').length).toBe(3);
   });
 });
 
@@ -91,7 +136,7 @@ describe('Zero Supply Balance', () => {
     const borrowButton = screen.getByRole('button', { name: 'Borrow USDC' });
     expect(supplyButton).toBeEnabled();
     expect(borrowButton).toBeEnabled();
-    expect(screen.getAllByRole('button').length).toBe(2);
+    expect(screen.getAllByRole('button').length).toBe(3);
   });
 
   it('no borrow capacity', () => {
@@ -107,7 +152,7 @@ describe('Zero Supply Balance', () => {
     const borrowButton = screen.getByRole('button', { name: 'Borrow USDC' });
     expect(supplyButton).toBeEnabled();
     expect(borrowButton).toBeDisabled();
-    expect(screen.getAllByRole('button').length).toBe(2);
+    expect(screen.getAllByRole('button').length).toBe(3);
   });
 
   it('no wallet balance', () => {
@@ -123,7 +168,7 @@ describe('Zero Supply Balance', () => {
     const borrowButton = screen.getByRole('button', { name: 'Borrow USDC' });
     expect(supplyButton).toBeDisabled();
     expect(borrowButton).toBeEnabled();
-    expect(screen.getAllByRole('button').length).toBe(2);
+    expect(screen.getAllByRole('button').length).toBe(3);
   });
 
   it('supply pending action', () => {
@@ -214,7 +259,7 @@ describe('Has Earn Balance', () => {
     const borrowButton = screen.getByRole('button', { name: 'Withdraw USDC' });
     expect(supplyButton).toBeEnabled();
     expect(borrowButton).toBeEnabled();
-    expect(screen.getAllByRole('button').length).toBe(2);
+    expect(screen.getAllByRole('button').length).toBe(3);
   });
 
   it('no wallet balance', () => {
@@ -230,7 +275,7 @@ describe('Has Earn Balance', () => {
     const withdrawButton = screen.getByRole('button', { name: 'Withdraw USDC' });
     expect(supplyButton).toBeDisabled();
     expect(withdrawButton).toBeEnabled();
-    expect(screen.getAllByRole('button').length).toBe(2);
+    expect(screen.getAllByRole('button').length).toBe(3);
   });
 
   it('supply pending action', () => {
@@ -454,7 +499,7 @@ describe('Has Borrow Balance', () => {
     const repayButton = screen.getByRole('button', { name: 'Repay USDC' });
     expect(borrowButton).toBeEnabled();
     expect(repayButton).toBeEnabled();
-    expect(screen.getAllByRole('button').length).toBe(2);
+    expect(screen.getAllByRole('button').length).toBe(3);
   });
 
   it('no wallet balance', () => {
@@ -470,7 +515,7 @@ describe('Has Borrow Balance', () => {
     const repayButton = screen.getByRole('button', { name: 'Repay USDC' });
     expect(borrowButton).toBeEnabled();
     expect(repayButton).toBeDisabled();
-    expect(screen.getAllByRole('button').length).toBe(2);
+    expect(screen.getAllByRole('button').length).toBe(3);
   });
 
   it('no borrow capacity', () => {
@@ -486,7 +531,7 @@ describe('Has Borrow Balance', () => {
     const repayButton = screen.getByRole('button', { name: 'Repay USDC' });
     expect(borrowButton).toBeDisabled();
     expect(repayButton).toBeEnabled();
-    expect(screen.getAllByRole('button').length).toBe(2);
+    expect(screen.getAllByRole('button').length).toBe(3);
   });
 
   it('no wallet balance and no borrow capacity', () => {
@@ -503,7 +548,7 @@ describe('Has Borrow Balance', () => {
     const repayButton = screen.getByRole('button', { name: 'Repay USDC' });
     expect(borrowButton).toBeDisabled();
     expect(repayButton).toBeDisabled();
-    expect(screen.getAllByRole('button').length).toBe(2);
+    expect(screen.getAllByRole('button').length).toBe(3);
   });
 
   it('borrow pending action', () => {

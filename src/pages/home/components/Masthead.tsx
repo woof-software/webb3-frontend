@@ -2,9 +2,11 @@ import { Dispatch, ReactNode, useRef, useState } from 'react';
 
 import DetailSheet from '@components/DetailSheet';
 import { Compare, HoverUnder } from '@components/Icons';
+import { MultiplierButton } from '@components/MultiplierButton';
 import Tooltip from '@components/Tooltip';
 import NetRatesTooltip, { NetRatesTooltipView } from '@components/Tooltips/NetRatesTooltip';
 import { useCurrencyContext } from '@contexts/CurrencyContext';
+import MultiplierContext from '@contexts/MultiplierContext';
 import { sanitizedAmountForAction } from '@helpers/actions';
 import {
   displayValue,
@@ -59,6 +61,7 @@ type MastheadHydrated = [
     onSupplyAction: (pendingAction?: PendingAction) => void;
     onWithdrawAction: (pendingAction?: PendingAction) => void;
     setCompare: Dispatch<boolean>;
+    isMultiplierReservesEnough?: boolean;
   }
 ];
 export type MastheadState = MastheadLoading | MastheadNoWallet | MastheadHydrated;
@@ -128,6 +131,8 @@ function getContent(state: MastheadState): Content {
   const [stateType] = state;
   const [ratesDetailActive, setRatesDetailActive] = useState(false);
   const tooltipLeftAlign = useRef<HTMLDivElement>(null); // use to align interest rate tooltip
+  
+  const multiplier = MultiplierContext.use();
 
   const { currency, counterCurrency, pressDownAnimate, pressUpAnimate } = useCurrencyContext();
   const defaultContent: Omit<Content, 'balanceOverview'> = {
@@ -139,6 +144,9 @@ function getContent(state: MastheadState): Content {
     balance: <span className="placeholder-content" style={{ width: '120px' }}></span>,
     buttons: (
       <div className="masthead__action-buttons">
+        <button className="button button--circle" disabled>
+          <span className="placeholder-content" style={{ width: '20px' }}></span>
+        </button>
         <button className="button button--large" disabled>
           <span className="placeholder-content" style={{ width: '100px' }}></span>
         </button>
@@ -167,6 +175,7 @@ function getContent(state: MastheadState): Content {
     );
     const buttons = (
       <div className="masthead__action-buttons">
+        <MultiplierButton disabled/>
         <button className="button button--large button--borrow" disabled>
           {iconForActionType(ActionType.Supply)}
           <label className="label">Supply {baseAsset.symbol}</label>
@@ -411,7 +420,7 @@ function getContent(state: MastheadState): Content {
         </button>
       );
     }
-
+    
     if (pendingRepayAction) {
       buttons = (
         <>
@@ -511,13 +520,39 @@ function getContent(state: MastheadState): Content {
       );
     }
 
-    buttons = (
-      <div className="masthead__action-buttons">
-        {supplyOrWithdrawButton}
-        {buttons}
-        {compareButton}
-      </div>
-    );
+    const isAnyCollateralHasPositiveBalance = collateralAssets.some((asset) => asset.walletBalance > 0n);
+
+    const [, { isMultiplierReservesEnough = false }] = state;
+
+    let multiplierButton: ReactNode = null;
+    
+    if (pendingAction === undefined && actions.length === 0) {
+      multiplierButton = (
+        <MultiplierButton
+          key='multiplier-button'
+          active={multiplier.isActivated}
+          disabled={!isMultiplierReservesEnough || !isAnyCollateralHasPositiveBalance}
+          onClick={() => multiplier.setIsActivated((v) => !v)}
+        />
+      )
+    }
+
+    if (multiplier.isActivated) {
+      buttons = (
+        <div className="masthead__action-buttons">
+          {multiplierButton}
+        </div>
+      )
+    } else {
+      buttons = (
+        <div className="masthead__action-buttons">
+          {multiplierButton}
+          {supplyOrWithdrawButton}
+          {buttons}
+          {compareButton}
+        </div>
+      );
+    }
 
     return {
       balanceOverview,
@@ -799,14 +834,40 @@ function getContent(state: MastheadState): Content {
         </button>
       );
     }
+    
+    const isAnyCollateralHasPositiveBalance = collateralAssets.some((asset) => asset.walletBalance > 0n);
 
-    buttons = (
-      <div className="masthead__action-buttons">
-        {buttons}
-        {repayBorrowOrWithdrawButton}
-        {compareButton}
-      </div>
-    );
+    const [, { isMultiplierReservesEnough = false }] = state;
+
+    let multiplierButton: ReactNode = null;
+
+    if (pendingAction === undefined && actions.length === 0) {
+      multiplierButton = (
+        <MultiplierButton
+          key='multiplier-button'
+          active={multiplier.isActivated}
+          disabled={!isMultiplierReservesEnough || !isAnyCollateralHasPositiveBalance}
+          onClick={() => multiplier.setIsActivated((v) => !v)}
+        />
+      )
+    }
+
+    if (multiplier.isActivated && pendingAction === undefined) {
+      buttons = (
+        <div className="masthead__action-buttons">
+          {multiplierButton}
+        </div>
+      )
+    } else {
+      buttons = (
+        <div className="masthead__action-buttons">
+          {multiplierButton}
+          {buttons}
+          {repayBorrowOrWithdrawButton}
+          {compareButton}
+        </div>
+      );
+    }
 
     return {
       balanceOverview,

@@ -1,0 +1,110 @@
+@use '../abstracts/variables' as *;
+
+.multiplier-collateral-input {
+  padding: 2.5rem;
+  border-radius: 0.5rem 0.5rem 0 0;
+  background-color: var(--ui--foreground--2);
+  
+  .heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    
+    .heading__info-block {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    
+    .heading__text {
+      color: var(--text--multiply);
+    }
+    
+    .heading__text--error {
+      color: var(--data--caution);
+    }
+
+    .heading__hint-button {
+      .svg__path {
+        fill: var(--icon--2) !important;
+      }
+    }
+  }
+  
+  .field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 1.25rem;
+    width: 100%;
+    
+    .field__input {
+      color: var(--text--1);
+      background: transparent;
+      border: none;
+      font-family: 'Haas Grot Disp R';
+      font-size: 2rem;
+      font-weight: 400;
+      height: 2.25rem;
+      line-height: 2.25rem;
+      caret-color: var(--text--supply);
+      transition: all 0.2s linear;
+      width: 100%;
+      padding: 0 1rem 0 0;
+
+      &:focus {
+        outline: none;
+      }
+
+      @media (max-width: $device--sm) {
+        padding: 0;
+      }
+    }
+    
+    .field__max-button {
+      
+    }
+  }
+  
+  .available-row {
+    align-items: center;
+    display: flex;
+    gap: 0.25rem;
+    margin-top: 0.25rem;
+    
+    .available-row__token {
+      height: 0.75rem;
+      width: 0.75rem;
+      min-height: 0.75rem;
+      min-width: 0.75rem;
+    }
+
+    .available-row__text {
+      color: var(--text--2);
+    }
+  }
+
+  @media (max-width: 480px) {
+    padding: 1.25rem;
+  }
+}
+
+.theme--light {
+  .heading {
+    .heading__hint-button {
+      .svg__path {
+        fill: var(--icon--3) !important;
+      }
+    }
+  }
+
+  .multiplier-collateral-input {
+    .heading__text {
+      color: $green--50;
+    }
+
+    .heading__text--error {
+      color: var(--data--caution);
+    }
+    }
+}

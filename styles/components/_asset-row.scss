@@ -12,6 +12,17 @@
     background: var(--ui--foreground--2);
   }
 
+  &__mobile-multiplier {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--button--multiplier);
+
+    .svg {
+      stroke: var(--button--multiplier--emphasized);
+    }
+  }
+
   &__hover {
     position: absolute;
     top: 0;
@@ -106,11 +117,21 @@
     &__actions {
       display: none;
     }
-  }
-  
-  @media (max-width: 26.563rem) {
-    & {
-      padding: 1.125rem 0.25rem;
+
+    &__actions.multiplier {
+      display: flex;
+      width: fit-content;
     }
   }
+
+
+  @media (max-width: 480px) {
+    &__info {
+      &__details {
+        align-items: start;
+        flex-direction: column;
+      }
+    }
+  }
+
 }
