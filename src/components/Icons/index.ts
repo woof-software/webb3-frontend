@@ -30,3 +30,6 @@ export * from './SwitchToggle';
 export * from './TailSpin';
 export * from './V2';
 export * from './Wallet';
+export * from './WarningIcon';
+export * from './ExchangeArrows';
+export * from './CollateralSwapIcon';

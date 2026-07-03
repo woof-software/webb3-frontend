@@ -1,9 +1,11 @@
 import { Dispatch, ReactNode, useRef, useState } from 'react';
 
+import { CollateralSwapButton } from '@components/CollateralSwapButton';
 import DetailSheet from '@components/DetailSheet';
 import { Compare, HoverUnder } from '@components/Icons';
 import Tooltip from '@components/Tooltip';
 import NetRatesTooltip, { NetRatesTooltipView } from '@components/Tooltips/NetRatesTooltip';
+import CollateralSwapContext from '@contexts/CollateralSwapContext';
 import { useCurrencyContext } from '@contexts/CurrencyContext';
 import { sanitizedAmountForAction } from '@helpers/actions';
 import {
@@ -129,6 +131,8 @@ function getContent(state: MastheadState): Content {
   const [ratesDetailActive, setRatesDetailActive] = useState(false);
   const tooltipLeftAlign = useRef<HTMLDivElement>(null); // use to align interest rate tooltip
 
+  const collateralSwap = CollateralSwapContext.use();
+
   const { currency, counterCurrency, pressDownAnimate, pressUpAnimate } = useCurrencyContext();
   const defaultContent: Omit<Content, 'balanceOverview'> = {
     balanceValue: (
@@ -139,6 +143,9 @@ function getContent(state: MastheadState): Content {
     balance: <span className="placeholder-content" style={{ width: '120px' }}></span>,
     buttons: (
       <div className="masthead__action-buttons">
+        <button className="button button--circle" disabled>
+          <span className="placeholder-content" style={{ width: '20px' }}></span>
+        </button>
         <button className="button button--large" disabled>
           <span className="placeholder-content" style={{ width: '100px' }}></span>
         </button>
@@ -167,6 +174,7 @@ function getContent(state: MastheadState): Content {
     );
     const buttons = (
       <div className="masthead__action-buttons">
+        <CollateralSwapButton disabled/>
         <button className="button button--large button--borrow" disabled>
           {iconForActionType(ActionType.Supply)}
           <label className="label">Supply {baseAsset.symbol}</label>
@@ -511,13 +519,41 @@ function getContent(state: MastheadState): Content {
       );
     }
 
-    buttons = (
-      <div className="masthead__action-buttons">
-        {supplyOrWithdrawButton}
-        {buttons}
-        {compareButton}
-      </div>
-    );
+    const isAnyCollateralHasPositiveBalance = collateralAssets.some((asset) => asset.walletBalance > 0n);
+
+    let collateralSwapButton: ReactNode = null;
+
+    if (pendingAction === undefined && actions.length === 0) {
+      collateralSwapButton = (
+        <CollateralSwapButton
+          key='collateral-swap-button'
+          active={collateralSwap.isActivated}
+          disabled={!isAnyCollateralHasPositiveBalance}
+          onClick={() => {
+            collateralSwap.setIsActivated((v) => !v)
+            collateralSwap.setToAddress('')
+            collateralSwap.setFromAddress('')
+          }}
+        />
+      )
+    }
+
+    if (collateralSwap.isActivated) {
+      buttons = (
+        <div className="masthead__action-buttons">
+          {collateralSwapButton}
+        </div>
+      )
+    } else {
+      buttons = (
+        <div className="masthead__action-buttons">
+          {collateralSwapButton}
+          {supplyOrWithdrawButton}
+          {buttons}
+          {compareButton}
+        </div>
+      );
+    }
 
     return {
       balanceOverview,
@@ -800,13 +836,41 @@ function getContent(state: MastheadState): Content {
       );
     }
 
-    buttons = (
-      <div className="masthead__action-buttons">
-        {buttons}
-        {repayBorrowOrWithdrawButton}
-        {compareButton}
-      </div>
-    );
+    const isAnyCollateralHasPositiveBalance = collateralAssets.some((asset) => asset.walletBalance > 0n);
+
+    let collateralSwapButton: ReactNode = null;
+
+    if (pendingAction === undefined && actions.length === 0) {
+      collateralSwapButton = (
+        <CollateralSwapButton
+          key='collateral-swap-button'
+          active={collateralSwap.isActivated}
+          disabled={!isAnyCollateralHasPositiveBalance}
+          onClick={() => {
+            collateralSwap.setIsActivated((v) => !v)
+            collateralSwap.setToAddress('')
+            collateralSwap.setFromAddress('')
+          }}
+        />
+      )
+    }
+
+    if (collateralSwap.isActivated && pendingAction === undefined) {
+      buttons = (
+        <div className="masthead__action-buttons">
+          {collateralSwapButton}
+        </div>
+      )
+    } else {
+      buttons = (
+        <div className="masthead__action-buttons">
+          {collateralSwapButton}
+          {buttons}
+          {repayBorrowOrWithdrawButton}
+          {compareButton}
+        </div>
+      );
+    }
 
     return {
       balanceOverview,

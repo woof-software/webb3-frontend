@@ -2,6 +2,7 @@ import { ReactNode, useContext, useEffect, useState } from 'react';
 
 import { isUnwrappedCollateralAsset } from '@constants/chains';
 import { getActionQueueContext } from '@contexts/ActionQueueContext';
+import CollateralSwapContext from '@contexts/CollateralSwapContext';
 import RewardsStateContext from '@contexts/RewardsStateContext';
 import { getSelectedMarketContext } from '@contexts/SelectedMarketContext';
 import type { Web3 } from '@contexts/Web3Context';
@@ -17,6 +18,7 @@ import { DEFAULT_MARKET } from '@helpers/markets';
 import { MAX_UINT256 } from '@helpers/numbers';
 import { getRewardsForSelectedMarket } from '@helpers/rewards';
 import { isStETH, isWrappedStETH } from '@helpers/steth';
+import { useCollateralsFlashLoan } from '@hooks/flash-loan/useCollateralsFlashLoan';
 import { Theme } from '@hooks/useThemeManager';
 import { AddTransaction } from '@hooks/useTransactionManager';
 import { useWriteCometState, WriteCometState } from '@hooks/useWriteCometState';
@@ -39,10 +41,14 @@ import {
   Transaction,
 } from '@types';
 
+import RepayActionCard from '../home/components/repay/RepayActionCard';
+
 import ActionModal from './components/ActionModal';
 import AssetRow from './components/AssetRow';
 import Masthead, { MastheadState } from './components/Masthead';
 import PositionCard, { PositionCardState } from './components/PositionCard';
+import CollateralSwapActionCard from './components/swap/CollateralSwapActionCard';
+import { CollateralSwapBaseAssetCard } from './components/swap/CollateralSwapBaseAssetCard';
 
 const sortTokensAlphabetically = (a: Token, b: Token): number => (a.name > b.name ? 1 : a.name === b.name ? 0 : -1);
 
@@ -68,13 +74,20 @@ const Home = ({
 }: HomeProps) => {
   // when V2 market was selected from market page and open up a new window default dashboard with default market
   const { selectedMarket, selectMarket } = useContext(getSelectedMarketContext());
+  
+  const collateralSwap = CollateralSwapContext.use();
 
   // We use a useEffect here to prevent infinite renders by the state update in selectMarket
   useEffect(() => {
+    collateralSwap.setIsActivated(false)
     if (selectedMarket[0] === 'hydrated' && selectedMarket[1].baseAsset.symbol == 'Compound V2') {
       selectMarket(DEFAULT_MARKET);
     }
   }, [selectedMarket[0], selectedMarket[1]?.baseAsset?.symbol]);
+  
+  const {
+    data: collateralsFlashLoan,
+  } = useCollateralsFlashLoan();
 
   const rewards = useContext(RewardsStateContext);
   const writeState = useWriteCometState(web3, addTransaction);
@@ -451,6 +464,8 @@ const Home = ({
               },
             },
           ]}
+          isCollateralSwapFromAvailable={token.balance > 0n}
+          isCollateralSwapToAvailable={(collateralsFlashLoan?.get(token.address)?.reserves ?? 0) > 0}
         />
       );
     });
@@ -519,6 +534,7 @@ const Home = ({
             </div>
             {assetRows}
           </div>
+          {(collateralSwap.isActivated && (state[1]?.baseAsset as BaseAssetWithAccountState)?.balance < 0) && <CollateralSwapBaseAssetCard/>}
           {otherAssetRows.length > 0 && (
             <div className="panel panel--assets">
               <div className="panel__header-row">
@@ -535,7 +551,13 @@ const Home = ({
           )}
         </div>
         <div className="grid-column--5">
-          <PositionCard state={positionCardState} />
+          {collateralSwap.isActivated && (
+            collateralSwap.toAddress === state[1]?.baseAsset?.address
+              ? <RepayActionCard />
+              : <CollateralSwapActionCard />
+          )}
+
+          {!collateralSwap.isActivated && <PositionCard state={positionCardState} />}
         </div>
       </div>
     </div>

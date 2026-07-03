@@ -1,0 +1,51 @@
+.custom-tooltip-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.custom-tooltip-wrapper > *:first-child {
+  pointer-events: auto;
+}
+
+.custom-tooltip {
+  position: absolute;
+  background-color: var(--ui--foreground--1);
+  box-shadow: 0 2px 8px 0 rgba(black, 0.4);
+  border-radius: 0.5rem;
+  z-index: 1000;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s, visibility 0.3s;
+}
+
+.custom-tooltip--visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.custom-tooltip--top {
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.custom-tooltip--bottom {
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.custom-tooltip--left {
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.custom-tooltip--right {
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+}

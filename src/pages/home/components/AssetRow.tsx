@@ -1,14 +1,17 @@
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { clsx } from 'clsx';
+import { Dispatch, ReactNode, SetStateAction, useEffect, useRef, useState } from 'react';
 
 import DetailSheet from '@components/DetailSheet';
 import { ArrowDown, ArrowUp, Close, Minus, Plus } from '@components/Icons';
 import Tooltip from '@components/Tooltip';
 import AssetTooltipContent from '@components/Tooltips/AssetTooltipContent';
 import UnwrappedAssetTooltipContent from '@components/Tooltips/UnwrappedAssetTooltipContent';
+import CollateralSwapContext from '@contexts/CollateralSwapContext';
 import { useCurrencyContext } from '@contexts/CurrencyContext';
 import { displayTextForActionType } from '@helpers/actions';
 import { assetIconForAssetSymbol } from '@helpers/assets';
 import { formatTokenBalance, PRICE_PRECISION, getTokenValue, formatValue, displayValue } from '@helpers/numbers';
+import { useMediaQuery } from '@hooks/useMediaQuery';
 import {
   Action,
   ActionType,
@@ -80,6 +83,8 @@ const LoadingAssetRow = () => {
 
 export type AssetRowProps = {
   state: AssetRowState;
+  isCollateralSwapFromAvailable?: boolean;
+  isCollateralSwapToAvailable?: boolean;
 };
 
 type Content = {
@@ -91,10 +96,80 @@ type Content = {
   buttons: ReactNode;
   tooltipContent: ReactNode;
   onIconClick: () => void;
+  handleSwapButtons: () => {text: ReactNode, onClick: () => void, isDisabled: boolean};
 };
 
-function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, currency: Currency): Content {
+type Context = {
+  currency: Currency;
+  collateralSwapFrom: string,
+  collateralSwapTo: string,
+  onCollateralSwapFrom: Dispatch<SetStateAction<string>>,
+  onCollateralSwapTo: Dispatch<SetStateAction<string>>,
+  isCollateralSwapActive: boolean,
+  isCollateralSwapFromAvailable: boolean,
+  isCollateralSwapToAvailable: boolean,
+}
+
+function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, ctx: Context): Content {
   const [stateType, { asset }] = state;
+
+  const {
+    currency,
+    collateralSwapFrom,
+    collateralSwapTo,
+    onCollateralSwapFrom,
+    onCollateralSwapTo,
+    isCollateralSwapActive,
+    isCollateralSwapFromAvailable,
+    isCollateralSwapToAvailable,
+  } = ctx;
+
+  const handleSwapButtons = () => {
+    const isSwapFrom = collateralSwapFrom === asset.address
+    const isSwapTo = collateralSwapTo === asset.address
+
+    if (isSwapFrom) {
+      return {
+        text: 'Swap From',
+        onClick: () => {
+          onCollateralSwapFrom('')
+          onCollateralSwapTo('')
+        },
+        isDisabled: false
+      }
+    }
+
+    if (isSwapTo) {
+      return {
+        text: 'Swap To',
+        onClick: () => onCollateralSwapTo(''),
+        isDisabled: !isCollateralSwapToAvailable,
+      }
+    }
+
+    if (!collateralSwapFrom) {
+      return {
+        text: 'Swap From',
+        onClick: () => onCollateralSwapFrom(asset.address),
+        isDisabled: !isCollateralSwapFromAvailable
+      }
+    }
+
+    if (collateralSwapFrom && !collateralSwapTo) {
+      return {
+        text: 'Swap To',
+        onClick: () => onCollateralSwapTo(asset.address),
+        isDisabled: !isCollateralSwapToAvailable,
+      }
+    }
+
+    return {
+      text: 'Swap To',
+      onClick: () => onCollateralSwapTo(asset.address),
+      isDisabled: !isCollateralSwapToAvailable,
+    }
+  }
+  
   const tooltipContent = getTooltipContent(state, currency);
 
   if (stateType === StateType.NoWallet) {
@@ -120,6 +195,7 @@ function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, currency:
       buttons,
       tooltipContent,
       onIconClick: () => undefined,
+      handleSwapButtons
     };
   }
 
@@ -162,7 +238,23 @@ function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, currency:
 
   let buttons: ReactNode;
 
-  if (pendingAction !== undefined) {
+  if (isCollateralSwapActive) {
+    const {text, onClick, isDisabled} = handleSwapButtons();
+
+    buttons = (
+      <button
+        key={'collateral-swap-button'}
+        className={clsx("button button--collateral-swap-row mobile-hide", {
+          "button--selected": collateralSwapFrom === asset.address || collateralSwapTo === asset.address,
+        })}
+        disabled={isDisabled}
+        onClick={onClick}
+      >
+        {(collateralSwapFrom === asset.address || collateralSwapTo === asset.address) && <Close />}
+        <span>{text}</span>
+      </button>
+    )
+  } else if (pendingAction !== undefined) {
     buttons = (
       <button
         className="button button--selected"
@@ -244,6 +336,7 @@ function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, currency:
       buttons,
       tooltipContent,
       onIconClick,
+      handleSwapButtons
     };
   } else {
     return {
@@ -259,6 +352,7 @@ function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, currency:
       buttons,
       tooltipContent,
       onIconClick,
+      handleSwapButtons
     };
   }
 }
@@ -304,12 +398,21 @@ function balanceDifferenceFromActions(pendingAction?: PendingAction, actionAmoun
   return amount;
 }
 
-const AssetRow = ({ state }: AssetRowProps) => {
+const AssetRow = (props: AssetRowProps) => {
+  const {
+    state,
+    isCollateralSwapFromAvailable = false,
+    isCollateralSwapToAvailable = false,
+  } = props;
+  
   const [stateType] = state;
   const [hoverModifier, setHoverModifier] = useState('');
   const [detailsActive, setDetailsActive] = useState(false);
   const { currency } = useCurrencyContext();
   const prevActionAmount = useRef<bigint | undefined>();
+  const isLargeScreen = useMediaQuery('(min-width: 1121px)')
+  
+  const collateralSwap = CollateralSwapContext.use()
 
   useEffect(() => {
     if (stateType === StateType.Hydrated) {
@@ -334,7 +437,17 @@ const AssetRow = ({ state }: AssetRowProps) => {
     buttons,
     tooltipContent,
     onIconClick,
-  } = getFormattedState(state, currency);
+    handleSwapButtons
+  } = getFormattedState(state, {
+    currency,
+    collateralSwapFrom: collateralSwap.fromAddress,
+    collateralSwapTo: collateralSwap.toAddress,
+    onCollateralSwapFrom: collateralSwap.setFromAddress,
+    onCollateralSwapTo: collateralSwap.setToAddress,
+    isCollateralSwapActive: collateralSwap.isActivated,
+    isCollateralSwapFromAvailable: isCollateralSwapFromAvailable,
+    isCollateralSwapToAvailable: isCollateralSwapToAvailable,
+  });
 
   const closeDetails = () => {
     setDetailsActive(false);
@@ -342,12 +455,40 @@ const AssetRow = ({ state }: AssetRowProps) => {
 
   const abbrSymbol = asset.symbol === 'wsuperOETHb' ? '...OETHb' : asset.symbol;
 
+  // collateral swap mobile
+  const {onClick, isDisabled} = handleSwapButtons()
+  let handleRowClick = () => setDetailsActive(true);
+  let isRowSelected = false;
+  let rowModifier = ''
+  
+  if (collateralSwap.isActivated) {
+    isRowSelected = collateralSwap.fromAddress === asset.address || collateralSwap.toAddress === asset.address;
+    rowModifier = isRowSelected ? ' asset-row--active' : assetRowModifier;
+  }
+
+  if (collateralSwap.isActivated && !isLargeScreen) {
+    handleRowClick = () => {
+      if (!isDisabled) {
+        onClick()
+      }
+    }
+  }
+
+  const getMobileSwapRowStyles = () => {
+    const isReverted = collateralSwap.fromAddress && !(collateralSwap.fromAddress === asset.address)
+
+    return clsx('asset asset-row__mobile-collateral-swap', {
+      'asset-row__mobile-collateral-swap--disabled': isDisabled,
+      'asset-row__mobile-collateral-swap--active': isRowSelected && !isDisabled,
+      'asset-row__mobile-collateral-swap--transformed': isReverted
+    })
+  }
+  //
+
   return (
     <div
-      className={`asset-row${assetRowModifier} L3`}
-      onClick={() => {
-        setDetailsActive(true);
-      }}
+      className={`asset-row${rowModifier} L3`}
+      onClick={handleRowClick}
     >
       <div className={`asset-row__hover${hoverModifier}`}></div>
       <Tooltip content={tooltipContent} width={340} hideArrow={true} yOffset={30}>
@@ -360,7 +501,10 @@ const AssetRow = ({ state }: AssetRowProps) => {
             setHoverModifier('');
           }}
         >
-          <span className={`asset asset--${assetIconForAssetSymbol(asset.symbol)}`} onClick={onIconClick}></span>
+          {!isLargeScreen && collateralSwap.isActivated
+            ? <span className={getMobileSwapRowStyles()}></span>
+            : <span className={`asset asset--${assetIconForAssetSymbol(asset.symbol)}`} onClick={onIconClick}></span>
+          }
           <div className="asset-row__info">
             <p className="body">{asset.name}</p>
             <div className="asset-row__info__details meta L2">

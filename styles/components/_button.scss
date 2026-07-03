@@ -49,6 +49,113 @@ button,
     color: var(--text--button-label--emphasized);
   }
 
+  &--collateral-swap-animated {
+    background-color: var(--button--neutral);
+    justify-content: center;
+    min-width: 2.75rem;
+    padding: 0 !important;
+
+    .svg:not(:only-child) {
+      min-width: 16px;
+      margin-right: 0;
+      transition: margin-right .15s ease;
+      fill: $neutral--10;
+    }
+
+    .label {
+      opacity: 0;
+      width: 0;
+      overflow: hidden;
+      color: var(--text--button-label);
+      transition: width .15s ease;
+    }
+
+    &:hover:not(:disabled) {
+      padding: 0 12px !important;
+
+      .label {
+        opacity: 1;
+        width: 2.188rem;
+      }
+
+      .svg:not(:only-child) {
+        margin-right: 0.5rem;
+      }
+    }
+
+    &:disabled {
+      .svg:not(:only-child) {
+        fill: var(--text--button-label--disabled);
+      }
+
+      .label {
+        color: var(--text--button-label--disabled);
+      }
+
+      &:hover {
+        .label {
+          width: 0;
+        }
+
+        .svg:not(:only-child) {
+          margin-right: 0;
+        }
+      }
+    }
+  }
+
+  @media (max-width: $device--sm) {
+    &--collateral-swap-animated {
+      display: flex;
+      justify-content: center;
+      width: auto;
+
+      .svg:not(:only-child) {
+        margin-right: 0.5rem;
+      }
+
+      .label {
+        opacity: 1;
+        width: 3.75rem; // 60px
+      }
+
+      &:disabled {
+        .svg:not(:only-child) {
+          stroke: var(--text--button-label--disabled);
+        }
+
+        &:hover {
+          .label {
+            width: auto;
+          }
+
+          .svg:not(:only-child) {
+            margin-right: 0.5rem;
+          }
+        }
+      }
+    }
+  }
+
+  &--collateral-swap {
+    background-color: var(--button--neutral);
+    padding: 0 12px !important;
+    min-width: auto;
+
+    .svg:not(:only-child) {
+      min-width: 16px;
+      fill: $neutral--10;
+    }
+
+    .label {
+      color: var(--text--button-label);
+    }
+  }
+
+  &--collateral-swap-row:disabled {
+    opacity: 0.3;
+  }
+
   &--transparent {
     background-color: transparent;
     border-color: transparent;
@@ -119,6 +226,14 @@ button,
     &:hover {
       --background-color: #{color.adjust($neutral--95, $lightness: 15%)};
     }
+  }
+
+  &--plain {
+    background-color: transparent;
+    border: 0;
+    color: var(--text--button-label);
+    padding: 0;
+    min-width: unset;
   }
 
   &--small {
@@ -219,5 +334,23 @@ button,
 .theme--light {
   .button--large {
     border-color: transparent;
+  }
+
+  .button--collateral-swap-animated {
+    .svg:not(:only-child) {
+      fill: $neutral--90;
+    }
+
+    &:disabled {
+      .svg:not(:only-child) {
+        fill: $neutral--40;
+      }
+    }
+  }
+
+  .button--collateral-swap {
+    .svg:not(:only-child) {
+      fill: $neutral--90;
+    }
   }
 }
