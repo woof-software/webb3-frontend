@@ -6,6 +6,7 @@ const screeningEndpoint = import.meta.env.VITE_SCREENING_ENDPOINT || 'SCREENING_
 export const SCREENING_URL = screeningEndpoint;
 
 // TODO: Should be restored to original version before merge it into main
+// TODO: Remove yaml file
 // export const SEPOLIA_URL = `https://${rpcProviderHost}/ethereum-sepolia`;
 // export const MAINNET_URL = `https://rpc.ankr.com/eth/${import.meta.env.VITE_ANKR_KEY}`;
 // export const POLYGON_URL = `https://${rpcProviderHost}/polygon-mainnet`;

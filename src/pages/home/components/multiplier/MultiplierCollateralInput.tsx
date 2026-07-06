@@ -6,6 +6,7 @@ import { assetIconForAssetSymbol } from '@helpers/assets';
 import { noop } from '@helpers/functions';
 import { spawnFloatRegex } from '@helpers/regex';
 import { useFontSizeFitting } from '@hooks/useFontSizeFitting';
+import { useFormattedNumberInput } from '@hooks/useFormattedNumberInput';
 
 export type CollateralInputProps = {
   symbol: string;
@@ -39,6 +40,15 @@ export const MultiplierCollateralInput: FC<CollateralInputProps> = (props) => {
 
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const {
+    formattedValue,
+    onKeyDown,
+    rememberCursor
+  } = useFormattedNumberInput({
+    value,
+    inputRef
+  });
+
   const getInputFontSize = useFontSizeFitting({
     border: 0.85
   });
@@ -57,6 +67,7 @@ export const MultiplierCollateralInput: FC<CollateralInputProps> = (props) => {
 
   const onInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/[^0-9.]/g, '');
+    rememberCursor(e);
 
     const regex = spawnFloatRegex(DEFAULT_INTEGER_PART_LENGTH, decimals);
 
@@ -123,7 +134,8 @@ export const MultiplierCollateralInput: FC<CollateralInputProps> = (props) => {
           placeholder="0"
           autoComplete="off"
           style={{ fontSize: `${adjustedFontSize}px` }}
-          value={value}
+          value={formattedValue}
+          onKeyDown={onKeyDown}
           onChange={onInputChange}
           disabled={disabled}
         />
