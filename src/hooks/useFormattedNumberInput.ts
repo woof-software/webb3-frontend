@@ -6,10 +6,15 @@ import {
   useRef,
 } from 'react';
 
-type useFormattedNumberInputArgs = {
+type UseFormattedNumberInputArgs = {
   value: string;
   inputRef: RefObject<HTMLInputElement | null>;
 };
+
+type CursorRef = {
+  digits: number;
+  afterDecimal: boolean;
+}
 
 /**
  * Provides formatting and cursor management for a controlled numeric input with
@@ -58,8 +63,11 @@ type useFormattedNumberInputArgs = {
  * ```
  */
 
-export const useFormattedNumberInput = ({ value, inputRef }: useFormattedNumberInputArgs) => {
-  const cursorDigitsRef = useRef<number | null>(null);
+export const useFormattedNumberInput = ({
+  value,
+  inputRef,
+}: UseFormattedNumberInputArgs) => {
+  const cursorRef = useRef<CursorRef | null>(null);
 
   const formatWithThousandSeparators = (value: string): string => {
     if (!value) return value;
@@ -75,6 +83,8 @@ export const useFormattedNumberInput = ({ value, inputRef }: useFormattedNumberI
       ? `${formattedIntegerPart}.${decimalPart}`
       : formattedIntegerPart;
   };
+
+  const formattedValue = formatWithThousandSeparators(value);
 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     const input = e.currentTarget;
@@ -101,35 +111,36 @@ export const useFormattedNumberInput = ({ value, inputRef }: useFormattedNumberI
 
   const rememberCursor = (e: ChangeEvent<HTMLInputElement>) => {
     const cursor = e.target.selectionStart ?? 0;
+    const left = e.target.value.slice(0, cursor);
 
-    cursorDigitsRef.current = (
-      e.target.value
-        .slice(0, cursor)
-        .match(/\d/g) ?? []
-    ).length;
+    cursorRef.current = {
+      digits: (left.match(/\d/g) ?? []).length,
+      afterDecimal: left.includes('.'),
+    };
   };
-
-  const formattedValue = formatWithThousandSeparators(value);
 
   useEffect(() => {
     const input = inputRef.current;
 
-    if (!input || cursorDigitsRef.current === null) {
+    if (!input || !cursorRef.current) {
       return;
     }
 
     requestAnimationFrame(() => {
-      let digits = 0;
+      const { digits, afterDecimal } = cursorRef.current!;
+
+      let currentDigits = 0;
       let cursorPos = 0;
 
-      while (
-        cursorPos < input.value.length &&
-        digits < cursorDigitsRef.current!
-        ) {
+      while (cursorPos < input.value.length && currentDigits < digits) {
         if (/\d/.test(input.value[cursorPos])) {
-          digits++;
+          currentDigits++;
         }
 
+        cursorPos++;
+      }
+
+      if (afterDecimal && input.value[cursorPos] === '.') {
         cursorPos++;
       }
 
