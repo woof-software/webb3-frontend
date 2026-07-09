@@ -31,8 +31,15 @@ jobs:
       - name: Build site
         run: yarn run build
         env:
-          VITE_ANKR_KEY: ${{ vars.WOOF_ANKR_KEY }}
-          VITE_V3_WALLET_CONNECT_PROJECT_ID: ${{vars.WOOF_WALLET_ID}}
+          VITE_MAINNET_URL: ${{ vars.VITE_MAINNET_URL }}
+          VITE_ARBITRUM_URL: ${{ vars.VITE_ARBITRUM_URL }}
+          VITE_BASE_URL: ${{ vars.VITE_BASE_URL }}
+          VITE_OPTIMISM_URL: ${{ vars.VITE_OPTIMISM_URL }}
+          VITE_POLYGON_URL: ${{ vars.VITE_POLYGON_URL }}
+          VITE_SCROLL_URL: ${{ vars.VITE_SCROLL_URL }}
+          VITE_LINEA_URL: ${{ vars.VITE_LINEA_URL }}
+          VITE_MANTLE_URL: ${{ vars.VITE_MANTLE_URL }}
+          VITE_UNICHAIN_URL: ${{ vars.VITE_UNICHAIN_URL }}
           VITE_V3_API_HOST: ${{ vars.VITE_V3_API_HOST }}
 
       - name: Deploy static site to S3 bucket
