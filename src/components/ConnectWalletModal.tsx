@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
-import {Ronin} from "@components/Icons/Ronin";
+import { Narval } from '@components/Icons/Narval';
+import { Ronin } from "@components/Icons/Ronin";
 import { Connector, ConnectorType } from '@contexts/Web3Context';
 import { getShortAddress } from '@helpers/address';
 import { getLedgerAddresses } from '@helpers/Ledger';
@@ -203,6 +204,19 @@ const ConnectWalletModal = ({ isOpen = false, onRequestClose, onSelectConnector 
                 <Ronin className="connect-wallet-item__symbol" />
                 <div className="connect-wallet-item__info">
                   <div className="heading heading--emphasized">Ronin</div>
+                </div>
+                <ArrowRight />
+              </div>
+              <div
+                className="connect-wallet-item"
+                onClick={() => {
+                  onSelectConnector([ConnectorType.Narval]);
+                  onClose();
+                }}
+              >
+                <Narval className="connect-wallet-item__symbol" />
+                <div className="connect-wallet-item__info">
+                  <div className="heading heading--emphasized">Narval</div>
                 </div>
                 <ArrowRight />
               </div>

@@ -4,6 +4,7 @@ const walletConnectProjectId =
 const screeningEndpoint = import.meta.env.VITE_SCREENING_ENDPOINT || 'SCREENING_ENDPOINT_NOT_CONFIGURED';
 
 export const SCREENING_URL = screeningEndpoint;
+export const NARVAL_CLIENT_ID = import.meta.env.VITE_NARVAL_CLIENT_ID;
 
 // TODO: Should be restored to original version before merge it into main
 // TODO: Remove yaml file

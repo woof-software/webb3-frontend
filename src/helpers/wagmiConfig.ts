@@ -1,3 +1,4 @@
+import { narval } from '@narval-xyz/connect/wagmi';
 import { createConfig, http } from 'wagmi';
 import { type Chain } from 'wagmi/chains';
 import { injected, walletConnect, coinbaseWallet } from 'wagmi/connectors';
@@ -5,7 +6,7 @@ import { injected, walletConnect, coinbaseWallet } from 'wagmi/connectors';
 import { CHAINS } from '@constants/chains';
 import { ledgerConnector } from '@helpers/Ledger';
 
-import { WALLECT_CONNECT_PROJECT_ID } from '../../envVars';
+import { WALLECT_CONNECT_PROJECT_ID, NARVAL_CLIENT_ID } from '../../envVars';
 
 const supportedChains = Object.values(CHAINS).map(
   (chainInfo) =>
@@ -24,6 +25,15 @@ const supportedChains = Object.values(CHAINS).map(
 
 const transports = Object.fromEntries(supportedChains.map((chain) => [chain.id, http()]));
 
+const narvalConnector = narval({
+  config: {
+    clientId: NARVAL_CLIENT_ID,
+    minimizeAfterSubmit: false,
+    env: 'production',
+    minimizedStyle: 'hide',
+  },
+});
+
 export const config = createConfig({
   chains: supportedChains,
   connectors: [
@@ -37,6 +47,7 @@ export const config = createConfig({
       preference: { options: 'all', telemetry: false },
     }),
     ledgerConnector(),
+    narvalConnector,
   ],
   transports,
 });

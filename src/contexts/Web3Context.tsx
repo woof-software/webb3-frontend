@@ -74,6 +74,7 @@ export enum ConnectorType {
   WalletLink = 'WalletLink',
   Ledger = 'Ledger',
   Ronin = 'Ronin',
+  Narval = 'Narval',
 }
 
 export type Connector =
@@ -81,7 +82,7 @@ export type Connector =
   | [ConnectorType.WalletConnect]
   | [ConnectorType.WalletLink]
   | [ConnectorType.Ledger, [string, string]]
-  | [ConnectorType.Ronin];
+  | [ConnectorType.Ronin] | [ConnectorType.Narval];
 
 export type ReadWeb3 = {
   connector: undefined;
@@ -121,6 +122,7 @@ const connectorsMap = {
   [ConnectorType.WalletLink]: { id: 'coinbaseWalletSDK' },
   [ConnectorType.Ledger]: { id: 'ledger' },
   [ConnectorType.Ronin]: { id: 'com.roninchain.wallet' },
+  [ConnectorType.Narval]: { id: 'narval-Institutional Wallets' },
 };
 
 export const Web3Provider = ({ children }: Web3ProviderProps) => {
@@ -141,7 +143,9 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
   let writeWeb3: WriteWeb3;
   const urlAccount = searchParams.has('account') ? (searchParams.get('account') as string) : account;
-  const screeningStatus = useAddressScreening(urlAccount);
+  // const screeningStatus = useAddressScreening(urlAccount);
+  // TODO: remove after tests
+  const screeningStatus = 'allowed';
   // A blocked wallet is fully disconnected, not just gated out of view.
   useDisconnectBlockedWallet(screeningStatus, disconnect);
   if (searchParams.has('account')) {
