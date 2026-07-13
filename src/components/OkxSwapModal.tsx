@@ -2,6 +2,7 @@ import { createOkxSwapWidget, THEME, ProviderType, OkxEvents } from '@okxweb3/de
 import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
+import { useMediaQuery } from '@hooks/useMediaQuery';
 import { Theme } from '@hooks/useThemeManager';
 
 interface OkxSwapModalProps {
@@ -10,8 +11,13 @@ interface OkxSwapModalProps {
 
 export const OkxSwapModal = ({ theme }: OkxSwapModalProps) => {
   const [searchParams, setSearchParams] = useSearchParams();
+
   const isOpen = searchParams.get('swapModal') === 'true';
+
   const widgetRef = useRef<HTMLDivElement>(null);
+  const instanceRef = useRef<ReturnType<typeof createOkxSwapWidget> | null>(null);
+
+  const isLargeScreen = useMediaQuery('(min-width: 1121px)');
 
   const closeModal = () => {
     const params = new URLSearchParams(searchParams);
@@ -20,12 +26,12 @@ export const OkxSwapModal = ({ theme }: OkxSwapModalProps) => {
   };
 
   useEffect(() => {
-    if (!widgetRef.current) return;
+    if (!isOpen || !widgetRef.current) return;
 
-    const instance = createOkxSwapWidget(widgetRef.current, {
+    instanceRef.current = createOkxSwapWidget(widgetRef.current, {
       params: {
         theme: theme === 'Light' ? THEME.LIGHT : THEME.DARK,
-        width: 375,
+        width: isLargeScreen ? 478 : 375,
         providerType: ProviderType.EVM,
         chainIds: ['1', '8453', '42161', '10', '59144', '137', '130', '5000', '534352'],
       },
@@ -41,9 +47,15 @@ export const OkxSwapModal = ({ theme }: OkxSwapModalProps) => {
     });
 
     return () => {
-      instance.destroy();
+      instanceRef.current?.destroy();
+      instanceRef.current = null;
     };
-  }, [theme]);
+  }, [theme, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    instanceRef.current?.updateParams({ width: isLargeScreen ? 478 : 375 });
+  }, [isLargeScreen, isOpen]);
 
   useEffect(() => {
     const handleKeyUp = (event: KeyboardEvent) => {
