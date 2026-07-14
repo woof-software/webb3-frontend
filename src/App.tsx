@@ -7,6 +7,7 @@ import ConnectWalletModal from '@components/ConnectWalletModal';
 import Footer from '@components/Footer';
 import Header from '@components/Header';
 import NetworkSwitchModal, { NetworkSwitchModalState } from '@components/NetworkSwitchModal';
+import { SafeAutoConnect } from "@components/SafeAutoConnect";
 import ScreeningErrorOverlay from '@components/ScreeningErrorOverlay';
 import * as ActionQueueContextHelpers from '@contexts/ActionQueueContext';
 import { CurrencyContextProvider } from '@contexts/CurrencyContext';
@@ -23,7 +24,6 @@ import { useTransactionManager } from '@hooks/useTransactionManager';
 import { Action, MarketDataLoaded, StateType } from '@types';
 
 import { allExtensions } from './pages/extensions/helpers/list';
-import { SafeAutoConnect } from "@components/SafeAutoConnect";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function App({ Component, pageProps }: any) {
