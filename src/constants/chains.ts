@@ -91,7 +91,7 @@ export const CHAINS: {
   },
   11155111: {
     chainId: 11155111,
-    url: 'https://ethereum-sepolia-rpc.publicnode.com',
+    url: SEPOLIA_URL,
     key: 'sepolia',
     name: 'Sepolia',
     blockExplorerUrls: ['https://sepolia.etherscan.io',],
