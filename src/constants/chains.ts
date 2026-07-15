@@ -91,10 +91,10 @@ export const CHAINS: {
   },
   11155111: {
     chainId: 11155111,
-    url: SEPOLIA_URL,
+    url: 'https://ethereum-sepolia-rpc.publicnode.com',
     key: 'sepolia',
     name: 'Sepolia',
-    blockExplorerUrls: ['https://ethereum-sepolia-rpc.publicnode.com',],
+    blockExplorerUrls: ['https://sepolia.etherscan.io',],
     nativeToken: {
       decimals: 18,
       name: 'Ether',
