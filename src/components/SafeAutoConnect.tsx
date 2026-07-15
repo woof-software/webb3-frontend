@@ -16,7 +16,7 @@ export const SafeAutoConnect = () => {
     if (!safeConnector) return;
 
     connect({ connector: safeConnector });
-  }, [isSafeContext, isConnected, connector, connectors, connect]);
+  }, [isSafeContext, isConnected, connector, connectors, connect, status]);
 
   return null;
 };
