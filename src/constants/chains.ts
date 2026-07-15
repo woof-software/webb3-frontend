@@ -94,7 +94,7 @@ export const CHAINS: {
     url: SEPOLIA_URL,
     key: 'sepolia',
     name: 'Sepolia',
-    blockExplorerUrls: ['https://sepolia.etherscan.io'],
+    blockExplorerUrls: ['https://ethereum-sepolia-rpc.publicnode.com',],
     nativeToken: {
       decimals: 18,
       name: 'Ether',
