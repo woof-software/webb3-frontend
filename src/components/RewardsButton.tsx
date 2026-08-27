@@ -256,6 +256,10 @@ const RewardsNetworkRow = ({
       </SimpleLink>
     );
 
+  // Show rewards only for Mantle and Linea networks.
+  const filteredUnclaimedBalances = unclaimedBalances.filter(
+    balance => balance.chainId === 59144 || balance.chainId === 5000
+  );
   return (
     <>
       <div className="divider"></div>
@@ -286,7 +290,7 @@ const RewardsNetworkRow = ({
               <span className="text-color--2">{`.${fractionalWalletBalance}`}</span>
             </label>
           </div>
-          {unclaimedBalances.length > 0 && (
+          {filteredUnclaimedBalances.length > 0 && (
             <>
               <div className="rewards__network-row__content">
                 <label className="label L2 text-color--2">Unclaimed Balances</label>
@@ -295,7 +299,7 @@ const RewardsNetworkRow = ({
                   <span className="text-color--2">{`.${fractionalUnclaimed}`}</span>
                 </label>
               </div>
-              {unclaimedBalances.map((rewardState) => {
+              {filteredUnclaimedBalances.map((rewardState) => {
                 const amountOwed = formatTokenBalance(rewardState.rewardAsset.decimals, rewardState.amountOwed);
                 const [wholeNumberUnclaimed, fractionalUnclaimed] = `${amountOwed}`.split('.');
                 return (
