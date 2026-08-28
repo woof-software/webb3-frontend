@@ -3,6 +3,8 @@ import { Grid } from '@components/Icons/Grid';
 import { Sparkle } from '@components/Icons/Sparkle';
 import { SimpleLink } from '@components/SimpleLink';
 import { Web3 } from '@contexts/Web3Context';
+import { MouseEventHandler } from 'react';
+import { useSearchParams } from 'react-router';
 
 import { RewardsBanner } from '../rewards/components/RewardsBanner';
 import { RewardsCard } from '../rewards/components/RewardsCard';
@@ -125,6 +127,13 @@ interface RewardsProps {
 
 const Rewards = ({ web3 }: RewardsProps) => {
   const { account } = web3.write;
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const onViewRewardsClick: MouseEventHandler<HTMLButtonElement> = () => {
+    const params = new URLSearchParams(searchParams);
+    params.set('rewardsRedirectModal', 'true');
+    setSearchParams(params);
+  };
 
   return (
     <main className={'rewards-page'}>
@@ -144,11 +153,17 @@ const Rewards = ({ web3 }: RewardsProps) => {
       </section>
       <div className={'rewards-links'}>
         {!!account && (
-          <SimpleLink className={'button button-green'} to={`https://app.merkl.xyz/users/${account}`}>
+          <button
+            className={'button button-green'}
+            onClick={onViewRewardsClick}
+          >
             View your Rewards
-          </SimpleLink>
+          </button>
         )}
-        <button disabled={true} className={'button'}>
+        <button
+          disabled={true}
+          className={'button'}
+        >
           Claiming: Coming Soon
         </button>
       </div>

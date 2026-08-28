@@ -23,6 +23,7 @@ import { useTransactionManager } from '@hooks/useTransactionManager';
 import { Action, MarketDataLoaded, StateType } from '@types';
 
 import { allExtensions } from './pages/extensions/helpers/list';
+import { RedirectModal } from './pages/rewards/components/RedirectModal';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function App({ Component, pageProps }: any) {
@@ -58,6 +59,10 @@ function App({ Component, pageProps }: any) {
     }
     if (location.pathname.startsWith('/extensions')) {
       document.title = 'Compound | Extensions';
+    }
+
+    if (location.pathname.startsWith('/rewards')) {
+      document.title = 'Compound | Rewards';
     }
 
     const extensionPathRegex = new RegExp('^\\/extensions\\/([a-zA-Z0-9-_]+)');
@@ -162,6 +167,7 @@ function App({ Component, pageProps }: any) {
         <ActionQueueContext.Provider value={actionQueue}>
           <CurrencyContextProvider>
             <AlertBanner web3={web3} />
+            <RedirectModal web3={web3}/>
             <Header
               web3={web3}
               transactions={transactions}

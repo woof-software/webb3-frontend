@@ -1,5 +1,5 @@
-import { useState, useRef, useContext, useEffect, MouseEventHandler } from 'react';
-import { useLocation } from 'react-router';
+import { useState, useRef, useContext, useEffect, MouseEventHandler, SetStateAction, Dispatch } from 'react';
+import { useLocation, useSearchParams } from 'react-router';
 
 import { getActionQueueContext } from '@contexts/ActionQueueContext';
 import RewardsStateContext from '@contexts/RewardsStateContext';
@@ -118,6 +118,7 @@ const RewardsButton = ({ web3, mobile = false, onClaimClicked = () => undefined 
             chainInformation={chainInformation}
             expanded={expandedState[chainId] ?? false}
             rewardsStates={rewardsStates}
+            setDropdownActive={setDropdownActive}
             onClaimClicked={(claimBalances: AccountRewardsState[]) => {
               if (
                 selectedMarket[1] !== undefined &&
@@ -208,6 +209,7 @@ type RewardsNetworkRowProps = {
   rewardsStates: AccountRewardsState[];
   onClaimClicked: (balanceClaims: AccountRewardsState[]) => void;
   onExpand: () => void;
+  setDropdownActive: Dispatch<SetStateAction<boolean>>;
 };
 
 const RewardsNetworkRow = ({
@@ -216,12 +218,14 @@ const RewardsNetworkRow = ({
   rewardsStates,
   onExpand,
   onClaimClicked,
+  setDropdownActive
 }: RewardsNetworkRowProps) => {
   if (rewardsStates[0] == null) return null;
   const location = useLocation();
   const { walletBalance, rewardAsset } = rewardsStates[0];
   const balance = formatTokenBalance(rewardAsset.decimals, walletBalance);
   const [wholeNumberWalletBalance, fractionalWalletBalance] = `${balance}`.split('.');
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const unclaimedBalances = filterMap<AccountRewardsState, AccountRewardsState>(rewardsStates, (rewardState) =>
     rewardState.amountOwed > 0n ? rewardState : undefined
@@ -230,27 +234,31 @@ const RewardsNetworkRow = ({
   const formattedUnclaimed = formatTokenBalance(rewardAsset.decimals, totalUnclaimed);
   const [wholeNumberUnclaimed, fractionalUnclaimed] = `${formattedUnclaimed}`.split('.');
 
-  const sumBalances = walletBalance + totalUnclaimed;
-  const formattedSumBalances = formatTokenBalance(rewardAsset.decimals, sumBalances);
-
   const buttonText =
     unclaimedBalances.length > 1
       ? `Claim ${unclaimedBalances.length} Balances`
       : `Claim ${formattedUnclaimed} ${rewardAsset.symbol}`;
 
-  const onClick: MouseEventHandler<HTMLButtonElement> = (e) => {
+  const onClickClaim: MouseEventHandler<HTMLButtonElement> = (e) => {
     e.stopPropagation();
     onClaimClicked(unclaimedBalances);
   };
 
+  const onClickRedirectModalOpen: MouseEventHandler<HTMLButtonElement> = () => {
+    const params = new URLSearchParams(searchParams);
+    params.set('rewardsRedirectModal', 'true');
+    setSearchParams(params);
+    setDropdownActive(false)
+  };
+
   const claimButton =
     location.pathname === '/' ? (
-      <button className={`button button--small`} onClick={onClick}>
+      <button className={`button button--small`} onClick={onClickClaim}>
         {buttonText}
       </button>
     ) : (
       <SimpleLink style={{ width: '100%' }} to="/">
-        <button className={`button button--small`} onClick={onClick}>
+        <button className={`button button--small`} onClick={onClickClaim}>
           {buttonText}
         </button>
       </SimpleLink>
@@ -260,6 +268,9 @@ const RewardsNetworkRow = ({
   const filteredUnclaimedBalances = unclaimedBalances.filter(
     balance => balance.chainId === 59144 || balance.chainId === 5000
   );
+
+  const isExternalClaimNetwork = chainInformation.chainId !== 59144 && chainInformation.chainId !== 5000;
+
   return (
     <>
       <div className="divider"></div>
@@ -276,9 +287,6 @@ const RewardsNetworkRow = ({
             <label className="label L1 text-color--1">{chainInformation.name}</label>
           </div>
           <div className="rewards__network-row__content__icons-with-info">
-            <label className="rewards__network-row__content__icons-with-info__total label label--secondary L1 text-color--2">
-              {formattedSumBalances}
-            </label>
             <CaretDown className="chevron" />
           </div>
         </div>
@@ -323,6 +331,14 @@ const RewardsNetworkRow = ({
               })}
               {claimButton}
             </>
+          )}
+          {isExternalClaimNetwork && (
+            <button
+              className={`button button--small`}
+              onClick={onClickRedirectModalOpen}
+            >
+              Claim COMP
+            </button>
           )}
         </div>
       </div>
