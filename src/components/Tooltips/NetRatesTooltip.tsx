@@ -2,6 +2,8 @@ import NetRatesGraph, { NetRatesGraphType } from '@components/NetRatesGraph';
 import { formatRateFactor } from '@helpers/numbers';
 import { Token } from '@types';
 
+import { getNetBorrowAPR, getNetSupplyAPR } from '../../pages/markets/helpers/getNetAprs';
+
 export enum NetRatesTooltipView {
   Borrow = 'borrow',
   Supply = 'supply',
@@ -25,8 +27,8 @@ const NetRatesTooltip = ({
   rewardsAsset,
   view,
 }: NetRatesTooltipProps) => {
-  const netBorrowAPR = borrowRewardsAPR ? borrowAPR - borrowRewardsAPR : borrowAPR;
-  const netSupplyAPR = earnRewardsAPR ? earnRewardsAPR + earnAPR : earnAPR;
+  const netBorrowAPR = getNetBorrowAPR(borrowAPR, borrowRewardsAPR)
+  const netSupplyAPR = getNetSupplyAPR(earnAPR, earnRewardsAPR)
 
   const netBorrowRateGraph = (
     <NetRatesGraph

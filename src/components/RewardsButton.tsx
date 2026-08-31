@@ -334,7 +334,7 @@ const RewardsNetworkRow = ({
           )}
           {isExternalClaimNetwork && (
             <button
-              className={`button button--small`}
+              className={`button button--small rewards__network-row__content__claim-button`}
               onClick={onClickRedirectModalOpen}
             >
               Claim COMP

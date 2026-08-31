@@ -3,6 +3,8 @@ import PanelWithHeader from '@components/PanelWithHeader';
 import { formatRateFactor } from '@helpers/numbers';
 import { Token, StateType } from '@types';
 
+import { getNetBorrowAPR, getNetSupplyAPR } from './../helpers/getNetAprs';
+
 type MarketRatesPanelLoading = [StateType.Loading];
 
 type MarketRatesPanelHydrated = [
@@ -90,8 +92,8 @@ const LoadingView = () => {
 };
 
 const MarketRatesPanelView = ({ borrowAPR, borrowRewardsAPR, earnAPR, earnRewardsAPR, rewardsAsset }: PanelContent) => {
-  const netBorrowAPR = borrowRewardsAPR ? borrowAPR - borrowRewardsAPR : borrowAPR;
-  const netSupplyAPR = earnRewardsAPR ? earnRewardsAPR + earnAPR : earnAPR;
+  const netBorrowAPR = getNetBorrowAPR(borrowAPR, borrowRewardsAPR)
+  const netSupplyAPR = getNetSupplyAPR(earnAPR, earnRewardsAPR)
 
   const netBorrowRateGraph = (
     <NetRatesGraph

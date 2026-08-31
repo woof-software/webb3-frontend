@@ -1,10 +1,9 @@
+import { MouseEventHandler } from 'react';
+import { useSearchParams } from 'react-router';
+
 import { DollarCircle } from '@components/Icons/DollarCircle';
 import { Grid } from '@components/Icons/Grid';
 import { Sparkle } from '@components/Icons/Sparkle';
-import { SimpleLink } from '@components/SimpleLink';
-import { Web3 } from '@contexts/Web3Context';
-import { MouseEventHandler } from 'react';
-import { useSearchParams } from 'react-router';
 
 import { RewardsBanner } from '../rewards/components/RewardsBanner';
 import { RewardsCard } from '../rewards/components/RewardsCard';
@@ -121,12 +120,7 @@ const rewardsFaq = [
   }
 ];
 
-interface RewardsProps {
-  web3: Web3;
-}
-
-const Rewards = ({ web3 }: RewardsProps) => {
-  const { account } = web3.write;
+const Rewards = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const onViewRewardsClick: MouseEventHandler<HTMLButtonElement> = () => {
@@ -152,19 +146,11 @@ const Rewards = ({ web3 }: RewardsProps) => {
         })}
       </section>
       <div className={'rewards-links'}>
-        {!!account && (
-          <button
-            className={'button button-green'}
-            onClick={onViewRewardsClick}
-          >
-            View your Rewards
-          </button>
-        )}
         <button
-          disabled={true}
-          className={'button'}
+          className={'button button-green'}
+          onClick={onViewRewardsClick}
         >
-          Claiming: Coming Soon
+          View your Rewards
         </button>
       </div>
       <RewardsFaq

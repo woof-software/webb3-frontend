@@ -18,6 +18,10 @@
 
 .rewards-faq-link {
   color: $green--30;
+
+  &:hover {
+    text-decoration: underline;
+  }
 }
 
 .rewards-cards {

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 
 import { CircleClose } from '@components/Icons';
 import type { Web3 } from '@contexts/Web3Context';
@@ -32,29 +32,29 @@ export const RedirectModal = ({ web3 }: RedirectModalProps) => {
     return () => window.removeEventListener('keyup', handleKeyUp);
   }, [searchParams, isOpen]);
 
-  if (!isOpen) return null;
-
   return (
-    <div className="modal modal--active">
+    <div className={`modal${isOpen ? ' modal--active' : ''}`}>
       <div className="modal__backdrop" onClick={closeModal} />
       <div className="modal__content L4">
         <div className="modal__content__header">
           <div className="modal__content__header__left"></div>
-          <h4 className="heading heading--emphasized heading">Redirection to Merkl</h4>
+          <h4 className="heading heading--emphasized heading">You are about to leave Compound</h4>
           <div className="modal__content__header__right" onClick={closeModal}>
             <CircleClose />
           </div>
         </div>
-        <div className="modal__content__icon-holder">
-          <div className={`modal__content__icon asset asset--COMP`}></div>
+        <div className="modal__content__icons-holder">
+          <div className={`asset asset--COMP`} />
+          <div className="modal__content__icons-holder__arrows"></div>
+          <div className={`asset asset--MERKL`} />
         </div>
         <div className="modal__content__paragraph">
-          <p className="body">Text which explain redirect</p>
+          <p className="body">Your COMP rewards are available on Merkl. Login to your Merkl account to claim them.</p>
         </div>
         <div className="modal__content__action-row">
           <a
-            href={`https://app.merkl.xyz/users/${account}`}
-            className="button button--x-large button--borrow"
+            href={account ? `https://app.merkl.xyz/users/${account}` : `https://app.merkl.xyz/users/`}
+            className="button button--x-large button--supply"
             onClick={closeModal}
             target="_blank"
             rel="noreferrer"

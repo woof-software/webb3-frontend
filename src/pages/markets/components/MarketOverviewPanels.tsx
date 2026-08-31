@@ -5,8 +5,10 @@ import CircleMeter from '@components/CircleMeter';
 import DetailSheet from '@components/DetailSheet';
 import IconPair from '@components/IconPair';
 import { CaretDown, CheckMark } from '@components/Icons';
+import { Thunder } from '@components/Icons/Thunder';
 import PanelWithHeader from '@components/PanelWithHeader';
 import PanelWithNoHeader from '@components/PanelWithNoHeader';
+import Tooltip from '@components/Tooltip';
 import { CHAINS, INACTIVE_CHAIN_IDS } from '@constants/chains';
 import { assetIconForAssetSymbol, iconNameForChainId } from '@helpers/assets';
 import { getMarketDescriptors } from '@helpers/markets';
@@ -257,12 +259,21 @@ const PanelRow = ({ marketSummary }: PanelRowProps) => {
   const netEarnAPR = getPercentage(marketSummary.supplyAPR);
   const netBorrowAPR = getPercentage(marketSummary.borrowAPR);
 
+  const boostedMarkets = [
+    '0xA17581A9E3356d9A858b789D68B4d866e593aE94',
+    '0x3Afdc9BCA9213A35503b077a6072F3D0d5AB0840',
+    '0xc3d688B66703497DAA19211EEdff47f25384cdc3'
+  ]
+
+  const isBoostedMarket = boostedMarkets.includes(marketSummary.comet.address);
+
   const shortMarketName = () => {
     const name = assetSymbol === 'ETH' ? 'WETH' : assetSymbol;
     const chain = CHAINS[marketSummary.chainId].key;
 
     return `${name}-${chain}`.toLowerCase();
   };
+
   const marketPath = `/markets/${shortMarketName()}`;
 
   const navigate = useNavigate();
@@ -299,10 +310,104 @@ const PanelRow = ({ marketSummary }: PanelRowProps) => {
         </div>
       </td>
       <td>
-        <div className="body text-color--1 L3">{netEarnAPR}%</div>
+        <div className="market-overview-panels__apr-container">
+          <div className="body text-color--1 L3">{netEarnAPR}%</div>
+          {isBoostedMarket &&
+          <div className="market-overview-panels__apr-boost-container">
+            {+netEarnAPR > 0 &&
+              <Tooltip
+                width={226}
+                content={
+                  <div>
+                    <p className="market-overview-panels__tooltip-text market-overview-panels__tooltip-header">
+                      This APR is boosted by Compound
+                    </p>
+                    <div className="market-overview-panels__tooltip-row market-overview-panels__tooltip-row-with-margin">
+                      <div className="market-overview-panels__tooltip-row-start">
+                        <div className={`asset asset--${assetIconForAssetSymbol(iconNameForChainId(marketSummary.chainId))} market-overview-panels__tooltip-row-icon`}></div>
+                        <span className="market-overview-panels__tooltip-text market-overview-panels__tooltip-text-muted">Interest</span>
+                      </div>
+                      <span className="market-overview-panels__tooltip-text">1.00%</span>
+                    </div>
+
+                    <div className="market-overview-panels__tooltip-row">
+                      <div className="market-overview-panels__tooltip-row-start">
+                        <div className={`asset asset--${assetIconForAssetSymbol('COMP')} market-overview-panels__tooltip-row-icon`}></div>
+                        <span className="market-overview-panels__tooltip-text market-overview-panels__tooltip-text-muted">COMP</span>
+                      </div>
+                      <span className="market-overview-panels__tooltip-text">est. 0.38%</span>
+                    </div>
+
+                    <div className="divider"></div>
+
+                    <div className="market-overview-panels__tooltip-row">
+                      <div className="market-overview-panels__tooltip-row-start">
+                        <Thunder className="market-overview-panels__tooltip-row-icon"/>
+                        <span className="market-overview-panels__tooltip-text market-overview-panels__tooltip-text-muted">Net Earn APR</span>
+                      </div>
+                      <span className="market-overview-panels__tooltip-text">1.38 %</span>
+                    </div>
+                  </div>
+                }
+              >
+                <span>
+                  <Thunder className="market-overview-panels__apr-container-icon"/>
+                </span>
+              </Tooltip>
+            }
+          </div>
+          }
+        </div>
       </td>
       <td>
-        <div className="body text-color--1 L3">{netBorrowAPR}%</div>
+        <div className="market-overview-panels__apr-container">
+          <div className="body text-color--1 L3">{netBorrowAPR}%</div>
+          {isBoostedMarket &&
+          <div className="market-overview-panels__apr-boost-container">
+            {+netBorrowAPR > 0 &&
+              <Tooltip
+                width={226}
+                content={
+                  <div>
+                    <p className="market-overview-panels__tooltip-text market-overview-panels__tooltip-header">
+                      This APR is boosted by Compound
+                    </p>
+                    <div className="market-overview-panels__tooltip-row market-overview-panels__tooltip-row-with-margin">
+                      <div className="market-overview-panels__tooltip-row-start">
+                        <div className={`asset asset--${assetIconForAssetSymbol(iconNameForChainId(marketSummary.chainId))} market-overview-panels__tooltip-row-icon`}></div>
+                        <span className="market-overview-panels__tooltip-text market-overview-panels__tooltip-text-muted">Interest</span>
+                      </div>
+                      <span className="market-overview-panels__tooltip-text">1.00%</span>
+                    </div>
+
+                    <div className="market-overview-panels__tooltip-row">
+                      <div className="market-overview-panels__tooltip-row-start">
+                        <div className={`asset asset--${assetIconForAssetSymbol('COMP')} market-overview-panels__tooltip-row-icon`}></div>
+                        <span className="market-overview-panels__tooltip-text market-overview-panels__tooltip-text-muted">COMP</span>
+                      </div>
+                      <span className="market-overview-panels__tooltip-text">est. 0.11%</span>
+                    </div>
+
+                    <div className="divider"></div>
+
+                    <div className="market-overview-panels__tooltip-row">
+                      <div className="market-overview-panels__tooltip-row-start">
+                        <Thunder className="market-overview-panels__tooltip-row-icon"/>
+                        <span className="market-overview-panels__tooltip-text market-overview-panels__tooltip-text-muted">Net Borrow APR</span>
+                      </div>
+                      <span className="market-overview-panels__tooltip-text">1.11 %</span>
+                    </div>
+                  </div>
+                }
+              >
+                <span>
+                  <Thunder className="market-overview-panels__apr-container-icon"/>
+                </span>
+              </Tooltip>
+            }
+          </div>
+          }
+        </div>
       </td>
       <td>
         <div className="body text-color--1 L3">
