@@ -49,7 +49,7 @@ export const RedirectModal = ({ web3 }: RedirectModalProps) => {
           <div className={`asset asset--MERKL`} />
         </div>
         <div className="modal__content__paragraph">
-          <p className="body">Your COMP rewards are available on Merkl. Login to your Merkl account to claim them.</p>
+          <p className="body">Your COMP rewards are available on Merkl. Log in to your Merkl account to claim them.</p>
         </div>
         <div className="modal__content__action-row">
           <a
