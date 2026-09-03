@@ -338,7 +338,7 @@ const PanelRow = ({ marketSummary, rewardsAPRs }: PanelRowProps) => {
       <td>
         <div className="market-overview-panels__utilization-container">
           <CircleMeter percentageFill={utilization.toString()} />
-          <div className="body text-color--1 L3">{utilization}%</div>
+          <div className="body text-color--1 L3">{utilization}</div>
         </div>
       </td>
       <td>
