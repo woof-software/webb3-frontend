@@ -1,5 +1,23 @@
+type MarketConfig = {
+  comet: string;
+  borrowAPR: bigint;
+  supplyAPR: bigint;
+  borrowRewardsAPR: bigint;
+  supplyRewardsAPR: bigint;
+  supplySpeed: bigint;
+  borrowSpeed: bigint;
+  isBoosted?: boolean;
+};
 
-export const REWARDS = [
+type MarketsConfig = Array<
+  [
+    chainId: number,
+    markets: MarketConfig[],
+  ]
+>;
+
+
+export const MARKETS_CONFIG: MarketsConfig = [
   [
     1,
     [
@@ -254,6 +272,8 @@ export const REWARDS = [
     [
       {
         comet: "0x8D38A3d6B3c3B7d96D6536DA7Eef94A9d7dbC991",
+        borrowAPR: 0n,
+        supplyAPR: 0n,
         borrowRewardsAPR: 0n,
         supplyRewardsAPR: 0n,
         supplySpeed: 2979166666666n,
@@ -261,6 +281,8 @@ export const REWARDS = [
       },
       {
         comet: "0x60F2058379716A64a7A5d29219397e79bC552194",
+        borrowAPR: 0n,
+        supplyAPR: 0n,
         borrowRewardsAPR: 0n,
         supplyRewardsAPR: 0n,
         supplySpeed: 2979166666666n,

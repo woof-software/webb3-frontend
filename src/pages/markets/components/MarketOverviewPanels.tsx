@@ -13,11 +13,16 @@ import { CHAINS, INACTIVE_CHAIN_IDS } from '@constants/chains';
 import RewardsStateContext from '@contexts/RewardsStateContext';
 import { assetIconForAssetSymbol, iconNameForChainId } from '@helpers/assets';
 import { getMarketDescriptors } from '@helpers/markets';
-import { BASE_FACTOR, formatRateFactor, formatValueInDollars, PRICE_PRECISION } from '@helpers/numbers';
+import { formatRateFactor, formatValueInDollars, PRICE_PRECISION } from '@helpers/numbers';
 import useOnClickOutside from '@hooks/useOnClickOutside';
 
 import { LatestMarketSummaries, MarketSummary } from '../../../types';
-import { getNetBorrowAPR, getNetSupplyAPR, getRewardsAPRs } from '../../markets/helpers/getNetAprs';
+import {
+  getContextRewardsAPRs, getMarketsConfigForChain,
+  getNetBorrowAPR,
+  getNetSupplyAPR,
+  MarketConfigEntry
+} from '../helpers/getMarketsInfo';
 
 const SORT_BY_OPTIONS = [
   'Utilization',
@@ -217,18 +222,17 @@ type PanelProps = {
   marketSummaries: LatestMarketSummaries;
 };
 
-const BOOSTED_MARKETS = [
-  '0xA17581A9E3356d9A858b789D68B4d866e593aE94',
-  '0x3Afdc9BCA9213A35503b077a6072F3D0d5AB0840',
-  '0xc3d688B66703497DAA19211EEdff47f25384cdc3'
-]
-
 const Panel = ({ chainId, marketSummaries }: PanelProps) => {
   const chainName = CHAINS[chainId].name;
   const rewards = useContext(RewardsStateContext);
 
-  const rewardsAPRs = useMemo(
-    () => getRewardsAPRs(rewards, chainId, BOOSTED_MARKETS),
+  const marketsConfigByAddress = useMemo(
+    () => getMarketsConfigForChain(chainId),
+    [chainId],
+  );
+
+  const contextRewardsAPRsByAddress = useMemo(
+    () => getContextRewardsAPRs(rewards, chainId),
     [rewards, chainId],
   );
 
@@ -248,11 +252,13 @@ const Panel = ({ chainId, marketSummaries }: PanelProps) => {
               <TableHead />
               <tbody>
                 {marketSummaries.map((marketSummary) => {
+                  const address = marketSummary.comet.address.toLowerCase();
                   return <PanelRow
                     key={marketSummary.comet.address}
                     marketSummary={marketSummary}
-                    rewardsAPRs={rewardsAPRs[marketSummary.comet.address]}
-                  />;
+                    marketConfig={marketsConfigByAddress[address]}
+                    contextRewardsAPRs={contextRewardsAPRsByAddress[address]}
+                  />
                 })}
               </tbody>
             </table>
@@ -265,39 +271,56 @@ const Panel = ({ chainId, marketSummaries }: PanelProps) => {
 
 type PanelRowProps = {
   marketSummary: MarketSummary;
-  rewardsAPRs?: { earnRewardsAPR: bigint; borrowRewardsAPR: bigint };
+  marketConfig?: MarketConfigEntry;
+  contextRewardsAPRs?: { earnRewardsAPR: bigint; borrowRewardsAPR: bigint };
 };
 
-const PanelRow = ({ marketSummary, rewardsAPRs }: PanelRowProps) => {
+const PanelRow = ({ marketSummary, marketConfig, contextRewardsAPRs }: PanelRowProps) => {
   const [assetSymbol, chainName, assetName] = getMarketDescriptors(marketSummary.comet.address, marketSummary.chainId);
 
   const utilization = formatRateFactor(marketSummary.utilization);
 
-  const netEarnAPR = formatRateFactor(marketSummary.supplyAPR);
-  const netBorrowAPR = formatRateFactor(marketSummary.borrowAPR);
+  let netEarnAPR: string;
+  let netBorrowAPR: string;
+  let interestEarnAPR: string | undefined;
+  let interestBorrowAPR: string | undefined;
+  let compEarnAPR: string | undefined;
+  let compBorrowAPR: string | undefined;
+  let isBoostedMarket = false;
 
-  let interestEarnAPR;
-  let interestBorrowAPR;
-  let compEarnAPR;
-  let compBorrowAPR;
+  if (marketConfig) {
+    interestEarnAPR = formatRateFactor(marketConfig.supplyAPR);
+    interestBorrowAPR = formatRateFactor(marketConfig.borrowAPR);
 
-  if (rewardsAPRs) {
+    compEarnAPR = formatRateFactor(marketConfig.supplyRewardsAPR);
+    compBorrowAPR = formatRateFactor(marketConfig.borrowRewardsAPR);
+
+    netEarnAPR = formatRateFactor(getNetSupplyAPR(marketConfig.supplyAPR, marketConfig.supplyRewardsAPR));
+    netBorrowAPR = formatRateFactor(getNetBorrowAPR(marketConfig.borrowAPR, marketConfig.borrowRewardsAPR));
+
+    isBoostedMarket = marketConfig.isBoosted;
+  } else {
     // marketSummary.supplyAPR / borrowAPR already come from the backend as NET values
     // (interest + rewards for earn, interest - rewards for borrow) here is a revert calculation
-    const rawEarnAPR = marketSummary.supplyAPR > rewardsAPRs.earnRewardsAPR
-      ? marketSummary.supplyAPR - rewardsAPRs.earnRewardsAPR
-      : 0n;
-    const rawBorrowAPR = marketSummary.borrowAPR + rewardsAPRs.borrowRewardsAPR;
+    netEarnAPR = formatRateFactor(marketSummary.supplyAPR);
+    netBorrowAPR = formatRateFactor(marketSummary.borrowAPR);
 
-    interestEarnAPR = formatRateFactor(rawEarnAPR);
-    interestBorrowAPR = formatRateFactor(rawBorrowAPR);
+    if (contextRewardsAPRs) {
+      const rawEarnAPR = marketSummary.supplyAPR > contextRewardsAPRs.earnRewardsAPR
+        ? marketSummary.supplyAPR - contextRewardsAPRs.earnRewardsAPR
+        : 0n;
+      const rawBorrowAPR = marketSummary.borrowAPR + contextRewardsAPRs.borrowRewardsAPR;
 
-    compEarnAPR = formatRateFactor(rewardsAPRs.earnRewardsAPR);
-    compBorrowAPR = formatRateFactor(rewardsAPRs.borrowRewardsAPR);
+      interestEarnAPR = formatRateFactor(rawEarnAPR);
+      interestBorrowAPR = formatRateFactor(rawBorrowAPR);
+
+      compEarnAPR = formatRateFactor(contextRewardsAPRs.earnRewardsAPR);
+      compBorrowAPR = formatRateFactor(contextRewardsAPRs.borrowRewardsAPR);
+    }
   }
 
-  const isBoostedMarket = BOOSTED_MARKETS.includes(marketSummary.comet.address);
-  const isTooltipsShow = isBoostedMarket && rewardsAPRs !== undefined;
+  const hasRewardsData = marketConfig !== undefined || contextRewardsAPRs !== undefined;
+  const isTooltipsShow = isBoostedMarket && hasRewardsData;
 
   const shortMarketName = () => {
     const name = assetSymbol === 'ETH' ? 'WETH' : assetSymbol;

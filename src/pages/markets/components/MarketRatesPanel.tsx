@@ -3,7 +3,7 @@ import PanelWithHeader from '@components/PanelWithHeader';
 import { formatRateFactor } from '@helpers/numbers';
 import { Token, StateType } from '@types';
 
-import { getNetBorrowAPR, getNetSupplyAPR } from './../helpers/getNetAprs';
+import { getNetBorrowAPR, getNetSupplyAPR } from '../helpers/getMarketsInfo';
 
 type MarketRatesPanelLoading = [StateType.Loading];
 

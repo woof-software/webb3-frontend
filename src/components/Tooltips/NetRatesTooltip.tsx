@@ -2,7 +2,7 @@ import NetRatesGraph, { NetRatesGraphType } from '@components/NetRatesGraph';
 import { formatRateFactor } from '@helpers/numbers';
 import { Token } from '@types';
 
-import { getNetBorrowAPR, getNetSupplyAPR } from '../../pages/markets/helpers/getNetAprs';
+import { getNetBorrowAPR, getNetSupplyAPR } from '../../pages/markets/helpers/getMarketsInfo';
 
 export enum NetRatesTooltipView {
   Borrow = 'borrow',
