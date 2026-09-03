@@ -1,7 +1,7 @@
 import { MARKETS_CONFIG } from '@constants/marketsConfig';
 import { RewardsState } from '@types';
 
-const DYNAMIC_SOURCED_CHAIN_IDS = new Set([5000, 59144]); // Mantle, Linea
+export const DYNAMIC_SOURCED_CHAIN_IDS = new Set([5000, 59144]); // Mantle, Linea
 
 export type MarketConfigEntry = {
   supplyAPR: bigint;

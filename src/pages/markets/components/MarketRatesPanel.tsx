@@ -3,13 +3,20 @@ import PanelWithHeader from '@components/PanelWithHeader';
 import { formatRateFactor } from '@helpers/numbers';
 import { Token, StateType } from '@types';
 
-import { getNetBorrowAPR, getNetSupplyAPR } from '../helpers/getMarketsInfo';
+import {
+  DYNAMIC_SOURCED_CHAIN_IDS,
+  getMarketsConfigForChain,
+  getNetBorrowAPR,
+  getNetSupplyAPR,
+} from '../helpers/getMarketsInfo';
 
 type MarketRatesPanelLoading = [StateType.Loading];
 
 type MarketRatesPanelHydrated = [
   StateType.Hydrated,
   {
+    chainId: number;
+    marketAddress: string;
     borrowAPR: bigint;
     borrowRewardsAPR?: bigint;
     earnAPR: bigint;
@@ -28,7 +35,7 @@ type PanelContent = {
   rewardsAsset?: Token;
 };
 
-const defaultPanelContent = {
+const defaultPanelContent: PanelContent = {
   borrowAPR: 0n,
   borrowRewardsAPR: undefined,
   earnAPR: 0n,
@@ -40,9 +47,27 @@ function getMarketRatesPanelContent(state: MarketRatesPanelState): PanelContent 
   const panelState = state[0];
   if (panelState === StateType.Loading) {
     return defaultPanelContent;
-  } else {
-    return state[1];
   }
+
+  const { chainId, marketAddress, borrowAPR, borrowRewardsAPR, earnAPR, earnRewardsAPR, rewardsAsset } = state[1];
+
+  if (DYNAMIC_SOURCED_CHAIN_IDS.has(chainId)) {
+    return { borrowAPR, borrowRewardsAPR, earnAPR, earnRewardsAPR, rewardsAsset };
+  }
+
+  const staticEntry = getMarketsConfigForChain(chainId)[marketAddress.toLowerCase()];
+
+  if (!staticEntry) {
+    return { borrowAPR, borrowRewardsAPR, earnAPR, earnRewardsAPR, rewardsAsset };
+  }
+
+  return {
+    borrowAPR: staticEntry.borrowAPR,
+    earnAPR: staticEntry.supplyAPR,
+    borrowRewardsAPR: staticEntry.borrowRewardsAPR ?? undefined,
+    earnRewardsAPR: staticEntry.supplyRewardsAPR ?? undefined,
+    rewardsAsset,
+  };
 }
 
 const MarketRatesPanel = ({ state }: { state: MarketRatesPanelState }) => {
@@ -92,8 +117,8 @@ const LoadingView = () => {
 };
 
 const MarketRatesPanelView = ({ borrowAPR, borrowRewardsAPR, earnAPR, earnRewardsAPR, rewardsAsset }: PanelContent) => {
-  const netBorrowAPR = getNetBorrowAPR(borrowAPR, borrowRewardsAPR)
-  const netSupplyAPR = getNetSupplyAPR(earnAPR, earnRewardsAPR)
+  const netBorrowAPR = getNetBorrowAPR(borrowAPR, borrowRewardsAPR);
+  const netSupplyAPR = getNetSupplyAPR(earnAPR, earnRewardsAPR);
 
   const netBorrowRateGraph = (
     <NetRatesGraph

@@ -170,6 +170,8 @@ const Market = ({ web3 }: MarketsProps) => {
         state={[
           StateType.Hydrated,
           {
+            chainId: market.chainInformation.chainId,
+            marketAddress: market.marketAddress,
             borrowAPR,
             borrowRewardsAPR,
             earnAPR,
@@ -308,7 +310,7 @@ const Market = ({ web3 }: MarketsProps) => {
         </section>
         {marketStatsPanel}
         {v2Markets ? marketOverviewPanel : marketRatesPanel}
-        {/*{interestRateModelPanel}*/}
+        {interestRateModelPanel}
         {assetRows}
         {additionalMarketDataPanel}
       </main>
