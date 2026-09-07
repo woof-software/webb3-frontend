@@ -25,6 +25,7 @@ import {
   Currency,
   PendingAction,
   StateType,
+  Token,
   TokenWithAccountState,
   Transaction,
 } from '@types';
@@ -43,6 +44,7 @@ type MastheadHydrated = [
     baseAsset: BaseAssetWithAccountState;
     baseAssetPost: BaseAssetWithAccountState;
     borrowAPR: bigint;
+    borrowRewardsAPR: bigint | undefined;
     collateralAssets: TokenWithAccountState[];
     collateralValue: bigint;
     collateralValuePost: bigint;
@@ -54,6 +56,7 @@ type MastheadHydrated = [
     liquidationCapacity: bigint;
     liquidationCapacityPost: bigint;
     pendingAction?: PendingAction;
+    rewardsAsset?: Token;
     theme: Theme;
     transaction?: Transaction;
     onSupplyAction: (pendingAction?: PendingAction) => void;
@@ -211,6 +214,7 @@ function getContent(state: MastheadState): Content {
     baseAsset,
     baseAssetPost,
     borrowAPR,
+    borrowRewardsAPR,
     collateralAssets,
     collateralValue,
     collateralValuePost,
@@ -222,6 +226,7 @@ function getContent(state: MastheadState): Content {
     liquidationCapacity,
     liquidationCapacityPost,
     pendingAction,
+    rewardsAsset,
     theme,
     transaction,
     onSupplyAction,
@@ -263,6 +268,7 @@ function getContent(state: MastheadState): Content {
 
   const netRatesTooltipProps = {
     borrowAPR,
+    borrowRewardsAPR,
     earnAPR,
     earnRewardsAPR,
     institutionalBoostAPR,
@@ -319,7 +325,7 @@ function getContent(state: MastheadState): Content {
           <div className="masthead__overview-details" onClick={() => setRatesDetailActive(true)}>
             <span className="meta text-color--3"> &#64; </span>
             <div className="masthead__overview-details__net-rate">
-              <span className="meta">{formatRateFactor(borrowAPR)} Net APR</span>
+              <span className="meta">{formatRateFactor(borrowAPR - (borrowRewardsAPR || 0n))} Net APR</span>
               <HoverUnder className="hover-under" long={true} theme={theme} />
             </div>
           </div>

@@ -2,6 +2,7 @@ import { ReactNode, useContext, useEffect, useState } from 'react';
 
 import { isUnwrappedCollateralAsset } from '@constants/chains';
 import { getActionQueueContext } from '@contexts/ActionQueueContext';
+import RewardsStateContext from '@contexts/RewardsStateContext';
 import { getSelectedMarketContext } from '@contexts/SelectedMarketContext';
 import type { Web3 } from '@contexts/Web3Context';
 import {
@@ -16,6 +17,7 @@ import { institutionalSupplyRewards } from '@helpers/institutionalRates';
 import { institutionalWhitelistStatus } from '@helpers/institutionalWhitelist';
 import { DEFAULT_MARKET } from '@helpers/markets';
 import { MAX_UINT256 } from '@helpers/numbers';
+import { getRewardsForSelectedMarket } from '@helpers/rewards';
 import { isStETH, isWrappedStETH } from '@helpers/steth';
 import { Theme } from '@hooks/useThemeManager';
 import { AddTransaction } from '@hooks/useTransactionManager';
@@ -77,6 +79,7 @@ const Home = ({
     }
   }, [selectedMarket[0], selectedMarket[1]?.baseAsset?.symbol]);
 
+  const rewards = useContext(RewardsStateContext);
   const writeState = useWriteCometState(web3, addTransaction);
   const { addOrUpdateAction, clearActions, getActions, getPendingAction, removeAction, setPendingAction } = useContext(
     getActionQueueContext()
@@ -91,8 +94,14 @@ const Home = ({
   let mastheadState: MastheadState;
   let positionCardState: PositionCardState;
   let isBulkerAllowed = false;
-  // Institutional USDC-terms rewards; set below once market state is loaded
-  let earnRewardsAPR: bigint | undefined, rewardsAsset: Token | undefined;
+  let borrowRewardsAPR: bigint | undefined, earnRewardsAPR: bigint | undefined, rewardsAsset: Token | undefined;
+  const rewardsState = getRewardsForSelectedMarket(rewards, selectedMarket);
+  if (rewardsState !== undefined) {
+    borrowRewardsAPR = rewardsState.borrowRewardsAPR;
+    earnRewardsAPR = rewardsState.earnRewardsAPR;
+    rewardsAsset = rewardsState.rewardAsset;
+  }
+
   const whitelistStatus = institutionalWhitelistStatus(web3.read.account);
 
   if (cometState === StateType.Loading) {
@@ -120,6 +129,7 @@ const Home = ({
       {
         baseAsset,
         borrowAPR,
+        borrowRewardsAPR,
         earnAPR,
         earnRewardsAPR,
         institutionalWhitelistStatus: whitelistStatus,
@@ -140,7 +150,7 @@ const Home = ({
       baseAsset,
       state[1].totalBaseSupplyUsd,
     ));
-    const actions = getActions(baseAsset, collateralAssets);
+    const actions = getActions(baseAsset, collateralAssets, rewards);
     const actionsForCompare = compare ? [] : actions;
     const updatedDataPostActions = calculateUpdatedBalances(baseAsset, collateralAssets, actionsForCompare);
     const pendingAction = getPendingAction(updatedDataPostActions.baseAsset, updatedDataPostActions.collateralAssets);
@@ -226,6 +236,15 @@ const Home = ({
             submitSingleActionCallback
           );
           break;
+        case ActionType.ClaimRewards:
+          writeState.claimReward(
+            singleAction[3],
+            assetInfo.address,
+            `Claim Rewards`,
+            estimatedGasLimit,
+            submitSingleActionCallback
+          );
+          break;
         default:
           throw new Error(`Cannot execute ActionType ${actionType} as a single action`);
       }
@@ -252,6 +271,7 @@ const Home = ({
         baseAsset,
         baseAssetPost: updatedDataPostActions.baseAsset,
         borrowAPR,
+        borrowRewardsAPR,
         collateralAssets,
         collateralValue,
         collateralValuePost: updatedDataPostActions.collateralValue,
@@ -263,6 +283,7 @@ const Home = ({
         liquidationCapacity,
         liquidationCapacityPost: updatedDataPostActions.liquidationCapacity,
         pendingAction,
+        rewardsAsset,
         theme,
         transaction: blockingTransaction,
         onWithdrawAction: (pendingAction?: PendingAction) => {
@@ -284,6 +305,7 @@ const Home = ({
         approvalTransactions,
         baseAsset,
         borrowAPR,
+        borrowRewardsAPR,
         baseAssetPost: updatedDataPostActions.baseAsset,
         collateralAssets,
         collateralValue: collateralValue,
@@ -403,7 +425,7 @@ const Home = ({
       .sort(sortTokensAlphabetically);
 
     assetRows = [...positiveBalanceAssets, ...zeroProtocolBalanceAssets, ...zeroBalanceAssets].map((token, index) => {
-      const action = actions.find((action) => isSameToken(action[1], token));
+      const action = actions.find((action) => action[0] !== ActionType.ClaimRewards && isSameToken(action[1], token));
       let displayAction: Action | undefined;
       if (action !== undefined) {
         let actionAmount = action[2];
@@ -461,7 +483,7 @@ const Home = ({
     });
 
     otherAssetRows = unwrappedAdditionalCollateralAssets.map((token, index) => {
-      const action = actions.find((action) => isSameToken(action[1], token));
+      const action = actions.find((action) => action[0] !== ActionType.ClaimRewards && isSameToken(action[1], token));
       let displayAction: Action | undefined;
       if (action !== undefined) {
         const actionAmount = action[2];
@@ -550,6 +572,8 @@ const Home = ({
 
 function getPendingActionFromAction(action: Action, baseAsset: BaseAssetWithAccountState): PendingAction | undefined {
   switch (action[0]) {
+    case ActionType.ClaimRewards:
+      return undefined;
     case ActionType.WithdrawCollateral:
       return [action[0], action[1], baseAsset, action[2]];
     default:

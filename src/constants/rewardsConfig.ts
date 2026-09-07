@@ -19,20 +19,20 @@ export const REWARDS_CONFIG: RewardsConfig = [
     [
       {
         comet: "0xc3d688B66703497DAA19211EEdff47f25384cdc3",
-        borrowRewardsAPR: 1379905919404118n,
-        supplyRewardsAPR: 1243544116605595n,
+        borrowRewardsAPR: 2579905919404118n,
+        supplyRewardsAPR: 2043544116605595n,
         isBoosted: true,
       },
       {
         comet: "0xA17581A9E3356d9A858b789D68B4d866e593aE94",
-        borrowRewardsAPR: 1840730861894757n,
-        supplyRewardsAPR: 682367647857447n,
+        borrowRewardsAPR: 2540730861894757n,
+        supplyRewardsAPR: 802367647857447n,
         isBoosted: true,
       },
       {
         comet: "0x3Afdc9BCA9213A35503b077a6072F3D0d5AB0840",
-        borrowRewardsAPR: 1682069454439632n,
-        supplyRewardsAPR: 1351220117801404n,
+        borrowRewardsAPR: 2382069454439632n,
+        supplyRewardsAPR: 1851220117801404n,
         isBoosted: true,
       },
       {

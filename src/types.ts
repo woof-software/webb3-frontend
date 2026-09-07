@@ -65,11 +65,13 @@ export type TokenWithMarketState = TokenWithState & {
 export type CTokenWithMarketState = {
   borrowAPR: string;
   borrowCap: string;
+  borrowRewardsAPR: string;
   collateralFactor: string;
   name: string;
   price: string;
   reserves: string;
   supplyAPR: string;
+  supplyRewardsAPR: string;
   symbol: string;
   totalBorrow: string;
   totalSupply: string;
@@ -283,6 +285,23 @@ export type VoteAccountState = VoteNoAccountState & {
   voteReceipts: Map<bigint, VoteReceipt>;
 };
 
+export type RewardsTokenState = {
+  chainId: number;
+  comet: string;
+  cometRewards: string;
+  baseAsset: BaseAsset;
+  rewardAsset: Token & { price: bigint };
+  earnRewardsAPR: bigint;
+  borrowRewardsAPR: bigint;
+};
+
+export type AccountRewardsState = RewardsTokenState & {
+  amountOwed: bigint;
+  walletBalance: bigint;
+  supplyBalance: bigint;
+  borrowBalance: bigint;
+};
+
 export interface ChainInformation {
   chainId: number;
   url: string;
@@ -422,6 +441,16 @@ export type VoteStateNoWallet = [StateType.NoWallet, VoteNoAccountState];
 export type VoteStateHydrated = [StateType.Hydrated, VoteAccountState];
 export type VoteState = VoteStateLoading | VoteStateNoWallet | VoteStateHydrated;
 
+export type RewardStateInfo = [string, { chainInformation: ChainInformation; rewardsStates: RewardsTokenState[] }];
+export type RewardAccountStateInfo = [
+  string,
+  { chainInformation: ChainInformation; rewardsStates: AccountRewardsState[] }
+];
+export type RewardsStateLoading = [StateType.Loading];
+export type RewardsStateNoWallet = [StateType.NoWallet, undefined | RewardStateInfo[]];
+export type RewardsStateHydrated = [StateType.Hydrated, undefined | RewardAccountStateInfo[]];
+export type RewardsState = RewardsStateLoading | RewardsStateNoWallet | RewardsStateHydrated;
+
 export type ExtensionsAccountEnableState = {
   enabled: string[];
   notEnabled: string[];
@@ -432,6 +461,7 @@ export type ExtensionsEnableState = ExtensionsEnableStateLoading | ExtensionsEna
 
 export enum ActionType {
   Borrow = 'borrow',
+  ClaimRewards = 'claim',
   Repay = 'repay',
   Supply = 'supply',
   SupplyCollateral = 'supply-collateral',
@@ -450,6 +480,7 @@ export type PendingAction =
 export type Action =
   | [BaseAssetAction, BaseAssetWithAccountState, bigint]
   | [CollateralAction, TokenWithAccountState, bigint]
+  | [ActionType.ClaimRewards, Token & { price: bigint }, bigint, AccountRewardsState];
 
 export type ActionQueue = {
   addOrUpdateAction: (action: Action) => void;
@@ -458,6 +489,7 @@ export type ActionQueue = {
   getActions: (
     baseAsset: BaseAssetWithAccountState,
     collateralAssets: TokenWithAccountState[],
+    rewardsState: RewardsState
   ) => Action[];
   getPendingAction: (
     baseAsset: BaseAssetWithAccountState,

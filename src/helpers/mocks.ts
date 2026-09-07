@@ -144,6 +144,7 @@ const baseAssetWithState: BaseAssetWithState = {
 const mockProtocolState: ProtocolState = {
   borrowAPR,
   earnAPR,
+  totalBaseSupplyUsd: 1_000_000n * 10n ** 8n,
   baseAsset: baseAssetWithState,
   collateralAssets: [LINK, COMP, DAI, ETH, UNI, WBTC],
 };
@@ -196,6 +197,7 @@ const collateralAssetsForBorrow = [
 const mockProtocolAndAccountStateBorrowing: ProtocolAndAccountState = {
   borrowAPR,
   earnAPR,
+  totalBaseSupplyUsd: 1_000_000n * 10n ** 8n,
   baseAsset: {
     ...baseAssetWithState,
     bulkerAllowance: MAX_UINT256,
@@ -270,6 +272,7 @@ const collateralAssetsForSupply = [
 const mockProtocolAndAccountStateSupply: ProtocolAndAccountState = {
   borrowAPR,
   earnAPR,
+  totalBaseSupplyUsd: 1_000_000n * 10n ** 8n,
   baseAsset: {
     ...baseAssetWithState,
     bulkerAllowance: MAX_UINT256,
@@ -337,6 +340,7 @@ const collateralAssetsForMarkets = [
 const mockProtocolMarketState: ProtocolAndMarketsState = {
   borrowAPR,
   earnAPR,
+  totalBaseSupplyUsd: 1_000_000n * 10n ** 8n,
   baseAsset: baseAssetWithState,
   collateralAssets: collateralAssetsForMarkets,
   cometAddress: '0xcC861650dc6f25cB5Ab4185d4657a70c923FDb27',

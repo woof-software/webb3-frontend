@@ -132,6 +132,8 @@ const MarketRatesPanelView = ({
     <NetRatesGraph
       state={NetRatesGraphType.Borrow}
       borrowAPR={borrowAPR}
+      borrowRewardsAPR={borrowRewardsAPR}
+      rewardsAsset={rewardsAsset}
     />
   );
 

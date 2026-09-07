@@ -406,6 +406,12 @@ const PanelRow = ({ marketSummary, rewardConfig, contextRewardsAPRs, institution
       <td>
         <div className="market-overview-panels__apr-container">
           <div className="body text-color--1 L3">{netEarnAPR}</div>
+          {(marketSummary.institutionalSupplyRewardsAPR !== undefined && !isBoostedMarket) && (
+            <InstitutionalRateInfo
+              marketSummary={marketSummary}
+              whitelistStatus={institutionalWhitelistStatus}
+            />
+          )}
           {isTooltipsShow &&
             <div className="market-overview-panels__apr-boost-container">
               <Tooltip
@@ -440,12 +446,6 @@ const PanelRow = ({ marketSummary, rewardConfig, contextRewardsAPRs, institution
                         <span className="market-overview-panels__tooltip-text market-overview-panels__tooltip-text-muted">Net Earn APR</span>
                       </div>
                       <span className="market-overview-panels__tooltip-text">{netEarnAPR}</span>
-                      <div className="body text-color--1 L3 market-overview-panels__net-earn-apr">
-                        {netEarnAPR}%
-                        {marketSummary.institutionalSupplyRewardsAPR !== undefined && (
-                          <InstitutionalRateInfo marketSummary={marketSummary} whitelistStatus={institutionalWhitelistStatus} />
-                        )}
-                      </div>
                     </div>
                   </div>
                 }

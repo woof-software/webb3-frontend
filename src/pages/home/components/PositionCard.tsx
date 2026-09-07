@@ -246,13 +246,15 @@ function getContent(state: PositionCardState, market: MarketData, currency: Curr
     return defaultPanelState;
   }
 
-  const { borrowAPR, borrowRewardsAPR, earnAPR, earnRewardsAPR, institutionalWhitelistStatus, theme } = state[1];
+  const { borrowAPR, borrowRewardsAPR, earnAPR, earnRewardsAPR, rewardsAsset, institutionalWhitelistStatus, theme } = state[1];
 
   const ratesTooltipContent = (
     <NetRatesTooltip
       borrowAPR={borrowAPR}
+      borrowRewardsAPR={borrowRewardsAPR}
       earnAPR={earnAPR}
       earnRewardsAPR={earnRewardsAPR}
+      rewardsAsset={rewardsAsset}
       institutionalBoostAPR={market?.institutional ? earnRewardsAPR : undefined}
       institutionalWhitelistStatus={institutionalWhitelistStatus}
       view={NetRatesTooltipView.All}

@@ -31,7 +31,7 @@ const NetRatesGraph = (state: NetRatesGraphState) => {
   const { rewardsAsset } = state;
   switch (state.state) {
     case NetRatesGraphType.Borrow: {
-      const { borrowAPR, borrowRewardsAPR } = state;
+      const { borrowAPR, borrowRewardsAPR = 0n } = state;
       const netBorrowAPR = getNetBorrowAPR(borrowAPR, borrowRewardsAPR)
 
       return (
@@ -109,7 +109,7 @@ const NetRatesGraph = (state: NetRatesGraphState) => {
       );
     }
     case NetRatesGraphType.Earn: {
-      const { earnAPR, earnRewardsAPR } = state;
+      const { earnAPR, earnRewardsAPR = 0n } = state;
       const netSupplyAPR = getNetSupplyAPR(earnAPR, earnRewardsAPR)
 
       //TODO: Here the net-rates-graph__graph has 2 top level divs :(
