@@ -12,7 +12,8 @@ import Tooltip from '@components/Tooltip';
 import { CHAINS, INACTIVE_CHAIN_IDS } from '@constants/chains';
 import RewardsStateContext from '@contexts/RewardsStateContext';
 import { assetIconForAssetSymbol, iconNameForChainId } from '@helpers/assets';
-import { getMarketDescriptors } from '@helpers/markets';
+import { InstitutionalWhitelistStatus } from '@helpers/institutionalWhitelist';
+import { getMarket, getMarketDescriptors } from '@helpers/markets';
 import { formatRateFactor, formatValueInDollars, PRICE_PRECISION } from '@helpers/numbers';
 import useOnClickOutside from '@hooks/useOnClickOutside';
 
@@ -23,6 +24,8 @@ import {
   getNetSupplyAPR,
   RewardConfigEntry
 } from '../helpers/getRewardsData';
+
+import InstitutionalRateInfo from './InstitutionalRateInfo';
 
 const SORT_BY_OPTIONS = [
   'Utilization',
@@ -36,8 +39,9 @@ const SORT_ORDER_OPTIONS = ['Ascending', 'Descending'] as const;
 
 type MarketOverviewPanelsProps = {
   latestMarketSummaries: LatestMarketSummaries;
+  institutionalWhitelistStatus?: InstitutionalWhitelistStatus;
 };
-const MarketOverviewPanels = ({ latestMarketSummaries }: MarketOverviewPanelsProps) => {
+const MarketOverviewPanels = ({ latestMarketSummaries, institutionalWhitelistStatus }: MarketOverviewPanelsProps) => {
   const [sortBy, setSortBy] = useState<(typeof SORT_BY_OPTIONS)[number]>('Utilization');
   const [sortOrder, setSortOrder] = useState<(typeof SORT_ORDER_OPTIONS)[number]>('Ascending');
   const [sortByDropdownActive, setSortByDropdownActive] = useState<boolean>(false);
@@ -143,7 +147,12 @@ const MarketOverviewPanels = ({ latestMarketSummaries }: MarketOverviewPanelsPro
         return (
           <>
             {coreChainIds.map((chainId) => (
-              <Panel key={chainId} chainId={chainId} marketSummaries={marketSummariesByChain[chainId]} />
+              <Panel
+                key={chainId}
+                chainId={chainId}
+                marketSummaries={marketSummariesByChain[chainId]}
+                institutionalWhitelistStatus={institutionalWhitelistStatus}
+              />
             ))}
 
             {inactiveChainIds.length > 0 && (
@@ -161,7 +170,12 @@ const MarketOverviewPanels = ({ latestMarketSummaries }: MarketOverviewPanelsPro
 
             {showInactive &&
               inactiveChainIds.map((chainId) => (
-                <Panel key={chainId} chainId={chainId} marketSummaries={marketSummariesByChain[chainId]} />
+                <Panel
+                key={chainId}
+                chainId={chainId}
+                marketSummaries={marketSummariesByChain[chainId]}
+                institutionalWhitelistStatus={institutionalWhitelistStatus}
+              />
               ))}
           </>
         );
@@ -220,9 +234,10 @@ function Dropdown<T extends string>({ options, currentOption, active, setOption,
 type PanelProps = {
   chainId: number;
   marketSummaries: LatestMarketSummaries;
+  institutionalWhitelistStatus?: InstitutionalWhitelistStatus;
 };
 
-const Panel = ({ chainId, marketSummaries }: PanelProps) => {
+const Panel = ({ chainId, marketSummaries, institutionalWhitelistStatus }: PanelProps) => {
   const chainName = CHAINS[chainId].name;
   const rewards = useContext(RewardsStateContext);
 
@@ -243,6 +258,15 @@ const Panel = ({ chainId, marketSummaries }: PanelProps) => {
     </div>
   );
 
+  // Institutional markets are pinned above the rest of the network's markets, regardless of sort
+  const isInstitutional = (marketSummary: MarketSummary) =>
+    getMarket(marketSummary.chainId, marketSummary.comet.address)?.institutional === true;
+  const institutionalSummaries: MarketSummary[] = [];
+  const standardSummaries: MarketSummary[] = [];
+  for (const marketSummary of marketSummaries) {
+    (isInstitutional(marketSummary) ? institutionalSummaries : standardSummaries).push(marketSummary);
+  }
+
   return (
     <div className="market-overview-panels__tables-container">
       <PanelWithHeader header={headerWithLogo} className="assets-table-panel grid-column--12">
@@ -251,14 +275,30 @@ const Panel = ({ chainId, marketSummaries }: PanelProps) => {
             <table className="assets-table">
               <TableHead />
               <tbody>
-                {marketSummaries.map((marketSummary) => {
+                {institutionalSummaries.map((marketSummary) => {
+                  return (
+                    <PanelRow
+                      key={marketSummary.comet.address}
+                      marketSummary={marketSummary}
+                      institutionalWhitelistStatus={institutionalWhitelistStatus}
+                    />
+                  );
+                })}
+                {institutionalSummaries.length > 0 && standardSummaries.length > 0 && (
+                  <tr className="market-overview-panels__table-divider-row">
+                    <td colSpan={8}>
+                      <div className="divider"></div>
+                    </td>
+                  </tr>
+                )}
+                {standardSummaries.map((marketSummary) => {
                   const address = marketSummary.comet.address.toLowerCase();
-                  return <PanelRow
-                    key={marketSummary.comet.address}
-                    marketSummary={marketSummary}
+                  return <PanelRow 
+                    key={marketSummary.comet.address} 
+                    marketSummary={marketSummary} 
                     rewardConfig={marketsConfigByAddress[address]}
                     contextRewardsAPRs={contextRewardsAPRsByAddress[address]}
-                  />
+                  />;
                 })}
               </tbody>
             </table>
@@ -273,10 +313,13 @@ type PanelRowProps = {
   marketSummary: MarketSummary;
   rewardConfig?: RewardConfigEntry;
   contextRewardsAPRs?: { earnRewardsAPR: bigint; borrowRewardsAPR: bigint };
+  institutionalWhitelistStatus?: InstitutionalWhitelistStatus;
 };
 
-const PanelRow = ({ marketSummary, rewardConfig, contextRewardsAPRs }: PanelRowProps) => {
+const PanelRow = ({ marketSummary, rewardConfig, contextRewardsAPRs, institutionalWhitelistStatus }: PanelRowProps) => {
   const [assetSymbol, chainName, assetName] = getMarketDescriptors(marketSummary.comet.address, marketSummary.chainId);
+  const market = getMarket(marketSummary.chainId, marketSummary.comet.address);
+  const showNewBadge = market?.isNew === true;
 
   const utilization = formatRateFactor(marketSummary.utilization);
 
@@ -312,7 +355,7 @@ const PanelRow = ({ marketSummary, rewardConfig, contextRewardsAPRs }: PanelRowP
   const isTooltipsShow = isBoostedMarket && contextRewardsAPRs !== undefined;
 
   const shortMarketName = () => {
-    const name = assetSymbol === 'ETH' ? 'WETH' : assetSymbol;
+    const name = market?.slug ?? (assetSymbol === 'ETH' ? 'WETH' : assetSymbol);
     const chain = CHAINS[marketSummary.chainId].key;
 
     return `${name}-${chain}`.toLowerCase();
@@ -328,18 +371,25 @@ const PanelRow = ({ marketSummary, rewardConfig, contextRewardsAPRs }: PanelRowP
     scrollTo(0, 0);
   };
 
+  const rowModifier = market?.institutional ? ' market-overview-panels__table-row--institutional' : '';
+
   return (
     // The Link component doesn't work here because tr must be
     // a direct child of tbody and td must be a direct child of tr
-    <tr className="market-overview-panels__table-row" onClick={handleRowClick}>
+    <tr className={`market-overview-panels__table-row${rowModifier}`} onClick={handleRowClick}>
       <td>
         <div className="market-overview-panels__market-container">
           <IconPair
             className="icon-pair--reverse-draw"
             icon1={assetIconForAssetSymbol(assetSymbol)}
-            icon2={iconNameForChainId(marketSummary.chainId)}
+            icon2={market?.iconPair[0] ?? iconNameForChainId(marketSummary.chainId)}
           />
           <div className="market-overview-panels__asset-description-container">
+            {showNewBadge && (
+              <div className="L2 market-overview-panels__badges">
+                <span className="new-badge label label--secondary">New</span>
+              </div>
+            )}
             <AssetName assetName={assetName} />
             <div className="label text-color--2 L2">
               {assetSymbol} ∙ {chainName}
@@ -390,6 +440,12 @@ const PanelRow = ({ marketSummary, rewardConfig, contextRewardsAPRs }: PanelRowP
                         <span className="market-overview-panels__tooltip-text market-overview-panels__tooltip-text-muted">Net Earn APR</span>
                       </div>
                       <span className="market-overview-panels__tooltip-text">{netEarnAPR}</span>
+                      <div className="body text-color--1 L3 market-overview-panels__net-earn-apr">
+                        {netEarnAPR}%
+                        {marketSummary.institutionalSupplyRewardsAPR !== undefined && (
+                          <InstitutionalRateInfo marketSummary={marketSummary} whitelistStatus={institutionalWhitelistStatus} />
+                        )}
+                      </div>
                     </div>
                   </div>
                 }

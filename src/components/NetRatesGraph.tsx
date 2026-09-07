@@ -14,15 +14,15 @@ export enum NetRatesGraphType {
 type NetRatesBorrowGraphState = {
   state: NetRatesGraphType.Borrow;
   borrowAPR: bigint;
-  borrowRewardsAPR: bigint | undefined;
-  rewardsAsset: Token | undefined;
+  borrowRewardsAPR?: bigint;
+  rewardsAsset?: Token;
 };
 
 type NetRatesEarnGraphState = {
   state: NetRatesGraphType.Earn;
   earnAPR: bigint;
-  earnRewardsAPR: bigint | undefined;
-  rewardsAsset: Token | undefined;
+  earnRewardsAPR?: bigint;
+  rewardsAsset?: Token;
 };
 
 type NetRatesGraphState = NetRatesBorrowGraphState | NetRatesEarnGraphState;

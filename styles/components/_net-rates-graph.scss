@@ -26,6 +26,10 @@
     gap: 0.38rem;
     min-width: 5.4rem;
 
+    &__small {
+      width: 5.4rem;
+    }
+
     &__row {
       display: flex;
       justify-content: flex-end;
@@ -86,6 +90,7 @@
         width: 0.75rem;
         height: 0.75rem;
       }
+
     }
 
     .line-texture {
