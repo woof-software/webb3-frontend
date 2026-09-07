@@ -18,11 +18,11 @@ import useOnClickOutside from '@hooks/useOnClickOutside';
 
 import { LatestMarketSummaries, MarketSummary } from '../../../types';
 import {
-  getContextRewardsAPRs, getMarketsConfigForChain,
+  getContextRewardsAPRs, getRewardsConfigForChain,
   getNetBorrowAPR,
   getNetSupplyAPR,
-  MarketConfigEntry
-} from '../helpers/getMarketsInfo';
+  RewardConfigEntry
+} from '../helpers/getRewardsData';
 
 const SORT_BY_OPTIONS = [
   'Utilization',
@@ -227,7 +227,7 @@ const Panel = ({ chainId, marketSummaries }: PanelProps) => {
   const rewards = useContext(RewardsStateContext);
 
   const marketsConfigByAddress = useMemo(
-    () => getMarketsConfigForChain(chainId),
+    () => getRewardsConfigForChain(chainId),
     [chainId],
   );
 
@@ -256,7 +256,7 @@ const Panel = ({ chainId, marketSummaries }: PanelProps) => {
                   return <PanelRow
                     key={marketSummary.comet.address}
                     marketSummary={marketSummary}
-                    marketConfig={marketsConfigByAddress[address]}
+                    rewardConfig={marketsConfigByAddress[address]}
                     contextRewardsAPRs={contextRewardsAPRsByAddress[address]}
                   />
                 })}
@@ -271,56 +271,45 @@ const Panel = ({ chainId, marketSummaries }: PanelProps) => {
 
 type PanelRowProps = {
   marketSummary: MarketSummary;
-  marketConfig?: MarketConfigEntry;
+  rewardConfig?: RewardConfigEntry;
   contextRewardsAPRs?: { earnRewardsAPR: bigint; borrowRewardsAPR: bigint };
 };
 
-const PanelRow = ({ marketSummary, marketConfig, contextRewardsAPRs }: PanelRowProps) => {
+const PanelRow = ({ marketSummary, rewardConfig, contextRewardsAPRs }: PanelRowProps) => {
   const [assetSymbol, chainName, assetName] = getMarketDescriptors(marketSummary.comet.address, marketSummary.chainId);
 
   const utilization = formatRateFactor(marketSummary.utilization);
 
-  let netEarnAPR: string;
-  let netBorrowAPR: string;
+  let netEarnAPR: string | undefined;
+  let netBorrowAPR: string | undefined;
   let interestEarnAPR: string | undefined;
   let interestBorrowAPR: string | undefined;
   let compEarnAPR: string | undefined;
   let compBorrowAPR: string | undefined;
-  let isBoostedMarket = false;
 
-  if (marketConfig) {
-    interestEarnAPR = formatRateFactor(marketConfig.supplyAPR);
-    interestBorrowAPR = formatRateFactor(marketConfig.borrowAPR);
+  if (contextRewardsAPRs) {
+    const rawEarnAPR = marketSummary.supplyAPR > contextRewardsAPRs.earnRewardsAPR
+      ? marketSummary.supplyAPR - contextRewardsAPRs.earnRewardsAPR
+      : 0n;
+    const rawBorrowAPR = marketSummary.borrowAPR + contextRewardsAPRs.borrowRewardsAPR;
 
-    compEarnAPR = formatRateFactor(marketConfig.supplyRewardsAPR);
-    compBorrowAPR = formatRateFactor(marketConfig.borrowRewardsAPR);
+    interestEarnAPR = formatRateFactor(rawEarnAPR);
+    interestBorrowAPR = formatRateFactor(rawBorrowAPR);
 
-    netEarnAPR = formatRateFactor(getNetSupplyAPR(marketConfig.supplyAPR, marketConfig.supplyRewardsAPR));
-    netBorrowAPR = formatRateFactor(getNetBorrowAPR(marketConfig.borrowAPR, marketConfig.borrowRewardsAPR));
+    compEarnAPR = formatRateFactor(rewardConfig?.supplyRewardsAPR ?? 0n);
+    compBorrowAPR = formatRateFactor(rewardConfig?.borrowRewardsAPR ?? 0n);
 
-    isBoostedMarket = marketConfig.isBoosted;
-  } else {
-    // marketSummary.supplyAPR / borrowAPR already come from the backend as NET values
-    // (interest + rewards for earn, interest - rewards for borrow) here is a revert calculation
-    netEarnAPR = formatRateFactor(marketSummary.supplyAPR);
-    netBorrowAPR = formatRateFactor(marketSummary.borrowAPR);
+    netEarnAPR = formatRateFactor(
+      getNetSupplyAPR(rawEarnAPR, contextRewardsAPRs.earnRewardsAPR, rewardConfig?.supplyRewardsAPR),
+    );
 
-    if (contextRewardsAPRs) {
-      const rawEarnAPR = marketSummary.supplyAPR > contextRewardsAPRs.earnRewardsAPR
-        ? marketSummary.supplyAPR - contextRewardsAPRs.earnRewardsAPR
-        : 0n;
-      const rawBorrowAPR = marketSummary.borrowAPR + contextRewardsAPRs.borrowRewardsAPR;
-
-      interestEarnAPR = formatRateFactor(rawEarnAPR);
-      interestBorrowAPR = formatRateFactor(rawBorrowAPR);
-
-      compEarnAPR = formatRateFactor(contextRewardsAPRs.earnRewardsAPR);
-      compBorrowAPR = formatRateFactor(contextRewardsAPRs.borrowRewardsAPR);
-    }
+    netBorrowAPR = formatRateFactor(
+      getNetBorrowAPR(rawBorrowAPR, contextRewardsAPRs.borrowRewardsAPR, rewardConfig?.borrowRewardsAPR),
+    );
   }
 
-  const hasRewardsData = marketConfig !== undefined || contextRewardsAPRs !== undefined;
-  const isTooltipsShow = isBoostedMarket && hasRewardsData;
+  const isBoostedMarket = rewardConfig?.isBoosted ?? false;
+  const isTooltipsShow = isBoostedMarket && contextRewardsAPRs !== undefined;
 
   const shortMarketName = () => {
     const name = assetSymbol === 'ETH' ? 'WETH' : assetSymbol;

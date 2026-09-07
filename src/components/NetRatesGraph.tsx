@@ -2,7 +2,7 @@ import Tooltip from '@components/Tooltip';
 import { formatRateFactor } from '@helpers/numbers';
 import { Token } from '@types';
 
-import { getNetBorrowAPR, getNetSupplyAPR } from '../pages/markets/helpers/getMarketsInfo';
+import { getNetBorrowAPR, getNetSupplyAPR } from '../pages/markets/helpers/getRewardsData';
 
 import { LineTexture } from './Icons/LineTexture';
 

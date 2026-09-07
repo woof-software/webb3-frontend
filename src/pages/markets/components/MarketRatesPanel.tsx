@@ -4,11 +4,10 @@ import { formatRateFactor } from '@helpers/numbers';
 import { Token, StateType } from '@types';
 
 import {
-  DYNAMIC_SOURCED_CHAIN_IDS,
-  getMarketsConfigForChain,
+  getRewardsConfigForChain,
   getNetBorrowAPR,
   getNetSupplyAPR,
-} from '../helpers/getMarketsInfo';
+} from '../helpers/getRewardsData';
 
 type MarketRatesPanelLoading = [StateType.Loading];
 
@@ -51,21 +50,17 @@ function getMarketRatesPanelContent(state: MarketRatesPanelState): PanelContent 
 
   const { chainId, marketAddress, borrowAPR, borrowRewardsAPR, earnAPR, earnRewardsAPR, rewardsAsset } = state[1];
 
-  if (DYNAMIC_SOURCED_CHAIN_IDS.has(chainId)) {
-    return { borrowAPR, borrowRewardsAPR, earnAPR, earnRewardsAPR, rewardsAsset };
-  }
+  const rewardConfig = getRewardsConfigForChain(chainId)[marketAddress.toLowerCase()];
 
-  const staticEntry = getMarketsConfigForChain(chainId)[marketAddress.toLowerCase()];
-
-  if (!staticEntry) {
+  if (!rewardConfig) {
     return { borrowAPR, borrowRewardsAPR, earnAPR, earnRewardsAPR, rewardsAsset };
   }
 
   return {
-    borrowAPR: staticEntry.borrowAPR,
-    earnAPR: staticEntry.supplyAPR,
-    borrowRewardsAPR: staticEntry.borrowRewardsAPR ?? undefined,
-    earnRewardsAPR: staticEntry.supplyRewardsAPR ?? undefined,
+    borrowAPR,
+    earnAPR,
+    borrowRewardsAPR: rewardConfig.borrowRewardsAPR,
+    earnRewardsAPR: rewardConfig.supplyRewardsAPR,
     rewardsAsset,
   };
 }
