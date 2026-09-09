@@ -1,4 +1,4 @@
-import { useContext, useMemo, useRef, useState } from 'react';
+import { useContext, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 
 import CircleMeter from '@components/CircleMeter';
@@ -400,7 +400,7 @@ const PanelRow = ({ marketSummary, rewardConfig, contextRewardsAPRs, institution
       <td>
         <div className="market-overview-panels__apr-container">
           <div className="body text-color--1 L3">{netEarnAPR}</div>
-          {(marketSummary.institutionalSupplyRewardsAPR !== undefined && !isBoostedMarket) && (
+          {(marketSummary.institutionalSupplyRewardsAPR !== undefined) && (
             <InstitutionalRateInfo
               marketSummary={marketSummary}
               whitelistStatus={institutionalWhitelistStatus}
