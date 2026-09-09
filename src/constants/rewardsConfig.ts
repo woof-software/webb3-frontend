@@ -12,6 +12,7 @@ type RewardsConfig = Array<
   ]
 >;
 
+// Record<number, Record<string, Object>
 
 export const REWARDS_CONFIG: RewardsConfig = [
   [

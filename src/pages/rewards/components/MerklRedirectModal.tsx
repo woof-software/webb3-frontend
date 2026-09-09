@@ -1,45 +1,60 @@
-import { useEffect } from 'react';
-import { useSearchParams } from 'react-router';
+import { useEffect, createContext, useState, useContext, Dispatch, SetStateAction, ReactNode } from 'react';
 
 import { CircleClose } from '@components/Icons';
 import type { Web3 } from '@contexts/Web3Context';
 
-interface RedirectModalProps {
+interface MerklRedirectModalContextValue {
+  isOpen: boolean;
+  setIsOpen: Dispatch<SetStateAction<boolean>>;
+}
+
+const MerklRedirectModalContext = createContext<MerklRedirectModalContextValue | null>(null);
+
+export const useMerklRedirectModal = () => {
+  const ctx = useContext(MerklRedirectModalContext);
+  if (!ctx) {
+    throw new Error('useMerklRedirectModal must be used within a MerklRedirectModalProvider');
+  }
+  return ctx;
+};
+
+export const MerklRedirectModalProvider = ({ children }: { children: ReactNode }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <MerklRedirectModalContext.Provider value={{ isOpen, setIsOpen }}>
+      {children}
+    </MerklRedirectModalContext.Provider>
+  );
+};
+
+interface MerklRedirectModalProps {
   web3: Web3;
 }
 
-export const RedirectModal = ({ web3 }: RedirectModalProps) => {
+export const MerklRedirectModal = ({ web3 }: MerklRedirectModalProps) => {
   const { account } = web3.write;
-
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  const isOpen = searchParams.get('rewardsRedirectModal') === 'true';
-
-  const closeModal = () => {
-    const params = new URLSearchParams(searchParams);
-    params.delete('rewardsRedirectModal');
-    setSearchParams(params, {replace: true});
-  };
+  const { isOpen, setIsOpen } = useMerklRedirectModal();
 
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyUp = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closeModal();
+      if (event.key === 'Escape') setIsOpen(false);
     };
 
     window.addEventListener('keyup', handleKeyUp);
     return () => window.removeEventListener('keyup', handleKeyUp);
-  }, [searchParams, isOpen]);
+  }, [isOpen, setIsOpen]);
 
   return (
     <div className={`modal${isOpen ? ' modal--active' : ''}`}>
-      <div className="modal__backdrop" onClick={closeModal} />
+      <div className="modal__backdrop" onClick={() => setIsOpen(false)} />
       <div className="modal__content L4">
         <div className="modal__content__header">
           <div className="modal__content__header__left"></div>
           <h4 className="heading heading--emphasized heading">You are about to leave Compound</h4>
-          <div className="modal__content__header__right" onClick={closeModal}>
+          <div className="modal__content__header__right" onClick={() => setIsOpen(false)}>
             <CircleClose />
           </div>
         </div>
@@ -55,7 +70,7 @@ export const RedirectModal = ({ web3 }: RedirectModalProps) => {
           <a
             href={account ? `https://app.merkl.xyz/users/${account}` : `https://app.merkl.xyz/users/`}
             className="button button--x-large button--supply"
-            onClick={closeModal}
+            onClick={() => setIsOpen(false)}
             target="_blank"
             rel="noreferrer"
           >

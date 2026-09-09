@@ -1,6 +1,6 @@
-export const Thunder = ({ className = '' }: { className?: string }) => {
+export const Lightning = ({ className = '' }: { className?: string }) => {
   return (
-    <div className={`thunder-container ${className}`}>
+    <div className={`lightning-container ${className}`}>
       <svg
         className={`svg`}
         width="7"

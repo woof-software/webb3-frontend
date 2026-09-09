@@ -1,5 +1,5 @@
 import { useState, useRef, useContext, useEffect, MouseEventHandler, SetStateAction, Dispatch } from 'react';
-import { useLocation, useSearchParams } from 'react-router';
+import { useLocation } from 'react-router';
 
 import { getActionQueueContext } from '@contexts/ActionQueueContext';
 import RewardsStateContext from '@contexts/RewardsStateContext';
@@ -11,6 +11,8 @@ import { formatTokenBalance } from '@helpers/numbers';
 import { REWARDS_PAUSE_FORUM_URL } from '@helpers/urls';
 import useOnClickOutside from '@hooks/useOnClickOutside';
 import { AccountRewardsState, ActionType, ChainInformation, StateType } from '@types';
+
+import { useMerklRedirectModal } from '../pages/rewards/components/MerklRedirectModal';
 
 import DetailSheet from './DetailSheet';
 import IconPair from './IconPair';
@@ -220,12 +222,14 @@ const RewardsNetworkRow = ({
   onClaimClicked,
   setDropdownActive
 }: RewardsNetworkRowProps) => {
-  if (rewardsStates[0] == null) return null;
   const location = useLocation();
+  const { setIsOpen } = useMerklRedirectModal()
+
+  if (rewardsStates[0] == null) return null;
+
   const { walletBalance, rewardAsset } = rewardsStates[0];
   const balance = formatTokenBalance(rewardAsset.decimals, walletBalance);
   const [wholeNumberWalletBalance, fractionalWalletBalance] = `${balance}`.split('.');
-  const [searchParams, setSearchParams] = useSearchParams();
 
   const unclaimedBalances = filterMap<AccountRewardsState, AccountRewardsState>(rewardsStates, (rewardState) =>
     rewardState.amountOwed > 0n ? rewardState : undefined
@@ -245,9 +249,7 @@ const RewardsNetworkRow = ({
   };
 
   const onClickRedirectModalOpen: MouseEventHandler<HTMLButtonElement> = () => {
-    const params = new URLSearchParams(searchParams);
-    params.set('rewardsRedirectModal', 'true');
-    setSearchParams(params);
+    setIsOpen(true)
     setDropdownActive(false)
   };
 

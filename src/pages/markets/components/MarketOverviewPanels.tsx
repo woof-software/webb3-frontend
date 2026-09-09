@@ -5,7 +5,7 @@ import CircleMeter from '@components/CircleMeter';
 import DetailSheet from '@components/DetailSheet';
 import IconPair from '@components/IconPair';
 import { CaretDown, CheckMark } from '@components/Icons';
-import { Thunder } from '@components/Icons/Thunder';
+import { Lightning } from '@components/Icons/Lightning';
 import PanelWithHeader from '@components/PanelWithHeader';
 import PanelWithNoHeader from '@components/PanelWithNoHeader';
 import Tooltip from '@components/Tooltip';
@@ -19,7 +19,8 @@ import useOnClickOutside from '@hooks/useOnClickOutside';
 
 import { LatestMarketSummaries, MarketSummary } from '../../../types';
 import {
-  getContextRewardsAPRs, getRewardsConfigForChain,
+  getContextRewardsAPRs,
+  getRewardsConfigForChain,
   getNetBorrowAPR,
   getNetSupplyAPR,
   RewardConfigEntry
@@ -241,15 +242,8 @@ const Panel = ({ chainId, marketSummaries, institutionalWhitelistStatus }: Panel
   const chainName = CHAINS[chainId].name;
   const rewards = useContext(RewardsStateContext);
 
-  const marketsConfigByAddress = useMemo(
-    () => getRewardsConfigForChain(chainId),
-    [chainId],
-  );
-
-  const contextRewardsAPRsByAddress = useMemo(
-    () => getContextRewardsAPRs(rewards, chainId),
-    [rewards, chainId],
-  );
+  const marketsConfigByAddress = getRewardsConfigForChain(chainId);
+  const contextRewardsAPRsByAddress = getContextRewardsAPRs(rewards, chainId)
 
   const headerWithLogo = (
     <div className="market-overview-panels__header-with-logo">
@@ -442,7 +436,7 @@ const PanelRow = ({ marketSummary, rewardConfig, contextRewardsAPRs, institution
 
                     <div className="market-overview-panels__tooltip-row">
                       <div className="market-overview-panels__tooltip-row-start">
-                        <Thunder className="market-overview-panels__tooltip-row-icon"/>
+                        <Lightning className="market-overview-panels__tooltip-row-icon"/>
                         <span className="market-overview-panels__tooltip-text market-overview-panels__tooltip-text-muted">Net Earn APR</span>
                       </div>
                       <span className="market-overview-panels__tooltip-text">{netEarnAPR}</span>
@@ -451,7 +445,7 @@ const PanelRow = ({ marketSummary, rewardConfig, contextRewardsAPRs, institution
                 }
               >
               <span>
-                <Thunder className="market-overview-panels__apr-container-icon"/>
+                <Lightning className="market-overview-panels__apr-container-icon"/>
               </span>
               </Tooltip>
             </div>
@@ -491,7 +485,7 @@ const PanelRow = ({ marketSummary, rewardConfig, contextRewardsAPRs, institution
 
                     <div className="market-overview-panels__tooltip-row">
                       <div className="market-overview-panels__tooltip-row-start">
-                        <Thunder className="market-overview-panels__tooltip-row-icon"/>
+                        <Lightning className="market-overview-panels__tooltip-row-icon"/>
                         <span className="market-overview-panels__tooltip-text market-overview-panels__tooltip-text-muted">Net Borrow APR</span>
                       </div>
                       <span className="market-overview-panels__tooltip-text">{netBorrowAPR}</span>
@@ -500,7 +494,7 @@ const PanelRow = ({ marketSummary, rewardConfig, contextRewardsAPRs, institution
                 }
               >
               <span>
-                <Thunder className="market-overview-panels__apr-container-icon"/>
+                <Lightning className="market-overview-panels__apr-container-icon"/>
               </span>
               </Tooltip>
             </div>

@@ -23,7 +23,7 @@ import { useTransactionManager } from '@hooks/useTransactionManager';
 import { Action, MarketDataLoaded, StateType } from '@types';
 
 import { allExtensions } from './pages/extensions/helpers/list';
-import { RedirectModal } from './pages/rewards/components/RedirectModal';
+import { MerklRedirectModal, MerklRedirectModalProvider } from './pages/rewards/components/MerklRedirectModal';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function App({ Component, pageProps }: any) {
@@ -166,57 +166,59 @@ function App({ Component, pageProps }: any) {
       <RewardsStateContext.Provider value={rewardsState}>
         <ActionQueueContext.Provider value={actionQueue}>
           <CurrencyContextProvider>
-            <AlertBanner web3={web3} />
-            <RedirectModal web3={web3}/>
-            <Header
-              web3={web3}
-              transactions={transactions}
-              clearTransactions={() => {
-                clearTransactions();
-                actionQueue.clearActions();
-              }}
-              onConnectWalletClick={() => {
-                setShowConnectWalletModal(true);
-              }}
-              onWalletDisconnect={() => {
-                web3.disconnectWallet();
-              }}
-            />
-            <ConnectWalletModal
-              isOpen={showConnectWalletModal}
-              onRequestClose={() => {
-                setNetworkSwitchState(undefined);
-                setShowConnectWalletModal(false);
-              }}
-              onSelectConnector={(connector) => {
-                web3.connectWallet(connector);
-                setShowConnectWalletModal(false);
-              }}
-            />
-            <NetworkSwitchModal state={networkSwitchState} onSwitchNetwork={handleSwitchNetwork} />
-            <div className="app-content">
-              <Component
-                transactions={transactions}
+            <MerklRedirectModalProvider>
+              <AlertBanner web3={web3} />
+              <MerklRedirectModal web3={web3}/>
+              <Header
                 web3={web3}
-                addTransaction={addTransaction}
-                theme={theme}
-                cometState={cometState}
-                setShowConnectWalletModal={setShowConnectWalletModal}
-                switchWriteNetwork={(chainId: number, description?: string) => {
-                  if (web3.write.chainId) {
-                    handleRequestNetworkSwitch(web3.write.chainId, chainId, description);
-                    return;
-                  }
-
-                  web3.switchWriteNetwork(chainId);
+                transactions={transactions}
+                clearTransactions={() => {
+                  clearTransactions();
+                  actionQueue.clearActions();
                 }}
-                estimatedGasMap={estimatedGasMap}
-                {...pageProps}
+                onConnectWalletClick={() => {
+                  setShowConnectWalletModal(true);
+                }}
+                onWalletDisconnect={() => {
+                  web3.disconnectWallet();
+                }}
               />
-              <ScreeningErrorOverlay screeningStatus={web3.screeningStatus} />
-            </div>
-            <Footer theme={theme} setTheme={setTheme} />
-            <div id="overlay"></div>
+              <ConnectWalletModal
+                isOpen={showConnectWalletModal}
+                onRequestClose={() => {
+                  setNetworkSwitchState(undefined);
+                  setShowConnectWalletModal(false);
+                }}
+                onSelectConnector={(connector) => {
+                  web3.connectWallet(connector);
+                  setShowConnectWalletModal(false);
+                }}
+              />
+              <NetworkSwitchModal state={networkSwitchState} onSwitchNetwork={handleSwitchNetwork} />
+              <div className="app-content">
+                <Component
+                  transactions={transactions}
+                  web3={web3}
+                  addTransaction={addTransaction}
+                  theme={theme}
+                  cometState={cometState}
+                  setShowConnectWalletModal={setShowConnectWalletModal}
+                  switchWriteNetwork={(chainId: number, description?: string) => {
+                    if (web3.write.chainId) {
+                      handleRequestNetworkSwitch(web3.write.chainId, chainId, description);
+                      return;
+                    }
+
+                    web3.switchWriteNetwork(chainId);
+                  }}
+                  estimatedGasMap={estimatedGasMap}
+                  {...pageProps}
+                />
+                <ScreeningErrorOverlay screeningStatus={web3.screeningStatus} />
+              </div>
+              <Footer theme={theme} setTheme={setTheme} />
+              <div id="overlay"></div>
+            </MerklRedirectModalProvider>
           </CurrencyContextProvider>
         </ActionQueueContext.Provider>
       </RewardsStateContext.Provider>

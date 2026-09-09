@@ -1,10 +1,8 @@
-import { MouseEventHandler } from 'react';
-import { useSearchParams } from 'react-router';
-
 import { DollarCircle } from '@components/Icons/DollarCircle';
 import { Grid } from '@components/Icons/Grid';
 import { Sparkle } from '@components/Icons/Sparkle';
 
+import { useMerklRedirectModal } from '../rewards/components/MerklRedirectModal';
 import { RewardsBanner } from '../rewards/components/RewardsBanner';
 import { RewardsCard } from '../rewards/components/RewardsCard';
 
@@ -121,13 +119,7 @@ const rewardsFaq = [
 ];
 
 const Rewards = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  const onViewRewardsClick: MouseEventHandler<HTMLButtonElement> = () => {
-    const params = new URLSearchParams(searchParams);
-    params.set('rewardsRedirectModal', 'true');
-    setSearchParams(params);
-  };
+  const { setIsOpen } = useMerklRedirectModal()
 
   return (
     <main className={'rewards-page'}>
@@ -148,7 +140,7 @@ const Rewards = () => {
       <div className={'rewards-links'}>
         <button
           className={'button button-green'}
-          onClick={onViewRewardsClick}
+          onClick={() => setIsOpen(true)}
         >
           View your Rewards
         </button>

@@ -1,6 +1,6 @@
 @use '../abstracts/variables' as *;
 
-.thunder-container {
+.lightning-container {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -20,7 +20,7 @@
 }
 
 .theme--light {
-  .thunder-container {
+  .lightning-container {
     background: $neutral--10;
 
     &:hover {
