@@ -1,4 +1,4 @@
-import { Bolt } from '@components/Icons';
+import { Lightning } from '@components/Icons/Lightning';
 import { INSTITUTIONAL_BOOST_END_DATE_LABEL } from '@helpers/institutionalRates';
 import { InstitutionalWhitelistStatus } from '@helpers/institutionalWhitelist';
 import { formatRateFactor } from '@helpers/numbers';
@@ -110,7 +110,7 @@ const BoostedSupplyRates = ({
           <span className="text-color--2"> Base Interest</span>
         </span>
         <span className="L4 meta">
-          <Bolt className="boosted-supply-rates__labels__bolt" />
+          <Lightning className="boosted-supply-rates__labels__bolt" />
           <span className="boosted-supply-rates__labels__value">{formatRateFactor(boostAPR)}</span>
           <span className="text-color--2"> {boostLabel}</span>
         </span>

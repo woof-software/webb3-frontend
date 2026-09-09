@@ -5,10 +5,9 @@ import { formatRateFactor } from '@helpers/numbers';
 import { Token, StateType } from '@types';
 
 import {
-  getRewardsConfigForChain,
   getNetBorrowAPR,
   getNetSupplyAPR,
-} from '../helpers/getRewardsData';
+} from '../helpers/getRewardsAPRs';
 
 type MarketRatesPanelLoading = [StateType.Loading];
 
@@ -54,21 +53,9 @@ function getMarketRatesPanelContent(state: MarketRatesPanelState): PanelContent 
     return defaultPanelContent;
   }
 
-  const { chainId, marketAddress, borrowAPR, borrowRewardsAPR, earnAPR, earnRewardsAPR, rewardsAsset } = state[1];
+  const { borrowRewardsAPR, borrowAPR, earnAPR, earnRewardsAPR, rewardsAsset } = state[1];
 
-  const rewardConfig = getRewardsConfigForChain(chainId)[marketAddress.toLowerCase()];
-
-  if (!rewardConfig) {
-    return { borrowAPR, borrowRewardsAPR, earnAPR, earnRewardsAPR, rewardsAsset };
-  }
-
-  return {
-    borrowAPR,
-    earnAPR,
-    borrowRewardsAPR: rewardConfig.borrowRewardsAPR,
-    earnRewardsAPR: rewardConfig.supplyRewardsAPR,
-    rewardsAsset,
-  };
+  return { borrowAPR, borrowRewardsAPR, earnAPR, earnRewardsAPR, rewardsAsset };
 }
 
 const MarketRatesPanel = ({ state }: { state: MarketRatesPanelState }) => {

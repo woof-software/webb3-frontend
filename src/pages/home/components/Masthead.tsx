@@ -25,8 +25,9 @@ import {
   Currency,
   PendingAction,
   StateType,
+  Token,
   TokenWithAccountState,
-  Transaction,
+  Transaction
 } from '@types';
 
 import { iconForActionType } from './ActionQueueItem';

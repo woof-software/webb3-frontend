@@ -4,7 +4,7 @@ import { InstitutionalWhitelistStatus } from '@helpers/institutionalWhitelist';
 import { formatRateFactor } from '@helpers/numbers';
 import { Token } from '@types';
 
-import { getNetBorrowAPR, getNetSupplyAPR } from '../../pages/markets/helpers/getRewardsData';
+import { getNetBorrowAPR, getNetSupplyAPR } from '../../pages/markets/helpers/getRewardsAPRs';
 
 export enum NetRatesTooltipView {
   Borrow = 'borrow',

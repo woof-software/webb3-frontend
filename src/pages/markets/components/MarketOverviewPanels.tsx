@@ -1,16 +1,15 @@
-import { useContext, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 
 import CircleMeter from '@components/CircleMeter';
 import DetailSheet from '@components/DetailSheet';
 import IconPair from '@components/IconPair';
 import { CaretDown, CheckMark } from '@components/Icons';
-import { Lightning } from '@components/Icons/Lightning';
 import PanelWithHeader from '@components/PanelWithHeader';
 import PanelWithNoHeader from '@components/PanelWithNoHeader';
-import Tooltip from '@components/Tooltip';
+import { NetRatesTooltipView } from '@components/Tooltips/NetRatesTooltip';
 import { CHAINS, INACTIVE_CHAIN_IDS } from '@constants/chains';
-import RewardsStateContext from '@contexts/RewardsStateContext';
+import { REWARDS_CONFIG } from '@constants/rewardsConfig';
 import { assetIconForAssetSymbol, iconNameForChainId } from '@helpers/assets';
 import { InstitutionalWhitelistStatus } from '@helpers/institutionalWhitelist';
 import { getMarket, getMarketDescriptors } from '@helpers/markets';
@@ -18,13 +17,11 @@ import { formatRateFactor, formatValueInDollars, PRICE_PRECISION } from '@helper
 import useOnClickOutside from '@hooks/useOnClickOutside';
 
 import { LatestMarketSummaries, MarketSummary } from '../../../types';
+import { BoostedRateInfo } from '../BoostedRateInfo';
 import {
-  getContextRewardsAPRs,
-  getRewardsConfigForChain,
   getNetBorrowAPR,
   getNetSupplyAPR,
-  RewardConfigEntry
-} from '../helpers/getRewardsData';
+} from '../helpers/getRewardsAPRs';
 
 import InstitutionalRateInfo from './InstitutionalRateInfo';
 
@@ -240,10 +237,6 @@ type PanelProps = {
 
 const Panel = ({ chainId, marketSummaries, institutionalWhitelistStatus }: PanelProps) => {
   const chainName = CHAINS[chainId].name;
-  const rewards = useContext(RewardsStateContext);
-
-  const marketsConfigByAddress = getRewardsConfigForChain(chainId);
-  const contextRewardsAPRsByAddress = getContextRewardsAPRs(rewards, chainId)
 
   const headerWithLogo = (
     <div className="market-overview-panels__header-with-logo">
@@ -286,12 +279,9 @@ const Panel = ({ chainId, marketSummaries, institutionalWhitelistStatus }: Panel
                   </tr>
                 )}
                 {standardSummaries.map((marketSummary) => {
-                  const address = marketSummary.comet.address.toLowerCase();
-                  return <PanelRow 
-                    key={marketSummary.comet.address} 
-                    marketSummary={marketSummary} 
-                    rewardConfig={marketsConfigByAddress[address]}
-                    contextRewardsAPRs={contextRewardsAPRsByAddress[address]}
+                  return <PanelRow
+                    key={marketSummary.comet.address}
+                    marketSummary={marketSummary}
                   />;
                 })}
               </tbody>
@@ -305,48 +295,23 @@ const Panel = ({ chainId, marketSummaries, institutionalWhitelistStatus }: Panel
 
 type PanelRowProps = {
   marketSummary: MarketSummary;
-  rewardConfig?: RewardConfigEntry;
-  contextRewardsAPRs?: { earnRewardsAPR: bigint; borrowRewardsAPR: bigint };
   institutionalWhitelistStatus?: InstitutionalWhitelistStatus;
 };
 
-const PanelRow = ({ marketSummary, rewardConfig, contextRewardsAPRs, institutionalWhitelistStatus }: PanelRowProps) => {
+const PanelRow = ({ marketSummary, institutionalWhitelistStatus }: PanelRowProps) => {
   const [assetSymbol, chainName, assetName] = getMarketDescriptors(marketSummary.comet.address, marketSummary.chainId);
   const market = getMarket(marketSummary.chainId, marketSummary.comet.address);
   const showNewBadge = market?.isNew === true;
 
+  const rewardConfig = REWARDS_CONFIG[marketSummary.chainId]?.[marketSummary.comet.address];
+
   const utilization = formatRateFactor(marketSummary.utilization);
 
-  let netEarnAPR: string | undefined;
-  let netBorrowAPR: string | undefined;
-  let interestEarnAPR: string | undefined;
-  let interestBorrowAPR: string | undefined;
-  let compEarnAPR: string | undefined;
-  let compBorrowAPR: string | undefined;
+  const netEarnAPR = formatRateFactor(getNetSupplyAPR(marketSummary.supplyAPR, rewardConfig?.supplyRewardsAPR));
+  const netBorrowAPR = formatRateFactor(getNetBorrowAPR(marketSummary.borrowAPR, rewardConfig?.borrowRewardsAPR));
 
-  if (contextRewardsAPRs) {
-    const rawEarnAPR = marketSummary.supplyAPR > contextRewardsAPRs.earnRewardsAPR
-      ? marketSummary.supplyAPR - contextRewardsAPRs.earnRewardsAPR
-      : 0n;
-    const rawBorrowAPR = marketSummary.borrowAPR + contextRewardsAPRs.borrowRewardsAPR;
-
-    interestEarnAPR = formatRateFactor(rawEarnAPR);
-    interestBorrowAPR = formatRateFactor(rawBorrowAPR);
-
-    compEarnAPR = formatRateFactor(rewardConfig?.supplyRewardsAPR ?? 0n);
-    compBorrowAPR = formatRateFactor(rewardConfig?.borrowRewardsAPR ?? 0n);
-
-    netEarnAPR = formatRateFactor(
-      getNetSupplyAPR(rawEarnAPR, contextRewardsAPRs.earnRewardsAPR, rewardConfig?.supplyRewardsAPR),
-    );
-
-    netBorrowAPR = formatRateFactor(
-      getNetBorrowAPR(rawBorrowAPR, contextRewardsAPRs.borrowRewardsAPR, rewardConfig?.borrowRewardsAPR),
-    );
-  }
-
-  const isBoostedMarket = rewardConfig?.isBoosted ?? false;
-  const isTooltipsShow = isBoostedMarket && contextRewardsAPRs !== undefined;
+  const hasEarnRewards = rewardConfig?.supplyRewardsAPR > 0n;
+  const hasBorrowRewards = rewardConfig?.borrowRewardsAPR > 0n;
 
   const shortMarketName = () => {
     const name = market?.slug ?? (assetSymbol === 'ETH' ? 'WETH' : assetSymbol);
@@ -406,98 +371,26 @@ const PanelRow = ({ marketSummary, rewardConfig, contextRewardsAPRs, institution
               whitelistStatus={institutionalWhitelistStatus}
             />
           )}
-          {isTooltipsShow &&
-            <div className="market-overview-panels__apr-boost-container">
-              <Tooltip
-                width={226}
-                yOffset={12}
-                content={
-                  <div>
-                    <p className="market-overview-panels__tooltip-text market-overview-panels__tooltip-header">
-                      This APR is boosted by Compound
-                    </p>
-                    <div className="market-overview-panels__tooltip-row market-overview-panels__tooltip-row-with-margin">
-                      <div className="market-overview-panels__tooltip-row-start">
-                        <div className={`asset asset--${assetIconForAssetSymbol(iconNameForChainId(marketSummary.chainId))} market-overview-panels__tooltip-row-icon`}></div>
-                        <span className="market-overview-panels__tooltip-text market-overview-panels__tooltip-text-muted">Interest</span>
-                      </div>
-                      <span className="market-overview-panels__tooltip-text">{interestEarnAPR}</span>
-                    </div>
-
-                    <div className="market-overview-panels__tooltip-row">
-                      <div className="market-overview-panels__tooltip-row-start">
-                        <div className={`asset asset--${assetIconForAssetSymbol('COMP')} market-overview-panels__tooltip-row-icon`}></div>
-                        <span className="market-overview-panels__tooltip-text market-overview-panels__tooltip-text-muted">COMP</span>
-                      </div>
-                      <span className="market-overview-panels__tooltip-text">{compEarnAPR}</span>
-                    </div>
-
-                    <div className="divider"></div>
-
-                    <div className="market-overview-panels__tooltip-row">
-                      <div className="market-overview-panels__tooltip-row-start">
-                        <Lightning className="market-overview-panels__tooltip-row-icon"/>
-                        <span className="market-overview-panels__tooltip-text market-overview-panels__tooltip-text-muted">Net Earn APR</span>
-                      </div>
-                      <span className="market-overview-panels__tooltip-text">{netEarnAPR}</span>
-                    </div>
-                  </div>
-                }
-              >
-              <span>
-                <Lightning className="market-overview-panels__apr-container-icon"/>
-              </span>
-              </Tooltip>
-            </div>
+          {hasEarnRewards &&
+            <BoostedRateInfo
+              view={NetRatesTooltipView.Supply}
+              earnAPR={marketSummary.supplyAPR}
+              earnRewardsAPR={rewardConfig?.supplyRewardsAPR}
+              rewardsAsset={rewardConfig?.rewardsAsset}
+            />
           }
         </div>
       </td>
       <td>
         <div className="market-overview-panels__apr-container">
           <div className="body text-color--1 L3">{netBorrowAPR}</div>
-          {isTooltipsShow &&
-            <div className="market-overview-panels__apr-boost-container">
-              <Tooltip
-                width={226}
-                yOffset={12}
-                content={
-                  <div>
-                    <p className="market-overview-panels__tooltip-text market-overview-panels__tooltip-header">
-                      This APR is boosted by Compound
-                    </p>
-                    <div className="market-overview-panels__tooltip-row market-overview-panels__tooltip-row-with-margin">
-                      <div className="market-overview-panels__tooltip-row-start">
-                        <div className={`asset asset--${assetIconForAssetSymbol(iconNameForChainId(marketSummary.chainId))} market-overview-panels__tooltip-row-icon`}></div>
-                        <span className="market-overview-panels__tooltip-text market-overview-panels__tooltip-text-muted">Interest</span>
-                      </div>
-                      <span className="market-overview-panels__tooltip-text">{interestBorrowAPR}</span>
-                    </div>
-
-                    <div className="market-overview-panels__tooltip-row">
-                      <div className="market-overview-panels__tooltip-row-start">
-                        <div className={`asset asset--${assetIconForAssetSymbol('COMP')} market-overview-panels__tooltip-row-icon`}></div>
-                        <span className="market-overview-panels__tooltip-text market-overview-panels__tooltip-text-muted">COMP</span>
-                      </div>
-                      <span className="market-overview-panels__tooltip-text">{compBorrowAPR}</span>
-                    </div>
-
-                    <div className="divider"></div>
-
-                    <div className="market-overview-panels__tooltip-row">
-                      <div className="market-overview-panels__tooltip-row-start">
-                        <Lightning className="market-overview-panels__tooltip-row-icon"/>
-                        <span className="market-overview-panels__tooltip-text market-overview-panels__tooltip-text-muted">Net Borrow APR</span>
-                      </div>
-                      <span className="market-overview-panels__tooltip-text">{netBorrowAPR}</span>
-                    </div>
-                  </div>
-                }
-              >
-              <span>
-                <Lightning className="market-overview-panels__apr-container-icon"/>
-              </span>
-              </Tooltip>
-            </div>
+          {hasBorrowRewards &&
+            <BoostedRateInfo 
+              view={NetRatesTooltipView.Borrow}
+              borrowAPR={marketSummary.borrowAPR}
+              borrowRewardsAPR={rewardConfig?.borrowRewardsAPR}
+              rewardsAsset={rewardConfig?.rewardsAsset}
+            />
           }
         </div>
       </td>

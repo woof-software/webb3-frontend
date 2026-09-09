@@ -3,7 +3,6 @@ export * from './ArrowLeft';
 export * from './ArrowRight';
 export * from './ArrowRightNoDash';
 export * from './ArrowUp';
-export * from './Bolt';
 export * from './CaretDown';
 export * from './CheckMark';
 export * from './CircleCheckmark';

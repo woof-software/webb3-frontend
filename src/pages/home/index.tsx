@@ -1,3 +1,4 @@
+import { REWARDS_CONFIG } from '@constants/rewardsConfig';
 import { ReactNode, useContext, useEffect, useState } from 'react';
 
 import { isUnwrappedCollateralAsset } from '@constants/chains';
@@ -96,7 +97,7 @@ const Home = ({
   let isBulkerAllowed = false;
   let borrowRewardsAPR: bigint | undefined, earnRewardsAPR: bigint | undefined, rewardsAsset: Token | undefined;
   const rewardsState = getRewardsForSelectedMarket(rewards, selectedMarket);
-  if (rewardsState !== undefined) {
+  if (rewardsState !== undefined) { 
     borrowRewardsAPR = rewardsState.borrowRewardsAPR;
     earnRewardsAPR = rewardsState.earnRewardsAPR;
     rewardsAsset = rewardsState.rewardAsset;

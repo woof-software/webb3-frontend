@@ -1,4 +1,4 @@
-import { Bolt } from '@components/Icons';
+import { Lightning } from '@components/Icons/Lightning';
 import Tooltip from '@components/Tooltip';
 import NetRatesTooltip, { NetRatesTooltipView } from '@components/Tooltips/NetRatesTooltip';
 import { InstitutionalWhitelistStatus } from '@helpers/institutionalWhitelist';
@@ -41,7 +41,7 @@ const InstitutionalRateInfo = ({
       }
     >
       <span className="info-icon" onClick={(e) => e.stopPropagation()}>
-        <Bolt />
+        <Lightning/>
       </span>
     </Tooltip>
   );

@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 
 import IconPair from '@components/IconPair';
 import { ArrowLeft, ExternalLink } from '@components/Icons';
+import { REWARDS_CONFIG } from '@constants/rewardsConfig';
 import RewardsStateContext from '@contexts/RewardsStateContext';
 import { getSelectedMarketContext } from '@contexts/SelectedMarketContext';
 import type { Web3 } from '@contexts/Web3Context';
@@ -192,6 +193,9 @@ const Market = ({ web3 }: MarketsProps) => {
       </CollateralAssetsPanel>
     );
 
+    const borrowRewardsAPRConfig = REWARDS_CONFIG[market.chainInformation.chainId]?.[market.marketAddress]?.borrowRewardsAPR ?? 0n;
+    const earnRewardsAPRConfig = REWARDS_CONFIG[market.chainInformation.chainId]?.[market.marketAddress]?.supplyRewardsAPR ?? 0n;
+
     marketRatesPanel = (
       <MarketRatesPanel
         state={[
@@ -200,9 +204,9 @@ const Market = ({ web3 }: MarketsProps) => {
             chainId: market.chainInformation.chainId,
             marketAddress: market.marketAddress,
             borrowAPR,
-            borrowRewardsAPR,
+            borrowRewardsAPR: borrowRewardsAPRConfig,
             earnAPR,
-            earnRewardsAPR,
+            earnRewardsAPR: earnRewardsAPRConfig,
             rewardsAsset,
             institutionalRewardsAPR: isInstitutionalReward ? earnRewardsAPR : undefined,
           },
