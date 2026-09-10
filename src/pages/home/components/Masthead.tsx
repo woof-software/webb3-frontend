@@ -271,6 +271,7 @@ function getContent(state: MastheadState): Content {
     borrowRewardsAPR,
     earnAPR,
     earnRewardsAPR,
+    rewardsAsset,
     institutionalBoostAPR,
     institutionalWhitelistStatus,
   };

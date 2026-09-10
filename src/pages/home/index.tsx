@@ -1,7 +1,7 @@
-import { REWARDS_CONFIG } from '@constants/rewardsConfig';
 import { ReactNode, useContext, useEffect, useState } from 'react';
 
 import { isUnwrappedCollateralAsset } from '@constants/chains';
+import { REWARDS_CONFIG } from '@constants/rewardsConfig';
 import { getActionQueueContext } from '@contexts/ActionQueueContext';
 import RewardsStateContext from '@contexts/RewardsStateContext';
 import { getSelectedMarketContext } from '@contexts/SelectedMarketContext';
@@ -18,7 +18,6 @@ import { institutionalSupplyRewards } from '@helpers/institutionalRates';
 import { institutionalWhitelistStatus } from '@helpers/institutionalWhitelist';
 import { DEFAULT_MARKET } from '@helpers/markets';
 import { MAX_UINT256 } from '@helpers/numbers';
-import { getRewardsForSelectedMarket } from '@helpers/rewards';
 import { isStETH, isWrappedStETH } from '@helpers/steth';
 import { Theme } from '@hooks/useThemeManager';
 import { AddTransaction } from '@hooks/useTransactionManager';
@@ -96,11 +95,14 @@ const Home = ({
   let positionCardState: PositionCardState;
   let isBulkerAllowed = false;
   let borrowRewardsAPR: bigint | undefined, earnRewardsAPR: bigint | undefined, rewardsAsset: Token | undefined;
-  const rewardsState = getRewardsForSelectedMarket(rewards, selectedMarket);
-  if (rewardsState !== undefined) { 
-    borrowRewardsAPR = rewardsState.borrowRewardsAPR;
-    earnRewardsAPR = rewardsState.earnRewardsAPR;
-    rewardsAsset = rewardsState.rewardAsset;
+  if (cometState === StateType.Hydrated || cometState === StateType.NoWallet) {
+    const marketInfo = selectedMarket[1];
+    if (marketInfo) {
+      const rewardConfig = REWARDS_CONFIG[marketInfo.chainInformation.chainId]?.[marketInfo.marketAddress];
+      borrowRewardsAPR = rewardConfig?.borrowRewardsAPR;
+      earnRewardsAPR = rewardConfig?.supplyRewardsAPR;
+      rewardsAsset = rewardConfig?.rewardsAsset;
+    }
   }
 
   const whitelistStatus = institutionalWhitelistStatus(web3.read.account);

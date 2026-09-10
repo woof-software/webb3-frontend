@@ -109,8 +109,8 @@ const BoostedSupplyRates = ({
           <span className="boosted-supply-rates__labels__value">{formatRateFactor(earnAPR)}</span>
           <span className="text-color--2"> Base Interest</span>
         </span>
-        <span className="L4 meta">
-          <Lightning className="boosted-supply-rates__labels__bolt" />
+        <span className="L4 meta boosted-supply-rates__labels__container">
+          <Lightning className="boosted-supply-rates__labels__icon" />
           <span className="boosted-supply-rates__labels__value">{formatRateFactor(boostAPR)}</span>
           <span className="text-color--2"> {boostLabel}</span>
         </span>

@@ -16,6 +16,7 @@ type NetRatesBorrowGraphState = {
   borrowAPR: bigint;
   borrowRewardsAPR?: bigint;
   rewardsAsset?: Token;
+  isGraphInnerTooltipShown?: boolean;
 };
 
 type NetRatesEarnGraphState = {
@@ -23,6 +24,7 @@ type NetRatesEarnGraphState = {
   earnAPR: bigint;
   earnRewardsAPR?: bigint;
   rewardsAsset?: Token;
+  isGraphInnerTooltipShown?: boolean;
 };
 
 type NetRatesGraphState = NetRatesBorrowGraphState | NetRatesEarnGraphState;
@@ -31,7 +33,7 @@ const NetRatesGraph = (state: NetRatesGraphState) => {
   const { rewardsAsset } = state;
   switch (state.state) {
     case NetRatesGraphType.Borrow: {
-      const { borrowAPR, borrowRewardsAPR = 0n } = state;
+      const { borrowAPR, borrowRewardsAPR = 0n, isGraphInnerTooltipShown = false } = state;
       const netBorrowAPR = getNetBorrowAPR(borrowAPR, borrowRewardsAPR)
 
       return (
@@ -55,19 +57,23 @@ const NetRatesGraph = (state: NetRatesGraphState) => {
                 {borrowRewardsAPR !== undefined && formatRateFactor(borrowRewardsAPR) !== '0.00%' && (
                   <div className='net-rates-graph__reward__asset'>
                     <span className='L3 meta text-color--1'>{formatRateFactor(borrowRewardsAPR)}</span>
-                    <Tooltip
-                      width={226}
-                      yOffset={12}
-                      content={
-                        <p className='net-rates-graph__tooltip-text'>
-                          Boosted by Compound: Net Borrow APR equals the base interest rate
-                          ({formatRateFactor(borrowAPR)}) minus the COMP reward est. rate
-                          ({formatRateFactor(borrowRewardsAPR)}).
-                        </p>
-                      }
-                    >
+                    {isGraphInnerTooltipShown ? (
+                      <Tooltip
+                        width={226}
+                        yOffset={12}
+                        content={
+                          <p className='net-rates-graph__tooltip-text'>
+                            Boosted by Compound: Net Borrow APR equals the base interest rate
+                            ({formatRateFactor(borrowAPR)}) minus the COMP reward est. rate
+                            ({formatRateFactor(borrowRewardsAPR)}).
+                          </p>
+                        }
+                      >
+                        <span className={`asset asset--${rewardsAsset?.symbol} net-rates-graph__tooltip-icon`}></span>
+                      </Tooltip>
+                    ) : (
                       <span className={`asset asset--${rewardsAsset?.symbol} net-rates-graph__tooltip-icon`}></span>
-                    </Tooltip>
+                    )}
                   </div>
                 )}
               </div>
@@ -89,19 +95,23 @@ const NetRatesGraph = (state: NetRatesGraphState) => {
               </div>
               <div className='net-rates-graph__reward__asset'>
                 <span className='L3 meta text-color--1'>{formatRateFactor(borrowRewardsAPR)}</span>
-                <Tooltip
-                  width={226}
-                  yOffset={12}
-                  content={
-                    <p className='net-rates-graph__tooltip-text'>
-                      Boosted by Compound: Net Borrow APR equals the base interest rate
-                      ({formatRateFactor(borrowAPR)}) minus the COMP reward est. rate
-                      ({formatRateFactor(borrowRewardsAPR)}).
-                    </p>
-                  }
-                >
+                {isGraphInnerTooltipShown ? (
+                  <Tooltip
+                    width={226}
+                    yOffset={12}
+                    content={
+                      <p className='net-rates-graph__tooltip-text'>
+                        Boosted by Compound: Net Borrow APR equals the base interest rate
+                        ({formatRateFactor(borrowAPR)}) minus the COMP reward est. rate
+                        ({formatRateFactor(borrowRewardsAPR)}).
+                      </p>
+                    }
+                  >
+                    <span className={`asset asset--${rewardsAsset?.symbol} net-rates-graph__tooltip-icon`}></span>
+                  </Tooltip>
+                ) : (
                   <span className={`asset asset--${rewardsAsset?.symbol} net-rates-graph__tooltip-icon`}></span>
-                </Tooltip>
+                )}
               </div>
             </div>
           )}
@@ -109,7 +119,7 @@ const NetRatesGraph = (state: NetRatesGraphState) => {
       );
     }
     case NetRatesGraphType.Earn: {
-      const { earnAPR, earnRewardsAPR = 0n } = state;
+      const { earnAPR, earnRewardsAPR = 0n, isGraphInnerTooltipShown = false } = state;
       const netSupplyAPR = getNetSupplyAPR(earnAPR, earnRewardsAPR)
 
       //TODO: Here the net-rates-graph__graph has 2 top level divs :(
@@ -134,18 +144,22 @@ const NetRatesGraph = (state: NetRatesGraphState) => {
                 <div className='net-rates-graph__bar net-rates-graph__bar--rewards'></div>
                 <div className='net-rates-graph__reward__asset'>
                   <span className='L3 meta text-color--1'>{formatRateFactor(earnRewardsAPR)}</span>
-                  <Tooltip
-                    width={226}
-                    yOffset={12}
-                    content={
-                      <p className='net-rates-graph__tooltip-text'>
-                        Boosted by Compound: Net Earn APR equals the base interest rate ({formatRateFactor(earnAPR)})
-                        plus the COMP reward est. rate ({formatRateFactor(earnRewardsAPR)}).
-                      </p>
-                    }
-                  >
+                  {isGraphInnerTooltipShown ? (
+                    <Tooltip
+                      width={226}
+                      yOffset={12}
+                      content={
+                        <p className='net-rates-graph__tooltip-text'>
+                          Boosted by Compound: Net Earn APR equals the base interest rate ({formatRateFactor(earnAPR)})
+                          plus the COMP reward est. rate ({formatRateFactor(earnRewardsAPR)}).
+                        </p>
+                      }
+                    >
+                      <span className={`asset asset--${rewardsAsset?.symbol} net-rates-graph__tooltip-icon`}></span>
+                    </Tooltip>
+                  ) : (
                     <span className={`asset asset--${rewardsAsset?.symbol} net-rates-graph__tooltip-icon`}></span>
-                  </Tooltip>
+                  )}
                 </div>
               </div>
             )}

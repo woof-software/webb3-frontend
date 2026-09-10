@@ -25,6 +25,7 @@ export interface NetRatesTooltipProps {
   institutionalBoostLabel?: string;
   rewardsAsset?: Token;
   view: NetRatesTooltipView;
+  isGraphInnerTooltipShown?: boolean;
 }
 
 const NetRatesTooltip = ({
@@ -37,6 +38,7 @@ const NetRatesTooltip = ({
   institutionalBoostLabel,
   institutionalBoostAPR,
   view,
+  isGraphInnerTooltipShown = false
 }: NetRatesTooltipProps) => {
   const netBorrowAPR = getNetBorrowAPR(borrowAPR, borrowRewardsAPR)
   const netSupplyAPR = getNetSupplyAPR(earnAPR, earnRewardsAPR)
@@ -47,6 +49,7 @@ const NetRatesTooltip = ({
       borrowAPR={borrowAPR}
       borrowRewardsAPR={borrowRewardsAPR}
       rewardsAsset={rewardsAsset}
+      isGraphInnerTooltipShown={isGraphInnerTooltipShown}
     />
   );
 
@@ -56,6 +59,7 @@ const NetRatesTooltip = ({
       earnAPR={earnAPR}
       earnRewardsAPR={earnRewardsAPR}
       rewardsAsset={rewardsAsset}
+      isGraphInnerTooltipShown={isGraphInnerTooltipShown}
     />
   );
 

@@ -121,6 +121,7 @@ const MarketRatesPanelView = ({
       borrowAPR={borrowAPR}
       borrowRewardsAPR={borrowRewardsAPR}
       rewardsAsset={rewardsAsset}
+      isGraphInnerTooltipShown={true}
     />
   );
 
@@ -135,6 +136,7 @@ const MarketRatesPanelView = ({
         earnAPR={earnAPR}
         earnRewardsAPR={earnRewardsAPR}
         rewardsAsset={rewardsAsset}
+        isGraphInnerTooltipShown={true}
       />
     );
 
