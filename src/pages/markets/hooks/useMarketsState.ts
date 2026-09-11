@@ -246,14 +246,12 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
       }
 
       if (market?.institutional) {
-        const institutionalSupplyRewardsAPR = market?.institutional ? institutionalSupplyRewardRate(totalSupplyValueInDollars) : 0n;
-
         return {
           borrowAPR: borrowAPR,
           earnAPR: earnAPR,
           rewardsAssetSymbol: market.baseAsset.symbol,
           borrowRewardsAPR: 0n,
-          supplyRewardsAPR: institutionalSupplyRewardsAPR,
+          supplyRewardsAPR: institutionalSupplyRewardRate(totalSupplyValueInDollars),
           isInstitutional: true
         };
       }

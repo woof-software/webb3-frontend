@@ -259,14 +259,12 @@ const formatCometStateHydrated = (
       }
 
       if (market?.institutional) {
-        const institutionalSupplyRewardsAPR = market?.institutional ? institutionalSupplyRewardRate(totalBaseSupplyInDollars) : 0n;
-
         return {
           borrowAPR: cometResponse.borrowAPR.toBigInt(),
           earnAPR: cometResponse.earnAPR.toBigInt(),
           rewardsAssetSymbol: market.baseAsset.symbol,
           borrowRewardsAPR: 0n,
-          supplyRewardsAPR: institutionalSupplyRewardsAPR,
+          supplyRewardsAPR: institutionalSupplyRewardRate(totalBaseSupplyInDollars),
           isInstitutional: true
         };
       }
@@ -390,14 +388,12 @@ const formatCometStateNoWallet = (
       }
 
       if (market?.institutional) {
-        const institutionalSupplyRewardsAPR = market?.institutional ? institutionalSupplyRewardRate(totalBaseSupplyInDollars) : 0n;
-
         return {
           borrowAPR: cometResponse.borrowAPR.toBigInt(),
           earnAPR: cometResponse.earnAPR.toBigInt(),
           rewardsAssetSymbol: market.baseAsset.symbol,
           borrowRewardsAPR: 0n,
-          supplyRewardsAPR: institutionalSupplyRewardsAPR,
+          supplyRewardsAPR: institutionalSupplyRewardRate(totalBaseSupplyInDollars),
           isInstitutional: true
         };
       }

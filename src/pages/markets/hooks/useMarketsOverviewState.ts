@@ -136,7 +136,6 @@ export const sanitizeMarketSummary = (marketSummary: MarketSummaryResponse): Mar
     ),
     ...((() => {
       const market = getMarket(marketSummary.chainId, marketSummary.comet.address);
-      const institutionalSupplyRewardsAPR = market?.institutional ? institutionalSupplyRewardRate(totalSupplyValueInDollars) : 0n;
 
       if (market?.rewardsOverwrite) {
         return {
@@ -154,7 +153,7 @@ export const sanitizeMarketSummary = (marketSummary: MarketSummaryResponse): Mar
           supplyAPR: supplyAPR,
           rewardAssetSymbol: market.baseAsset.symbol,
           borrowRewardsAPR: 0n,
-          supplyRewardsAPR: institutionalSupplyRewardsAPR,
+          supplyRewardsAPR: institutionalSupplyRewardRate(totalSupplyValueInDollars),
           isInstitutional: true
         };
       }
