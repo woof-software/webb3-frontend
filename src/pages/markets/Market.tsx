@@ -124,7 +124,7 @@ const Market = ({ web3 }: MarketsProps) => {
               interestRateModel: modelState,
               reserveFactor: token.reserveFactor,
               reserves: token.reserves,
-              rewardsAsset: 'COMP',
+              rewardsAssetSymbol: 'COMP',
               totalBorrow: token.totalBorrow,
               totalSupply: token.totalSupply,
               withHeader: true,
