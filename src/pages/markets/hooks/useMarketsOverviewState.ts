@@ -19,7 +19,6 @@ export function useMarketsOverviewState(): MarketOverviewState {
     queryKey: ['marketOverviewState'],
     queryFn: () => getState(),
     initialData: [StateType.Loading],
-    throwOnError: true,
     refetchInterval: LATEST_SUMMARY_REFRESH_INTERVAL,
   });
 
