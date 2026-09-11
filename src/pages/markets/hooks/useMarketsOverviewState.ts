@@ -149,7 +149,6 @@ export const sanitizeMarketSummary = (marketSummary: MarketSummaryResponse): Mar
 
       if (market?.institutional) {
         return {
-          rewardAssetSymbol: market.baseAsset.symbol,
           borrowRewardsAPR: 0n,
           supplyRewardsAPR: institutionalSupplyRewardRate(totalSupplyValueInDollars),
           isInstitutional: true

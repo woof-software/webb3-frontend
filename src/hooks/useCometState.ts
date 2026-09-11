@@ -260,7 +260,6 @@ const formatCometStateHydrated = (
 
       if (market?.institutional) {
         return {
-          rewardsAssetSymbol: market.baseAsset.symbol,
           borrowRewardsAPR: 0n,
           supplyRewardsAPR: institutionalSupplyRewardRate(totalBaseSupplyInDollars),
           isInstitutional: true
@@ -385,7 +384,6 @@ const formatCometStateNoWallet = (
 
       if (market?.institutional) {
         return {
-          rewardsAssetSymbol: market.baseAsset.symbol,
           borrowRewardsAPR: 0n,
           supplyRewardsAPR: institutionalSupplyRewardRate(totalBaseSupplyInDollars),
           isInstitutional: true

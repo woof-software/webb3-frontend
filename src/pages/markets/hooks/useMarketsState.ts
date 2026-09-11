@@ -247,7 +247,6 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
 
       if (market?.institutional) {
         return {
-          rewardsAssetSymbol: market.baseAsset.symbol,
           borrowRewardsAPR: 0n,
           supplyRewardsAPR: institutionalSupplyRewardRate(totalSupplyValueInDollars),
           isInstitutional: true
