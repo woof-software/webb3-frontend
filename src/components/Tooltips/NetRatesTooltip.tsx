@@ -2,9 +2,6 @@ import BoostedSupplyRates from '@components/BoostedSupplyRates';
 import NetRatesGraph, { NetRatesGraphType } from '@components/NetRatesGraph';
 import { InstitutionalWhitelistStatus } from '@helpers/institutionalWhitelist';
 import { formatRateFactor } from '@helpers/numbers';
-import { Token } from '@types';
-
-import { getNetBorrowAPR, getNetSupplyAPR } from '../../pages/markets/helpers/getRewardsAPRs';
 
 export enum NetRatesTooltipView {
   Borrow = 'borrow',
@@ -25,7 +22,6 @@ export interface NetRatesTooltipProps {
   institutionalBoostLabel?: string;
   rewardsAssetSymbol?: string;
   view: NetRatesTooltipView;
-  isGraphInnerTooltipShown?: boolean;
 }
 
 const NetRatesTooltip = ({
@@ -38,10 +34,9 @@ const NetRatesTooltip = ({
   institutionalBoostLabel,
   institutionalBoostAPR,
   view,
-  isGraphInnerTooltipShown = false
 }: NetRatesTooltipProps) => {
-  const netBorrowAPR = getNetBorrowAPR(borrowAPR, borrowRewardsAPR)
-  const netSupplyAPR = getNetSupplyAPR(earnAPR, earnRewardsAPR)
+  const netBorrowAPR = borrowRewardsAPR ? borrowAPR - borrowRewardsAPR : borrowAPR;
+  const netSupplyAPR = earnRewardsAPR ? earnAPR + earnRewardsAPR : earnAPR;
 
   const netBorrowRateGraph = (
     <NetRatesGraph
@@ -49,7 +44,6 @@ const NetRatesTooltip = ({
       borrowAPR={borrowAPR}
       borrowRewardsAPR={borrowRewardsAPR}
       rewardsAssetSymbol={rewardsAssetSymbol}
-      isGraphInnerTooltipShown={isGraphInnerTooltipShown}
     />
   );
 
@@ -59,7 +53,6 @@ const NetRatesTooltip = ({
       earnAPR={earnAPR}
       earnRewardsAPR={earnRewardsAPR}
       rewardsAssetSymbol={rewardsAssetSymbol}
-      isGraphInnerTooltipShown={isGraphInnerTooltipShown}
     />
   );
 
