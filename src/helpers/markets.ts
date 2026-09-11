@@ -71,9 +71,27 @@ export const V2_MARKET: MarketData = {
 export const MARKETS: MarketData[] = [
   ...(
     [
-      [1, 'USDC', 'USD Coin', mainnetUSDCRoots],
-      [1, 'ETH', 'Ether', mainnetWETHRoots],
-      [1, 'USDT', 'Tether', mainnetUSDTRoots],
+      [1, 'USDC', 'USD Coin', mainnetUSDCRoots, {
+        rewardsOverwrite: {
+          rewardsAssetSymbol: "COMP",
+          borrowRewardsAPR: 2579905919404118n,
+          supplyRewardsAPR: 2043544116605595n,
+        }
+      }],
+      [1, 'ETH', 'Ether', mainnetWETHRoots, {
+        rewardsOverwrite: {
+          rewardsAssetSymbol: "COMP",
+          borrowRewardsAPR: 2540730861894757n,
+          supplyRewardsAPR: 802367647857447n,
+        }
+      }],
+      [1, 'USDT', 'Tether', mainnetUSDTRoots, {
+        rewardsOverwrite: {
+          rewardsAssetSymbol: "COMP",
+          borrowRewardsAPR: 2382069454439632n,
+          supplyRewardsAPR: 1851220117801404n,
+        }
+      }],
       [1, 'wstETH', 'Lido Wrapped Staked ETH', mainnetWSTETHRoots],
       [1, 'USDS', 'USDS', mainnetUSDSRoots],
       [1, 'WBTC', 'Wrapped BTC', mainnetWBTCRoots],

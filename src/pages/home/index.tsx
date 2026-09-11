@@ -1,7 +1,6 @@
 import { ReactNode, useContext, useEffect, useState } from 'react';
 
 import { isUnwrappedCollateralAsset } from '@constants/chains';
-import { REWARDS_CONFIG } from '@constants/rewardsConfig';
 import { getActionQueueContext } from '@contexts/ActionQueueContext';
 import RewardsStateContext from '@contexts/RewardsStateContext';
 import { getSelectedMarketContext } from '@contexts/SelectedMarketContext';
@@ -14,7 +13,6 @@ import {
 } from '@helpers/actions';
 import { arrayPartition } from '@helpers/functions';
 import { getKeyForActions, PreEstimatedAction } from '@helpers/gasEstimator';
-import { institutionalSupplyRewards } from '@helpers/institutionalRates';
 import { institutionalWhitelistStatus } from '@helpers/institutionalWhitelist';
 import { DEFAULT_MARKET } from '@helpers/markets';
 import { MAX_UINT256 } from '@helpers/numbers';
@@ -94,16 +92,6 @@ const Home = ({
   let mastheadState: MastheadState;
   let positionCardState: PositionCardState;
   let isBulkerAllowed = false;
-  let borrowRewardsAPR: bigint | undefined, earnRewardsAPR: bigint | undefined, rewardsAsset: Token | undefined;
-  if (cometState === StateType.Hydrated || cometState === StateType.NoWallet) {
-    const marketInfo = selectedMarket[1];
-    if (marketInfo) {
-      const rewardConfig = REWARDS_CONFIG[marketInfo.chainInformation.chainId]?.[marketInfo.marketAddress];
-      borrowRewardsAPR = rewardConfig?.borrowRewardsAPR;
-      earnRewardsAPR = rewardConfig?.supplyRewardsAPR;
-      rewardsAsset = rewardConfig?.rewardsAsset;
-    }
-  }
 
   const whitelistStatus = institutionalWhitelistStatus(web3.read.account);
 
@@ -112,16 +100,16 @@ const Home = ({
     assetRows = [0, 0, 0, 0, 0, 0].map((_, index) => <AssetRow key={index} state={[StateType.Loading]} />);
     positionCardState = [StateType.Loading];
   } else if (cometState === StateType.NoWallet) {
-    const { baseAsset, borrowAPR, collateralAssets, earnAPR, totalBaseSupplyUsd } = state[1];
-
-    // Institutional markets pay USDC-terms rewards on top of the regular supply rate
-    ({ earnRewardsAPR, rewardsAsset } = institutionalSupplyRewards(
-      selectedMarket[1],
-      earnRewardsAPR,
-      rewardsAsset,
+    const {
       baseAsset,
-      totalBaseSupplyUsd,
-    ));
+      borrowAPR,
+      collateralAssets,
+      earnAPR,
+      borrowRewardsAPR,
+      supplyRewardsAPR,
+      rewardsAssetSymbol,
+      isInstitutional
+    } = state[1];
 
     mastheadState = [StateType.NoWallet, { baseAsset, earnAPR }];
     assetRows = collateralAssets
@@ -132,27 +120,31 @@ const Home = ({
       {
         baseAsset,
         borrowAPR,
+        rewardsAssetSymbol,
         borrowRewardsAPR,
         earnAPR,
-        earnRewardsAPR,
+        earnRewardsAPR: isInstitutional ? undefined : supplyRewardsAPR,
+        institutionalBoostAPR: isInstitutional ? supplyRewardsAPR : undefined,
         institutionalWhitelistStatus: whitelistStatus,
-        rewardsAsset,
         theme,
       },
     ];
   } else {
     const market = selectedMarket[1] as MarketDataLoaded; // It must be loaded if in StateType.Hydrated
-    const { baseAsset, borrowAPR, collateralAssets, collateralValue, earnAPR, liquidationCapacity } = state[1];
+    const {
+      baseAsset,
+      borrowAPR,
+      collateralAssets,
+      collateralValue,
+      earnAPR,
+      liquidationCapacity,
+      borrowRewardsAPR,
+      supplyRewardsAPR,
+      isInstitutional,
+      rewardsAssetSymbol,
+    } = state[1];
     isBulkerAllowed = state[1].isBulkerAllowed;
 
-    // Institutional markets pay USDC-terms rewards on top of the regular supply rate
-    ({ earnRewardsAPR, rewardsAsset } = institutionalSupplyRewards(
-      market,
-      earnRewardsAPR,
-      rewardsAsset,
-      baseAsset,
-      state[1].totalBaseSupplyUsd,
-    ));
     const actions = getActions(baseAsset, collateralAssets, rewards);
     const actionsForCompare = compare ? [] : actions;
     const updatedDataPostActions = calculateUpdatedBalances(baseAsset, collateralAssets, actionsForCompare);
@@ -280,13 +272,13 @@ const Home = ({
         collateralValuePost: updatedDataPostActions.collateralValue,
         compare,
         earnAPR,
-        earnRewardsAPR,
-        institutionalBoostAPR: market?.institutional ? earnRewardsAPR : undefined,
+        earnRewardsAPR: isInstitutional ? undefined : supplyRewardsAPR,
+        institutionalBoostAPR: isInstitutional ? supplyRewardsAPR : undefined,
         institutionalWhitelistStatus: whitelistStatus,
         liquidationCapacity,
         liquidationCapacityPost: updatedDataPostActions.liquidationCapacity,
         pendingAction,
-        rewardsAsset,
+        rewardsAssetSymbol,
         theme,
         transaction: blockingTransaction,
         onWithdrawAction: (pendingAction?: PendingAction) => {
@@ -314,9 +306,10 @@ const Home = ({
         collateralValue: collateralValue,
         collateralValuePost: updatedDataPostActions.collateralValue,
         earnAPR,
-        earnRewardsAPR,
+        earnRewardsAPR: isInstitutional ? undefined : supplyRewardsAPR,
+        institutionalBoostAPR: isInstitutional ? supplyRewardsAPR : undefined,
         institutionalWhitelistStatus: whitelistStatus,
-        rewardsAsset,
+        rewardsAssetSymbol,
         liquidationCapacity: liquidationCapacity,
         liquidationCapacityPost: updatedDataPostActions.liquidationCapacity,
         pendingAction,

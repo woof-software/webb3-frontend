@@ -15,7 +15,7 @@ type NetRatesBorrowGraphState = {
   state: NetRatesGraphType.Borrow;
   borrowAPR: bigint;
   borrowRewardsAPR?: bigint;
-  rewardsAsset?: Token;
+  rewardsAssetSymbol?: string;
   isGraphInnerTooltipShown?: boolean;
 };
 
@@ -23,14 +23,14 @@ type NetRatesEarnGraphState = {
   state: NetRatesGraphType.Earn;
   earnAPR: bigint;
   earnRewardsAPR?: bigint;
-  rewardsAsset?: Token;
+  rewardsAssetSymbol?: string;
   isGraphInnerTooltipShown?: boolean;
 };
 
 type NetRatesGraphState = NetRatesBorrowGraphState | NetRatesEarnGraphState;
 
 const NetRatesGraph = (state: NetRatesGraphState) => {
-  const { rewardsAsset } = state;
+  const { rewardsAssetSymbol} = state;
   switch (state.state) {
     case NetRatesGraphType.Borrow: {
       const { borrowAPR, borrowRewardsAPR = 0n, isGraphInnerTooltipShown = false } = state;
@@ -69,10 +69,10 @@ const NetRatesGraph = (state: NetRatesGraphState) => {
                           </p>
                         }
                       >
-                        <span className={`asset asset--${rewardsAsset?.symbol} net-rates-graph__tooltip-icon`}></span>
+                        <span className={`asset asset--${rewardsAssetSymbol} net-rates-graph__tooltip-icon`}></span>
                       </Tooltip>
                     ) : (
-                      <span className={`asset asset--${rewardsAsset?.symbol} net-rates-graph__tooltip-icon`}></span>
+                      <span className={`asset asset--${rewardsAssetSymbol} net-rates-graph__tooltip-icon`}></span>
                     )}
                   </div>
                 )}
@@ -107,10 +107,10 @@ const NetRatesGraph = (state: NetRatesGraphState) => {
                       </p>
                     }
                   >
-                    <span className={`asset asset--${rewardsAsset?.symbol} net-rates-graph__tooltip-icon`}></span>
+                    <span className={`asset asset--${rewardsAssetSymbol} net-rates-graph__tooltip-icon`}></span>
                   </Tooltip>
                 ) : (
-                  <span className={`asset asset--${rewardsAsset?.symbol} net-rates-graph__tooltip-icon`}></span>
+                  <span className={`asset asset--${rewardsAssetSymbol} net-rates-graph__tooltip-icon`}></span>
                 )}
               </div>
             </div>
@@ -155,10 +155,10 @@ const NetRatesGraph = (state: NetRatesGraphState) => {
                         </p>
                       }
                     >
-                      <span className={`asset asset--${rewardsAsset?.symbol} net-rates-graph__tooltip-icon`}></span>
+                      <span className={`asset asset--${rewardsAssetSymbol} net-rates-graph__tooltip-icon`}></span>
                     </Tooltip>
                   ) : (
-                    <span className={`asset asset--${rewardsAsset?.symbol} net-rates-graph__tooltip-icon`}></span>
+                    <span className={`asset asset--${rewardsAssetSymbol} net-rates-graph__tooltip-icon`}></span>
                   )}
                 </div>
               </div>

@@ -152,6 +152,10 @@ export type ProtocolState = {
   earnAPR: bigint;
   // The market's total supplied base asset value in dollars, at PRICE_PRECISION
   totalBaseSupplyUsd: bigint;
+  borrowRewardsAPR: bigint;
+  supplyRewardsAPR: bigint;
+  rewardsAssetSymbol?: string;
+  isInstitutional?: boolean;
 };
 
 export type ProtocolAndAccountState = Omit<ProtocolState, 'baseAsset' | 'collateralAssets'> & {
@@ -160,6 +164,10 @@ export type ProtocolAndAccountState = Omit<ProtocolState, 'baseAsset' | 'collate
   collateralValue: bigint;
   isBulkerAllowed: boolean;
   liquidationCapacity: bigint;
+  borrowRewardsAPR: bigint;
+  supplyRewardsAPR: bigint;
+  rewardsAssetSymbol?: string;
+  isInstitutional?: boolean;
 };
 
 export type ProtocolAndMarketsState = Omit<ProtocolState, 'collateralAssets'> & {
@@ -174,6 +182,10 @@ export type ProtocolAndMarketsState = Omit<ProtocolState, 'collateralAssets'> & 
   totalBorrow: bigint;
   totalSupply: bigint;
   utilization: bigint;
+  borrowRewardsAPR: bigint;
+  supplyRewardsAPR: bigint;
+  rewardsAssetSymbol?: string
+  isInstitutional?: boolean;
   type: 'ProtocolAndMarketState';
 };
 
@@ -345,6 +357,11 @@ export type MarketData = {
   // Recently launched markets get a 'New' badge in the market selector
   isNew?: boolean;
   type: 'MarketData';
+  rewardsOverwrite?: {
+    rewardsAssetSymbol: string;
+    borrowRewardsAPR: bigint;
+    supplyRewardsAPR: bigint;
+  }
 };
 
 export type MarketDataLoaded = Omit<MarketData, 'baseAsset' | 'type'> & {
@@ -367,9 +384,9 @@ export type MarketSummary = {
   };
   borrowAPR: bigint;
   supplyAPR: bigint;
-  // The USDC-terms rewards portion of supplyAPR from an institutional market's
-  // rewards program, when it is paying
-  institutionalSupplyRewardsAPR?: bigint;
+  borrowRewardsAPR: bigint;
+  supplyRewardsAPR: bigint;
+  rewardAssetSymbol?: string;
   /**
    * Total borrow value in USD
    */
@@ -386,6 +403,7 @@ export type MarketSummary = {
   timestamp: number;
   collateralAssetSymbols: string[];
   date: string;
+  isInstitutional?: boolean;
 };
 
 export type AggregatedHistoricalSummary = {

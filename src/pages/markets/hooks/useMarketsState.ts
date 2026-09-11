@@ -9,6 +9,7 @@ import Comet from '@helpers/abis/Comet';
 import ERC20 from '@helpers/abis/ERC20';
 import { adjustCollateralPrice, getBaseAssetPriceFeed } from '@helpers/baseAssetPrice';
 import { getHardcodedFeedPrice, getRemappedPriceFeed } from '@helpers/deprecatedMarkets';
+import { institutionalSupplyRewardRate } from '@helpers/institutionalRates';
 import { isV2Market } from '@helpers/markets';
 import { getMockMarketState } from '@helpers/mocks';
 import { getMarketDataUrlForMarket } from '@helpers/urls';
@@ -216,15 +217,14 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
     baseAssetPriceInDollars: baseTokenPriceInDollars.toBigInt(),
   };
 
+  const totalSupplyValueInDollars = (totalSupply * baseAssetWithState.baseAssetPriceInDollars) / 10n ** BigInt(baseAssetWithState.decimals);
+
   const state: ProtocolAndMarketsState = {
     baseAsset: baseAssetWithState,
-    borrowAPR,
     borrowRates,
     collateralAssets,
     cometAddress: market.marketAddress,
-    earnAPR,
-    totalBaseSupplyUsd:
-      (totalSupply * baseAssetWithState.baseAssetPriceInDollars) / 10n ** BigInt(baseAssetWithState.decimals),
+    totalBaseSupplyUsd: totalSupplyValueInDollars,
     factorScale,
     marketHistory: marketHistoryAsBuckets,
     reserves: reserves.toBigInt(),
@@ -234,6 +234,37 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
     totalSupply,
     utilization: utilization.toBigInt(),
     type: 'ProtocolAndMarketState',
+    ...((() => {
+      if (market?.rewardsOverwrite) {
+        return {
+          borrowAPR: borrowAPR - market.rewardsOverwrite.borrowRewardsAPR,
+          earnAPR: earnAPR + market.rewardsOverwrite.supplyRewardsAPR,
+          borrowRewardsAPR: market.rewardsOverwrite.borrowRewardsAPR,
+          supplyRewardsAPR: market.rewardsOverwrite.supplyRewardsAPR,
+          rewardsAssetSymbol: market.rewardsOverwrite.rewardsAssetSymbol
+        };
+      }
+
+      if (market?.institutional) {
+        const institutionalSupplyRewardsAPR = market?.institutional ? institutionalSupplyRewardRate(totalSupplyValueInDollars) : 0n;
+
+        return {
+          borrowAPR: borrowAPR,
+          earnAPR: earnAPR,
+          rewardsAssetSymbol: market.baseAsset.symbol,
+          borrowRewardsAPR: 0n,
+          supplyRewardsAPR: institutionalSupplyRewardsAPR,
+          isInstitutional: true
+        };
+      }
+
+      return {
+        borrowAPR: borrowAPR,
+        earnAPR: earnAPR,
+        borrowRewardsAPR: 0n,
+        supplyRewardsAPR: 0n,
+      };
+    })())
   };
   return [StateType.Hydrated, state];
 };

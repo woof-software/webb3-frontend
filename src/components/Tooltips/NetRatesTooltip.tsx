@@ -23,7 +23,7 @@ export interface NetRatesTooltipProps {
   institutionalWhitelistStatus?: InstitutionalWhitelistStatus;
   // Label override for the boosted portion of the rate
   institutionalBoostLabel?: string;
-  rewardsAsset?: Token;
+  rewardsAssetSymbol?: string;
   view: NetRatesTooltipView;
   isGraphInnerTooltipShown?: boolean;
 }
@@ -33,7 +33,7 @@ const NetRatesTooltip = ({
   borrowRewardsAPR,
   earnAPR,
   earnRewardsAPR,
-  rewardsAsset,
+  rewardsAssetSymbol,
   institutionalWhitelistStatus,
   institutionalBoostLabel,
   institutionalBoostAPR,
@@ -48,7 +48,7 @@ const NetRatesTooltip = ({
       state={NetRatesGraphType.Borrow}
       borrowAPR={borrowAPR}
       borrowRewardsAPR={borrowRewardsAPR}
-      rewardsAsset={rewardsAsset}
+      rewardsAssetSymbol={rewardsAssetSymbol}
       isGraphInnerTooltipShown={isGraphInnerTooltipShown}
     />
   );
@@ -58,7 +58,7 @@ const NetRatesTooltip = ({
       state={NetRatesGraphType.Earn}
       earnAPR={earnAPR}
       earnRewardsAPR={earnRewardsAPR}
-      rewardsAsset={rewardsAsset}
+      rewardsAssetSymbol={rewardsAssetSymbol}
       isGraphInnerTooltipShown={isGraphInnerTooltipShown}
     />
   );

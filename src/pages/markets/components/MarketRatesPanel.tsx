@@ -2,7 +2,7 @@ import BoostedSupplyRates from '@components/BoostedSupplyRates';
 import NetRatesGraph, { NetRatesGraphType } from '@components/NetRatesGraph';
 import PanelWithHeader from '@components/PanelWithHeader';
 import { formatRateFactor } from '@helpers/numbers';
-import { Token, StateType } from '@types';
+import { StateType } from '@types';
 
 import {
   getNetBorrowAPR,
@@ -20,7 +20,7 @@ type MarketRatesPanelHydrated = [
     borrowRewardsAPR?: bigint;
     earnAPR: bigint;
     earnRewardsAPR?: bigint;
-    rewardsAsset?: Token;
+    rewardsAssetSymbol?: string;
     // Set when earnRewardsAPR is an institutional market's USDC-terms program
     // reward, which annotates the net earn rate with a tooltip
     institutionalRewardsAPR?: bigint;
@@ -34,7 +34,7 @@ type PanelContent = {
   borrowRewardsAPR?: bigint;
   earnAPR: bigint;
   earnRewardsAPR?: bigint;
-  rewardsAsset?: Token;
+  rewardsAssetSymbol?: string;
   institutionalRewardsAPR?: bigint;
 };
 
@@ -43,7 +43,7 @@ const defaultPanelContent: PanelContent = {
   borrowRewardsAPR: undefined,
   earnAPR: 0n,
   earnRewardsAPR: undefined,
-  rewardsAsset: undefined,
+  rewardsAssetSymbol: undefined,
   institutionalRewardsAPR: undefined,
 };
 
@@ -51,11 +51,9 @@ function getMarketRatesPanelContent(state: MarketRatesPanelState): PanelContent 
   const panelState = state[0];
   if (panelState === StateType.Loading) {
     return defaultPanelContent;
+  } else {
+    return state[1];
   }
-
-  const { borrowRewardsAPR, borrowAPR, earnAPR, earnRewardsAPR, rewardsAsset } = state[1];
-
-  return { borrowAPR, borrowRewardsAPR, earnAPR, earnRewardsAPR, rewardsAsset };
 }
 
 const MarketRatesPanel = ({ state }: { state: MarketRatesPanelState }) => {
@@ -109,7 +107,7 @@ const MarketRatesPanelView = ({
   borrowRewardsAPR,
   earnAPR,
   earnRewardsAPR,
-  rewardsAsset,
+  rewardsAssetSymbol,
   institutionalRewardsAPR
 }: PanelContent) => {
   const netBorrowAPR = getNetBorrowAPR(borrowAPR, borrowRewardsAPR);
@@ -120,7 +118,7 @@ const MarketRatesPanelView = ({
       state={NetRatesGraphType.Borrow}
       borrowAPR={borrowAPR}
       borrowRewardsAPR={borrowRewardsAPR}
-      rewardsAsset={rewardsAsset}
+      rewardsAssetSymbol={rewardsAssetSymbol}
       isGraphInnerTooltipShown={true}
     />
   );
@@ -135,7 +133,7 @@ const MarketRatesPanelView = ({
         state={NetRatesGraphType.Earn}
         earnAPR={earnAPR}
         earnRewardsAPR={earnRewardsAPR}
-        rewardsAsset={rewardsAsset}
+        rewardsAssetSymbol={rewardsAssetSymbol}
         isGraphInnerTooltipShown={true}
       />
     );

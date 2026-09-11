@@ -37,6 +37,7 @@ const RewardsButton = ({ web3, mobile = false, onClaimClicked = () => undefined 
   const [expandedState, setExpandedState] = useState<ExpandedState>({});
   const ref = useRef(null);
   useOnClickOutside(ref, () => setDropdownActive(false));
+  const allowedChainIds = new Set([5000, 59144]);
 
   useEffect(() => {
     if (rewardsState === StateType.Hydrated && state[1] !== undefined) {
@@ -54,21 +55,23 @@ const RewardsButton = ({ web3, mobile = false, onClaimClicked = () => undefined 
 
   if (rewardsState === StateType.Hydrated && state[1] !== undefined) {
     const allRewards = state[1];
-    const { totalRewards, totalUnclaimed } = allRewards.reduce(
-      (accum, [, { rewardsStates }]) => {
-        const unclaimed = rewardsStates.reduce((accum, { amountOwed }) => accum + amountOwed, 0n);
-        const walletBalance = (rewardsStates[0] || {}).walletBalance || 0n;
+    const { totalRewards, totalUnclaimed } = allRewards
+      .filter(([chainId]) => allowedChainIds.has(+chainId))
+      .reduce(
+        (accum, [, { rewardsStates }]) => {
+          const unclaimed = rewardsStates.reduce((accum, { amountOwed }) => accum + amountOwed, 0n);
+          const walletBalance = (rewardsStates[0] || {}).walletBalance || 0n;
 
-        return {
-          ...accum,
-          totalRewards: accum.totalRewards + unclaimed + walletBalance,
-          totalUnclaimed: accum.totalUnclaimed + unclaimed,
-        };
-      },
-      {
-        totalRewards: 0n,
-        totalUnclaimed: 0n,
-      }
+          return {
+            ...accum,
+            totalRewards: accum.totalRewards + unclaimed + walletBalance,
+            totalUnclaimed: accum.totalUnclaimed + unclaimed,
+          };
+        },
+        {
+          totalRewards: 0n,
+          totalUnclaimed: 0n,
+        }
     );
     const rewardAsset = allRewards[0][1].rewardsStates[0].rewardAsset;
     const [wholeNumberTotalRewards, fractionalTotalRewards] = `${formatTokenBalance(

@@ -3,15 +3,11 @@ import { Link } from 'react-router';
 
 import IconPair from '@components/IconPair';
 import { ArrowLeft, ExternalLink } from '@components/Icons';
-import { REWARDS_CONFIG } from '@constants/rewardsConfig';
-import RewardsStateContext from '@contexts/RewardsStateContext';
 import { getSelectedMarketContext } from '@contexts/SelectedMarketContext';
 import type { Web3 } from '@contexts/Web3Context';
-import { institutionalSupplyRewards } from '@helpers/institutionalRates';
 import { institutionalWhitelistStatus } from '@helpers/institutionalWhitelist';
 import { getMarket, isV2Market } from '@helpers/markets';
 import { formatTokenBalance, getTokenValue, PRICE_PRECISION } from '@helpers/numbers';
-import { getRewardsForSelectedMarket } from '@helpers/rewards';
 import { getBlockExplorerUrlForAddress, INSTITUTIONAL_MARKET_URL } from '@helpers/urls';
 import { CTokenWithMarketState, Currency, StateType, Token, TokenWithMarketState } from '@types';
 
@@ -36,7 +32,6 @@ const Market = ({ web3 }: MarketsProps) => {
 
   const marketCurrencyToShow = Currency.USD;
 
-  const rewards = useContext(RewardsStateContext);
   const state = useMarketsState(web3, selectedMarket);
   const [marketStateType, marketStateData] = state;
   const [, market] = selectedMarket;
@@ -141,6 +136,7 @@ const Market = ({ web3 }: MarketsProps) => {
   } else if (marketStateData?.type === 'ProtocolAndMarketState') {
     const {
       borrowAPR,
+      borrowRewardsAPR,
       borrowRates,
       earnAPR,
       baseAsset,
@@ -150,29 +146,14 @@ const Market = ({ web3 }: MarketsProps) => {
       totalBorrow,
       totalSupply,
       utilization,
+      isInstitutional,
+      supplyRewardsAPR,
+      rewardsAssetSymbol,
     } = marketStateData;
-    let borrowRewardsAPR: bigint | undefined, earnRewardsAPR: bigint | undefined, rewardsAsset: Token | undefined;
-    const rewardsState = getRewardsForSelectedMarket(rewards, selectedMarket);
-    if (rewardsState !== undefined) {
-      borrowRewardsAPR = rewardsState.borrowRewardsAPR;
-      earnRewardsAPR = rewardsState.earnRewardsAPR;
-      rewardsAsset = rewardsState.rewardAsset;
-    }
-
-    const institutionalResult = institutionalSupplyRewards(
-      configMarket,
-      earnRewardsAPR,
-      rewardsAsset,
-      baseAsset,
-      marketStateData.totalBaseSupplyUsd,
-    );
-    earnRewardsAPR = institutionalResult.earnRewardsAPR;
-    rewardsAsset = institutionalResult.rewardsAsset;
-    const { isInstitutionalReward } = institutionalResult;
 
     // While the boost is paying, a banner describes the connected account's
     // access to it
-    if (isInstitutionalReward) {
+    if (isInstitutional && supplyRewardsAPR > 0n) {
       whitelistStatusBanner = (
         <WhitelistStatusBanner whitelistStatus={institutionalWhitelistStatus(web3.read.account)} />
       );
@@ -193,9 +174,6 @@ const Market = ({ web3 }: MarketsProps) => {
       </CollateralAssetsPanel>
     );
 
-    const borrowRewardsAPRConfig = REWARDS_CONFIG[market.chainInformation.chainId]?.[market.marketAddress]?.borrowRewardsAPR ?? 0n;
-    const earnRewardsAPRConfig = REWARDS_CONFIG[market.chainInformation.chainId]?.[market.marketAddress]?.supplyRewardsAPR ?? 0n;
-
     marketRatesPanel = (
       <MarketRatesPanel
         state={[
@@ -204,11 +182,11 @@ const Market = ({ web3 }: MarketsProps) => {
             chainId: market.chainInformation.chainId,
             marketAddress: market.marketAddress,
             borrowAPR,
-            borrowRewardsAPR: borrowRewardsAPRConfig,
+            borrowRewardsAPR: borrowRewardsAPR,
             earnAPR,
-            earnRewardsAPR: earnRewardsAPRConfig,
-            rewardsAsset,
-            institutionalRewardsAPR: isInstitutionalReward ? earnRewardsAPR : undefined,
+            earnRewardsAPR: isInstitutional ? undefined : supplyRewardsAPR,
+            rewardsAssetSymbol,
+            institutionalRewardsAPR: isInstitutional ? supplyRewardsAPR : undefined,
           },
         ]}
       />

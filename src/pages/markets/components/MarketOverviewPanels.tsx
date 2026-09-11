@@ -9,7 +9,6 @@ import PanelWithHeader from '@components/PanelWithHeader';
 import PanelWithNoHeader from '@components/PanelWithNoHeader';
 import { NetRatesTooltipView } from '@components/Tooltips/NetRatesTooltip';
 import { CHAINS, INACTIVE_CHAIN_IDS } from '@constants/chains';
-import { REWARDS_CONFIG } from '@constants/rewardsConfig';
 import { assetIconForAssetSymbol, iconNameForChainId } from '@helpers/assets';
 import { InstitutionalWhitelistStatus } from '@helpers/institutionalWhitelist';
 import { getMarket, getMarketDescriptors } from '@helpers/markets';
@@ -18,10 +17,6 @@ import useOnClickOutside from '@hooks/useOnClickOutside';
 
 import { LatestMarketSummaries, MarketSummary } from '../../../types';
 import { BoostedRateInfo } from '../BoostedRateInfo';
-import {
-  getNetBorrowAPR,
-  getNetSupplyAPR,
-} from '../helpers/getRewardsAPRs';
 
 import InstitutionalRateInfo from './InstitutionalRateInfo';
 
@@ -303,15 +298,13 @@ const PanelRow = ({ marketSummary, institutionalWhitelistStatus }: PanelRowProps
   const market = getMarket(marketSummary.chainId, marketSummary.comet.address);
   const showNewBadge = market?.isNew === true;
 
-  const rewardConfig = REWARDS_CONFIG[marketSummary.chainId]?.[marketSummary.comet.address];
-
   const utilization = formatRateFactor(marketSummary.utilization);
 
-  const netEarnAPR = formatRateFactor(getNetSupplyAPR(marketSummary.supplyAPR, rewardConfig?.supplyRewardsAPR));
-  const netBorrowAPR = formatRateFactor(getNetBorrowAPR(marketSummary.borrowAPR, rewardConfig?.borrowRewardsAPR));
+  const netEarnAPR = formatRateFactor(marketSummary.supplyAPR);
+  const netBorrowAPR = formatRateFactor(marketSummary.borrowAPR);
 
-  const hasEarnRewards = rewardConfig?.supplyRewardsAPR > 0n;
-  const hasBorrowRewards = rewardConfig?.borrowRewardsAPR > 0n;
+  const hasEarnRewards = marketSummary.supplyRewardsAPR > 0n;
+  const hasBorrowRewards = marketSummary.borrowRewardsAPR > 0n;
 
   const shortMarketName = () => {
     const name = market?.slug ?? (assetSymbol === 'ETH' ? 'WETH' : assetSymbol);
@@ -365,18 +358,18 @@ const PanelRow = ({ marketSummary, institutionalWhitelistStatus }: PanelRowProps
       <td>
         <div className="market-overview-panels__apr-container">
           <div className="body text-color--1 L3">{netEarnAPR}</div>
-          {(marketSummary.institutionalSupplyRewardsAPR !== undefined) && (
+          {marketSummary.isInstitutional && (
             <InstitutionalRateInfo
               marketSummary={marketSummary}
               whitelistStatus={institutionalWhitelistStatus}
             />
           )}
-          {hasEarnRewards &&
+          {(hasEarnRewards && !marketSummary.isInstitutional) &&
             <BoostedRateInfo
               view={NetRatesTooltipView.Supply}
               earnAPR={marketSummary.supplyAPR}
-              earnRewardsAPR={rewardConfig?.supplyRewardsAPR}
-              rewardsAsset={rewardConfig?.rewardsAsset}
+              earnRewardsAPR={marketSummary.supplyRewardsAPR}
+              rewardsAssetSymbol={marketSummary.rewardAssetSymbol}
             />
           }
         </div>
@@ -384,12 +377,12 @@ const PanelRow = ({ marketSummary, institutionalWhitelistStatus }: PanelRowProps
       <td>
         <div className="market-overview-panels__apr-container">
           <div className="body text-color--1 L3">{netBorrowAPR}</div>
-          {hasBorrowRewards &&
+          {(hasBorrowRewards && !marketSummary.isInstitutional) &&
             <BoostedRateInfo 
               view={NetRatesTooltipView.Borrow}
               borrowAPR={marketSummary.borrowAPR}
-              borrowRewardsAPR={rewardConfig?.borrowRewardsAPR}
-              rewardsAsset={rewardConfig?.rewardsAsset}
+              borrowRewardsAPR={marketSummary.borrowRewardsAPR}
+              rewardsAssetSymbol={marketSummary.rewardAssetSymbol}
             />
           }
         </div>

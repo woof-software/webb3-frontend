@@ -15,13 +15,11 @@ import { AggregatedHistoricalSummary, MarketOverviewState, MarketSummary, Reward
 const LATEST_SUMMARY_REFRESH_INTERVAL = 1000 * 60 * 10; // 10 minutes
 
 export function useMarketsOverviewState(): MarketOverviewState {
-  // TODO: This can also be modified to use react-query
-  const rewardsState = useContext(RewardsStateContext);
-
   const query = useQuery({
-    queryKey: ['marketOverviewState', rewardsState[0]],
-    queryFn: () => getState(rewardsState),
+    queryKey: ['marketOverviewState'],
+    queryFn: () => getState(),
     initialData: [StateType.Loading],
+    throwOnError: true,
     refetchInterval: LATEST_SUMMARY_REFRESH_INTERVAL,
   });
 
@@ -45,49 +43,13 @@ type MarketSummaryResponse = {
   collateralAssetSymbols: string[];
 };
 
-const getState = async (rewardsState: RewardsState, includeTestnets = false): Promise<MarketOverviewState> => {
-  const [rewardsStateType, rewards] = rewardsState;
-  if (rewardsStateType === StateType.Loading || rewards === undefined) {
-    return [StateType.Loading];
-  }
-
+const getState = async (includeTestnets = false): Promise<MarketOverviewState> => {
   const latestMarketSummariesResponse = await fetch(getLatestMarketSummaryEndpoint(includeTestnets));
   const latestMarketSummaries = await latestMarketSummariesResponse.json();
 
   const sanitizedLatestMarketSummaries: MarketSummary[] = latestMarketSummaries
     .map(convertApiResponse)
-    .map(sanitizeMarketSummary)
-    // Institutional markets add USDC-terms rewards on top of the supply rate for their current size
-    .map((marketSummary: MarketSummary): MarketSummary => {
-      const rewardForChain = rewards.find((reward) => Number(reward[0]) === marketSummary.chainId);
-      if (rewardForChain === undefined) {
-        return marketSummary;
-      }
-
-      const rewardsForMarket = rewardForChain[1].rewardsStates.find((rewardState) => {
-        return rewardState.comet === marketSummary.comet.address;
-      });
-
-      if (rewardsForMarket === undefined) {
-        return marketSummary;
-      }
-
-      const market = getMarket(marketSummary.chainId, marketSummary.comet.address);
-      const institutionalSupplyRewardsAPR = market?.institutional
-        ? institutionalSupplyRewardRate(marketSummary.totalSupplyValue)
-        : 0n;
-
-      const supplyRewardsAPR = market?.institutional
-        ? institutionalSupplyRewardsAPR
-        : rewardsForMarket.earnRewardsAPR;
-
-      return {
-        ...marketSummary,
-        borrowAPR: marketSummary.borrowAPR - rewardsForMarket.borrowRewardsAPR,
-        supplyAPR: marketSummary.supplyAPR + supplyRewardsAPR,
-        ...(institutionalSupplyRewardsAPR > 0n ? { institutionalSupplyRewardsAPR } : {}),
-      };
-    });
+    .map(sanitizeMarketSummary);
 
   const historicalMarketSummariesResponse = await fetch(getHistoricalMarketSummaryEndpoint(includeTestnets));
   const historicalMarketSummaries = await historicalMarketSummariesResponse.json();
@@ -161,8 +123,6 @@ export const sanitizeMarketSummary = (marketSummary: MarketSummaryResponse): Mar
     comet: {
       address: getAddress(marketSummary.comet.address),
     },
-    borrowAPR: borrowAPR,
-    supplyAPR: supplyAPR,
     totalBorrowValue: totalBorrowValueInDollars,
     totalSupplyValue: totalSupplyValueInDollars,
     totalCollateralValue: totalCollateralValueInDollars,
@@ -174,5 +134,37 @@ export const sanitizeMarketSummary = (marketSummary: MarketSummaryResponse): Mar
       baseAsset,
       marketSummary.collateralAssetSymbols ?? []
     ),
+    ...((() => {
+      const market = getMarket(marketSummary.chainId, marketSummary.comet.address);
+      const institutionalSupplyRewardsAPR = market?.institutional ? institutionalSupplyRewardRate(totalSupplyValueInDollars) : 0n;
+
+      if (market?.rewardsOverwrite) {
+        return {
+          borrowAPR: borrowAPR - market.rewardsOverwrite.borrowRewardsAPR,
+          supplyAPR: supplyAPR + market.rewardsOverwrite.supplyRewardsAPR,
+          borrowRewardsAPR: market.rewardsOverwrite.borrowRewardsAPR,
+          supplyRewardsAPR: market.rewardsOverwrite.supplyRewardsAPR,
+          rewardAssetSymbol: market.rewardsOverwrite.rewardsAssetSymbol
+        };
+      }
+
+      if (market?.institutional) {
+        return {
+          borrowAPR: borrowAPR,
+          supplyAPR: supplyAPR + institutionalSupplyRewardsAPR,
+          rewardAssetSymbol: market.baseAsset.symbol,
+          borrowRewardsAPR: 0n,
+          supplyRewardsAPR: institutionalSupplyRewardsAPR,
+          isInstitutional: true
+        };
+      }
+
+      return {
+        borrowAPR: borrowAPR,
+        supplyAPR: supplyAPR,
+        borrowRewardsAPR: 0n,
+        supplyRewardsAPR: 0n,
+      };
+    })())
   };
 };

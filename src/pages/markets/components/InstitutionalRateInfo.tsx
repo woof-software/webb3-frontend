@@ -19,7 +19,7 @@ const InstitutionalRateInfo = ({
   marketSummary,
   whitelistStatus = InstitutionalWhitelistStatus.NoWallet,
 }: InstitutionalRateInfoProps) => {
-  const boostAPR = marketSummary.institutionalSupplyRewardsAPR ?? 0n;
+  const boostAPR = marketSummary.isInstitutional ? marketSummary.supplyRewardsAPR : 0n;
 
   return (
     <Tooltip

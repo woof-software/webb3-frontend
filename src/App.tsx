@@ -60,7 +60,6 @@ function App({ Component, pageProps }: any) {
     if (location.pathname.startsWith('/extensions')) {
       document.title = 'Compound | Extensions';
     }
-
     if (location.pathname.startsWith('/rewards')) {
       document.title = 'Compound | Rewards';
     }

@@ -56,7 +56,7 @@ type MastheadHydrated = [
     liquidationCapacity: bigint;
     liquidationCapacityPost: bigint;
     pendingAction?: PendingAction;
-    rewardsAsset?: Token;
+    rewardsAssetSymbol?: string;
     theme: Theme;
     transaction?: Transaction;
     onSupplyAction: (pendingAction?: PendingAction) => void;
@@ -226,7 +226,7 @@ function getContent(state: MastheadState): Content {
     liquidationCapacity,
     liquidationCapacityPost,
     pendingAction,
-    rewardsAsset,
+    rewardsAssetSymbol,
     theme,
     transaction,
     onSupplyAction,
@@ -271,7 +271,7 @@ function getContent(state: MastheadState): Content {
     borrowRewardsAPR,
     earnAPR,
     earnRewardsAPR,
-    rewardsAsset,
+    rewardsAssetSymbol,
     institutionalBoostAPR,
     institutionalWhitelistStatus,
   };

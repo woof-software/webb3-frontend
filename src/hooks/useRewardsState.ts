@@ -2,7 +2,6 @@ import { getAddress } from 'ethers/lib/utils';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 
-import { REWARDS_CONFIG } from '@constants/rewardsConfig';
 import type { Web3 } from '@contexts/Web3Context';
 import { convertApiResponse } from '@helpers/functions';
 import { getMarketsByNetwork } from '@helpers/markets';
@@ -162,8 +161,6 @@ function sanitizeRewardState(rewardState: RewardsStateResponse) {
   const borrowRewardsAPR = BigInt(Math.floor(Number(rewardState.borrowRewardsApr) * 10 ** FACTOR_PRECISION));
   const earnRewardsAPR = BigInt(Math.floor(Number(rewardState.earnRewardsApr) * 10 ** FACTOR_PRECISION));
 
-  const rewardsConfig = REWARDS_CONFIG[rewardState.chainId]?.[rewardState.comet.address];
-
   return {
     baseAsset: {
       address: getAddress(rewardState.baseAsset.address),
@@ -183,8 +180,8 @@ function sanitizeRewardState(rewardState: RewardsStateResponse) {
       price: rewardAssetPrice,
       symbol: rewardState.rewardAsset.symbol,
     },
-    borrowRewardsAPR: borrowRewardsAPR !== 0n ? borrowRewardsAPR : (rewardsConfig?.borrowRewardsAPR ?? 0n),
-    earnRewardsAPR: earnRewardsAPR !== 0n ? earnRewardsAPR : (rewardsConfig?.supplyRewardsAPR ?? 0n)
+    borrowRewardsAPR: borrowRewardsAPR,
+    earnRewardsAPR: earnRewardsAPR
   };
 }
 
