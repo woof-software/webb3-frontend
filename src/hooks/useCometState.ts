@@ -250,8 +250,8 @@ const formatCometStateHydrated = (
     ...((() => {
       if (market?.rewardsOverwrite) {
         return {
-          borrowAPR: cometResponse.borrowAPR.toBigInt() - market.rewardsOverwrite.borrowRewardsAPR,
-          earnAPR: cometResponse.earnAPR.toBigInt() + market.rewardsOverwrite.supplyRewardsAPR,
+          borrowAPR: cometResponse.borrowAPR.toBigInt(),
+          earnAPR: cometResponse.earnAPR.toBigInt(),
           borrowRewardsAPR: market.rewardsOverwrite.borrowRewardsAPR,
           supplyRewardsAPR: market.rewardsOverwrite.supplyRewardsAPR,
           rewardsAssetSymbol: market.rewardsOverwrite.rewardsAssetSymbol
@@ -381,8 +381,8 @@ const formatCometStateNoWallet = (
     ...((() => {
       if (market?.rewardsOverwrite) {
         return {
-          borrowAPR: cometResponse.borrowAPR.toBigInt() - market.rewardsOverwrite.borrowRewardsAPR,
-          earnAPR: cometResponse.earnAPR.toBigInt() + market.rewardsOverwrite.supplyRewardsAPR,
+          borrowAPR: cometResponse.borrowAPR.toBigInt(),
+          earnAPR: cometResponse.earnAPR.toBigInt(),
           borrowRewardsAPR: market.rewardsOverwrite.borrowRewardsAPR,
           supplyRewardsAPR: market.rewardsOverwrite.supplyRewardsAPR,
           rewardsAssetSymbol: market.rewardsOverwrite.rewardsAssetSymbol

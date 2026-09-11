@@ -237,8 +237,8 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
     ...((() => {
       if (market?.rewardsOverwrite) {
         return {
-          borrowAPR: borrowAPR - market.rewardsOverwrite.borrowRewardsAPR,
-          earnAPR: earnAPR + market.rewardsOverwrite.supplyRewardsAPR,
+          borrowAPR: borrowAPR,
+          earnAPR: earnAPR,
           borrowRewardsAPR: market.rewardsOverwrite.borrowRewardsAPR,
           supplyRewardsAPR: market.rewardsOverwrite.supplyRewardsAPR,
           rewardsAssetSymbol: market.rewardsOverwrite.rewardsAssetSymbol

@@ -140,8 +140,8 @@ export const sanitizeMarketSummary = (marketSummary: MarketSummaryResponse): Mar
 
       if (market?.rewardsOverwrite) {
         return {
-          borrowAPR: borrowAPR - market.rewardsOverwrite.borrowRewardsAPR,
-          supplyAPR: supplyAPR + market.rewardsOverwrite.supplyRewardsAPR,
+          borrowAPR: borrowAPR,
+          supplyAPR: supplyAPR,
           borrowRewardsAPR: market.rewardsOverwrite.borrowRewardsAPR,
           supplyRewardsAPR: market.rewardsOverwrite.supplyRewardsAPR,
           rewardAssetSymbol: market.rewardsOverwrite.rewardsAssetSymbol
@@ -151,7 +151,7 @@ export const sanitizeMarketSummary = (marketSummary: MarketSummaryResponse): Mar
       if (market?.institutional) {
         return {
           borrowAPR: borrowAPR,
-          supplyAPR: supplyAPR + institutionalSupplyRewardsAPR,
+          supplyAPR: supplyAPR,
           rewardAssetSymbol: market.baseAsset.symbol,
           borrowRewardsAPR: 0n,
           supplyRewardsAPR: institutionalSupplyRewardsAPR,

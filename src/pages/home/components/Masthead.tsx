@@ -62,6 +62,7 @@ type MastheadHydrated = [
     onSupplyAction: (pendingAction?: PendingAction) => void;
     onWithdrawAction: (pendingAction?: PendingAction) => void;
     setCompare: Dispatch<boolean>;
+    isInstitutional: boolean;
   }
 ];
 export type MastheadState = MastheadLoading | MastheadNoWallet | MastheadHydrated;

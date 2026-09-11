@@ -16,27 +16,27 @@ export interface NetRatesTooltipProps {
   earnRewardsAPR?: bigint;
   // Set on institutional markets: the supply section shows the boosted rate
   // breakdown and whitelist card instead of the standard earn graph
-  institutionalBoostAPR?: bigint;
   institutionalWhitelistStatus?: InstitutionalWhitelistStatus;
   // Label override for the boosted portion of the rate
   institutionalBoostLabel?: string;
   rewardsAssetSymbol?: string;
   view: NetRatesTooltipView;
+  isInstitutional?: boolean;
 }
 
 const NetRatesTooltip = ({
   borrowAPR,
-  borrowRewardsAPR,
+  borrowRewardsAPR = 0n,
   earnAPR,
-  earnRewardsAPR,
+  earnRewardsAPR = 0n,
   rewardsAssetSymbol,
   institutionalWhitelistStatus,
   institutionalBoostLabel,
-  institutionalBoostAPR,
+  isInstitutional,
   view,
 }: NetRatesTooltipProps) => {
-  const netBorrowAPR = borrowRewardsAPR ? borrowAPR - borrowRewardsAPR : borrowAPR;
-  const netSupplyAPR = earnRewardsAPR ? earnAPR + earnRewardsAPR : earnAPR;
+  const netBorrowAPR = borrowAPR - borrowRewardsAPR;
+  const netSupplyAPR = earnAPR + earnRewardsAPR;
 
   const netBorrowRateGraph = (
     <NetRatesGraph
@@ -64,12 +64,11 @@ const NetRatesTooltip = ({
     </div>
   );
 
-  const boostAPR = institutionalBoostAPR !== undefined && institutionalBoostAPR > 0n ? institutionalBoostAPR : undefined;
   const boostedBreakdown =
-    boostAPR !== undefined ? (
+    isInstitutional !== undefined ? (
       <BoostedSupplyRates
         earnAPR={earnAPR}
-        boostAPR={boostAPR}
+        boostAPR={earnRewardsAPR}
         whitelistStatus={institutionalWhitelistStatus ?? InstitutionalWhitelistStatus.NoWallet}
         boostLabel={institutionalBoostLabel}
       />
@@ -79,7 +78,7 @@ const NetRatesTooltip = ({
     <div className="net-rates-tooltip__section">
       <label className="L2 label text-color--2">Net Supply APR</label>
       <p className="L2 body body--emphasized text-color--1">
-        {formatRateFactor(boostAPR !== undefined ? earnAPR + boostAPR : netSupplyAPR)}
+        {formatRateFactor(netSupplyAPR)}
       </p>
       {boostedBreakdown ?? netEarnRateGraph}
     </div>

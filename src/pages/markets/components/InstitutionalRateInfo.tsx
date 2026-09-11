@@ -19,7 +19,6 @@ const InstitutionalRateInfo = ({
   marketSummary,
   whitelistStatus = InstitutionalWhitelistStatus.NoWallet,
 }: InstitutionalRateInfoProps) => {
-  const boostAPR = marketSummary.isInstitutional ? marketSummary.supplyRewardsAPR : 0n;
 
   return (
     <Tooltip
@@ -32,8 +31,9 @@ const InstitutionalRateInfo = ({
       content={
         <NetRatesTooltip
           borrowAPR={0n}
-          earnAPR={marketSummary.supplyAPR - boostAPR}
-          institutionalBoostAPR={boostAPR}
+          earnAPR={marketSummary.supplyAPR}
+          earnRewardsAPR={marketSummary.supplyRewardsAPR}
+          isInstitutional={marketSummary.isInstitutional}
           institutionalWhitelistStatus={whitelistStatus}
           institutionalBoostLabel="Whitelisted Extra APY"
           view={NetRatesTooltipView.Supply}
