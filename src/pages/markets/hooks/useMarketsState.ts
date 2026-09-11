@@ -234,11 +234,11 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
     totalSupply,
     utilization: utilization.toBigInt(),
     type: 'ProtocolAndMarketState',
+    borrowAPR: borrowAPR,
+    earnAPR: earnAPR,
     ...((() => {
       if (market?.rewardsOverwrite) {
         return {
-          borrowAPR: borrowAPR,
-          earnAPR: earnAPR,
           borrowRewardsAPR: market.rewardsOverwrite.borrowRewardsAPR,
           supplyRewardsAPR: market.rewardsOverwrite.supplyRewardsAPR,
           rewardsAssetSymbol: market.rewardsOverwrite.rewardsAssetSymbol
@@ -247,8 +247,6 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
 
       if (market?.institutional) {
         return {
-          borrowAPR: borrowAPR,
-          earnAPR: earnAPR,
           rewardsAssetSymbol: market.baseAsset.symbol,
           borrowRewardsAPR: 0n,
           supplyRewardsAPR: institutionalSupplyRewardRate(totalSupplyValueInDollars),
@@ -257,8 +255,6 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
       }
 
       return {
-        borrowAPR: borrowAPR,
-        earnAPR: earnAPR,
         borrowRewardsAPR: 0n,
         supplyRewardsAPR: 0n,
       };

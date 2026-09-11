@@ -247,11 +247,11 @@ const formatCometStateHydrated = (
       collateralAssets
     ),
     isBulkerAllowed: cometResponse.bulkerAllowance.gt(0),
+    borrowAPR: cometResponse.borrowAPR.toBigInt(),
+    earnAPR: cometResponse.earnAPR.toBigInt(),
     ...((() => {
       if (market?.rewardsOverwrite) {
         return {
-          borrowAPR: cometResponse.borrowAPR.toBigInt(),
-          earnAPR: cometResponse.earnAPR.toBigInt(),
           borrowRewardsAPR: market.rewardsOverwrite.borrowRewardsAPR,
           supplyRewardsAPR: market.rewardsOverwrite.supplyRewardsAPR,
           rewardsAssetSymbol: market.rewardsOverwrite.rewardsAssetSymbol
@@ -260,8 +260,6 @@ const formatCometStateHydrated = (
 
       if (market?.institutional) {
         return {
-          borrowAPR: cometResponse.borrowAPR.toBigInt(),
-          earnAPR: cometResponse.earnAPR.toBigInt(),
           rewardsAssetSymbol: market.baseAsset.symbol,
           borrowRewardsAPR: 0n,
           supplyRewardsAPR: institutionalSupplyRewardRate(totalBaseSupplyInDollars),
@@ -270,8 +268,6 @@ const formatCometStateHydrated = (
       }
 
       return {
-        borrowAPR: cometResponse.borrowAPR.toBigInt(),
-        earnAPR: cometResponse.earnAPR.toBigInt(),
         borrowRewardsAPR: 0n,
         supplyRewardsAPR: 0n,
       };
@@ -376,11 +372,11 @@ const formatCometStateNoWallet = (
       price: cometResponse.baseAsset.price.toBigInt(),
       baseAssetPriceInDollars: baseAssetDollarPrice.toBigInt(),
     },
+    borrowAPR: cometResponse.borrowAPR.toBigInt(),
+    earnAPR: cometResponse.earnAPR.toBigInt(),
     ...((() => {
       if (market?.rewardsOverwrite) {
         return {
-          borrowAPR: cometResponse.borrowAPR.toBigInt(),
-          earnAPR: cometResponse.earnAPR.toBigInt(),
           borrowRewardsAPR: market.rewardsOverwrite.borrowRewardsAPR,
           supplyRewardsAPR: market.rewardsOverwrite.supplyRewardsAPR,
           rewardsAssetSymbol: market.rewardsOverwrite.rewardsAssetSymbol
@@ -389,8 +385,6 @@ const formatCometStateNoWallet = (
 
       if (market?.institutional) {
         return {
-          borrowAPR: cometResponse.borrowAPR.toBigInt(),
-          earnAPR: cometResponse.earnAPR.toBigInt(),
           rewardsAssetSymbol: market.baseAsset.symbol,
           borrowRewardsAPR: 0n,
           supplyRewardsAPR: institutionalSupplyRewardRate(totalBaseSupplyInDollars),
@@ -399,8 +393,6 @@ const formatCometStateNoWallet = (
       }
 
       return {
-        borrowAPR: cometResponse.borrowAPR.toBigInt(),
-        earnAPR: cometResponse.earnAPR.toBigInt(),
         borrowRewardsAPR: 0n,
         supplyRewardsAPR: 0n,
       };

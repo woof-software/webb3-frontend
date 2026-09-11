@@ -134,13 +134,13 @@ export const sanitizeMarketSummary = (marketSummary: MarketSummaryResponse): Mar
       baseAsset,
       marketSummary.collateralAssetSymbols ?? []
     ),
+    borrowAPR: borrowAPR,
+    supplyAPR: supplyAPR,
     ...((() => {
       const market = getMarket(marketSummary.chainId, marketSummary.comet.address);
 
       if (market?.rewardsOverwrite) {
         return {
-          borrowAPR: borrowAPR,
-          supplyAPR: supplyAPR,
           borrowRewardsAPR: market.rewardsOverwrite.borrowRewardsAPR,
           supplyRewardsAPR: market.rewardsOverwrite.supplyRewardsAPR,
           rewardAssetSymbol: market.rewardsOverwrite.rewardsAssetSymbol
@@ -149,8 +149,6 @@ export const sanitizeMarketSummary = (marketSummary: MarketSummaryResponse): Mar
 
       if (market?.institutional) {
         return {
-          borrowAPR: borrowAPR,
-          supplyAPR: supplyAPR,
           rewardAssetSymbol: market.baseAsset.symbol,
           borrowRewardsAPR: 0n,
           supplyRewardsAPR: institutionalSupplyRewardRate(totalSupplyValueInDollars),
@@ -159,8 +157,6 @@ export const sanitizeMarketSummary = (marketSummary: MarketSummaryResponse): Mar
       }
 
       return {
-        borrowAPR: borrowAPR,
-        supplyAPR: supplyAPR,
         borrowRewardsAPR: 0n,
         supplyRewardsAPR: 0n,
       };
