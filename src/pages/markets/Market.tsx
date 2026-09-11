@@ -184,9 +184,9 @@ const Market = ({ web3 }: MarketsProps) => {
             borrowAPR,
             borrowRewardsAPR: borrowRewardsAPR,
             earnAPR,
-            earnRewardsAPR: isInstitutional ? undefined : supplyRewardsAPR,
+            earnRewardsAPR: supplyRewardsAPR,
             rewardsAssetSymbol,
-            institutionalRewardsAPR: isInstitutional ? supplyRewardsAPR : undefined,
+            isInstitutional: isInstitutional,
           },
         ]}
       />
