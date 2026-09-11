@@ -97,14 +97,14 @@ const LoadingView = () => {
 
 const MarketRatesPanelView = ({
   borrowAPR,
-  borrowRewardsAPR,
+  borrowRewardsAPR = 0n,
   earnAPR,
-  earnRewardsAPR,
+  earnRewardsAPR = 0n,
   rewardsAssetSymbol,
   isInstitutional,
 }: PanelContent) => {
-  const netBorrowAPR = borrowRewardsAPR ? borrowAPR - borrowRewardsAPR : borrowAPR;
-  const netSupplyAPR = earnRewardsAPR ? earnAPR + earnRewardsAPR : earnAPR;
+  const netBorrowAPR = borrowAPR - borrowRewardsAPR;
+  const netSupplyAPR = earnAPR + earnRewardsAPR;
 
   const netBorrowRateGraph = (
     <NetRatesGraph
@@ -118,7 +118,7 @@ const MarketRatesPanelView = ({
   // Institutional markets show the base/boost breakdown bar; the whitelist
   // status renders as a standalone banner on the page instead of a card here
   const netEarnRateGraph =
-    isInstitutional && !!earnRewardsAPR ? (
+    isInstitutional && earnRewardsAPR > 0n ? (
       <BoostedSupplyRates earnAPR={earnAPR} boostAPR={earnRewardsAPR} showWhitelistCard={false} />
     ) : (
       <NetRatesGraph
