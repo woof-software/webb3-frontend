@@ -9,6 +9,7 @@ import Comet from '@helpers/abis/Comet';
 import ERC20 from '@helpers/abis/ERC20';
 import { adjustCollateralPrice, getBaseAssetPriceFeed } from '@helpers/baseAssetPrice';
 import { getHardcodedFeedPrice, getRemappedPriceFeed } from '@helpers/deprecatedMarkets';
+import { institutionalSupplyRewardRate } from '@helpers/institutionalRates';
 import { isV2Market } from '@helpers/markets';
 import { getMockMarketState } from '@helpers/mocks';
 import { getMarketDataUrlForMarket } from '@helpers/urls';
@@ -216,15 +217,14 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
     baseAssetPriceInDollars: baseTokenPriceInDollars.toBigInt(),
   };
 
+  const totalSupplyValueInDollars = (totalSupply * baseAssetWithState.baseAssetPriceInDollars) / 10n ** BigInt(baseAssetWithState.decimals);
+
   const state: ProtocolAndMarketsState = {
     baseAsset: baseAssetWithState,
-    borrowAPR,
     borrowRates,
     collateralAssets,
     cometAddress: market.marketAddress,
-    earnAPR,
-    totalBaseSupplyUsd:
-      (totalSupply * baseAssetWithState.baseAssetPriceInDollars) / 10n ** BigInt(baseAssetWithState.decimals),
+    totalBaseSupplyUsd: totalSupplyValueInDollars,
     factorScale,
     marketHistory: marketHistoryAsBuckets,
     reserves: reserves.toBigInt(),
@@ -234,6 +234,30 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
     totalSupply,
     utilization: utilization.toBigInt(),
     type: 'ProtocolAndMarketState',
+    borrowAPR: borrowAPR,
+    earnAPR: earnAPR,
+    ...((() => {
+      if (market?.rewardsOverwrite) {
+        return {
+          borrowRewardsAPR: market.rewardsOverwrite.borrowRewardsAPR,
+          supplyRewardsAPR: market.rewardsOverwrite.supplyRewardsAPR,
+          rewardsAssetSymbol: market.rewardsOverwrite.rewardsAssetSymbol
+        };
+      }
+
+      if (market?.institutional) {
+        return {
+          borrowRewardsAPR: 0n,
+          supplyRewardsAPR: institutionalSupplyRewardRate(totalSupplyValueInDollars),
+          isInstitutional: true
+        };
+      }
+
+      return {
+        borrowRewardsAPR: 0n,
+        supplyRewardsAPR: 0n,
+      };
+    })())
   };
   return [StateType.Hydrated, state];
 };

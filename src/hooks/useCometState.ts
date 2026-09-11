@@ -7,6 +7,7 @@ import type { Web3 } from '@contexts/Web3Context';
 import { getAssetDisplayName, getAssetDisplaySymbol } from '@helpers/assets';
 import { getBaseAssetPriceFeed, getBaseAssetDollarPrice, adjustCollateralPrice } from '@helpers/baseAssetPrice';
 import { getIsDeprecatedwUSDMMarket } from '@helpers/deprecatedMarkets';
+import { institutionalSupplyRewardRate } from '@helpers/institutionalRates';
 import { shouldKeepCollateralAsset } from '@helpers/legacyCollateral';
 import { REFRESH_INTERVAL, getCapacity, getCollateralValue, MAX_UINT256 } from '@helpers/numbers';
 import CometQuery from '@helpers/sleuth/out/CometQuery.sol/CometQuery.json';
@@ -194,14 +195,13 @@ const formatCometStateHydrated = (
   });
 
   const baseAssetDollarPrice = getBaseAssetDollarPrice(cometResponse, market);
+  
+  const totalBaseSupplyInDollars = (cometResponse.totalSupply.toBigInt() * baseAssetDollarPrice.toBigInt()) /
+      10n ** BigInt(cometResponse.baseAsset.decimals.toNumber())
 
   const state: ProtocolAndAccountState = {
-    borrowAPR: cometResponse.borrowAPR.toBigInt(),
     collateralAssets: collateralAssets,
-    earnAPR: cometResponse.earnAPR.toBigInt(),
-    totalBaseSupplyUsd:
-      (cometResponse.totalSupply.toBigInt() * baseAssetDollarPrice.toBigInt()) /
-      10n ** BigInt(cometResponse.baseAsset.decimals.toNumber()),
+    totalBaseSupplyUsd: totalBaseSupplyInDollars,
     baseAsset: {
       address: cometResponse.baseAsset.baseAsset,
       symbol: getAssetDisplaySymbol(
@@ -247,6 +247,30 @@ const formatCometStateHydrated = (
       collateralAssets
     ),
     isBulkerAllowed: cometResponse.bulkerAllowance.gt(0),
+    borrowAPR: cometResponse.borrowAPR.toBigInt(),
+    earnAPR: cometResponse.earnAPR.toBigInt(),
+    ...((() => {
+      if (market?.rewardsOverwrite) {
+        return {
+          borrowRewardsAPR: market.rewardsOverwrite.borrowRewardsAPR,
+          supplyRewardsAPR: market.rewardsOverwrite.supplyRewardsAPR,
+          rewardsAssetSymbol: market.rewardsOverwrite.rewardsAssetSymbol
+        };
+      }
+
+      if (market?.institutional) {
+        return {
+          borrowRewardsAPR: 0n,
+          supplyRewardsAPR: institutionalSupplyRewardRate(totalBaseSupplyInDollars),
+          isInstitutional: true
+        };
+      }
+
+      return {
+        borrowRewardsAPR: 0n,
+        supplyRewardsAPR: 0n,
+      };
+    })())
   };
 
   return [StateType.Hydrated, state];
@@ -301,8 +325,11 @@ const formatCometStateNoWallet = (
   market: MarketData | MarketDataLoaded
 ): CometStateNoWallet => {
   const baseAssetDollarPrice = getBaseAssetDollarPrice(cometResponse, market);
+
+  const totalBaseSupplyInDollars = (cometResponse.totalSupply.toBigInt() * baseAssetDollarPrice.toBigInt()) /
+    10n ** BigInt(cometResponse.baseAsset.decimals.toNumber())
+
   const state = {
-    borrowAPR: cometResponse.borrowAPR.toBigInt(),
     collateralAssets: cometResponse.collateralAssets.map((assetInfo) => ({
       address: assetInfo.collateralAsset,
       priceFeed: assetInfo.priceFeed,
@@ -324,10 +351,7 @@ const formatCometStateNoWallet = (
         assetInfo.price.toBigInt()
       ),
     })),
-    earnAPR: cometResponse.earnAPR.toBigInt(),
-    totalBaseSupplyUsd:
-      (cometResponse.totalSupply.toBigInt() * baseAssetDollarPrice.toBigInt()) /
-      10n ** BigInt(cometResponse.baseAsset.decimals.toNumber()),
+    totalBaseSupplyUsd: totalBaseSupplyInDollars,
     baseAsset: {
       address: cometResponse.baseAsset.baseAsset,
       symbol: getAssetDisplaySymbol(
@@ -347,6 +371,30 @@ const formatCometStateNoWallet = (
       price: cometResponse.baseAsset.price.toBigInt(),
       baseAssetPriceInDollars: baseAssetDollarPrice.toBigInt(),
     },
+    borrowAPR: cometResponse.borrowAPR.toBigInt(),
+    earnAPR: cometResponse.earnAPR.toBigInt(),
+    ...((() => {
+      if (market?.rewardsOverwrite) {
+        return {
+          borrowRewardsAPR: market.rewardsOverwrite.borrowRewardsAPR,
+          supplyRewardsAPR: market.rewardsOverwrite.supplyRewardsAPR,
+          rewardsAssetSymbol: market.rewardsOverwrite.rewardsAssetSymbol
+        };
+      }
+
+      if (market?.institutional) {
+        return {
+          borrowRewardsAPR: 0n,
+          supplyRewardsAPR: institutionalSupplyRewardRate(totalBaseSupplyInDollars),
+          isInstitutional: true
+        };
+      }
+
+      return {
+        borrowRewardsAPR: 0n,
+        supplyRewardsAPR: 0n,
+      };
+    })())
   };
 
   return [StateType.NoWallet, state];

@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { getAddress } from 'ethers/lib/utils';
+import { useContext } from 'react';
 
+import RewardsStateContext from '@contexts/RewardsStateContext';
 import { isNonStablecoinMarket } from '@helpers/baseAssetPrice';
 import { convertApiResponse } from '@helpers/functions';
 import { institutionalSupplyRewardRate } from '@helpers/institutionalRates';
@@ -8,12 +10,11 @@ import { filterLegacyCollateralSymbols } from '@helpers/legacyCollateral';
 import { getMarket, getMarketDescriptors } from '@helpers/markets';
 import { BASE_FACTOR, FACTOR_PRECISION, PRICE_PRECISION } from '@helpers/numbers';
 import { getHistoricalMarketSummaryEndpoint, getLatestMarketSummaryEndpoint } from '@helpers/urls';
-import { AggregatedHistoricalSummary, MarketOverviewState, MarketSummary, StateType } from '@types';
+import { AggregatedHistoricalSummary, MarketOverviewState, MarketSummary, RewardsState, StateType } from '@types';
 
 const LATEST_SUMMARY_REFRESH_INTERVAL = 1000 * 60 * 10; // 10 minutes
 
 export function useMarketsOverviewState(): MarketOverviewState {
-  // TODO: This can also be modified to use react-query
   const query = useQuery({
     queryKey: ['marketOverviewState'],
     queryFn: () => getState(),
@@ -47,20 +48,7 @@ const getState = async (includeTestnets = false): Promise<MarketOverviewState> =
 
   const sanitizedLatestMarketSummaries: MarketSummary[] = latestMarketSummaries
     .map(convertApiResponse)
-    .map(sanitizeMarketSummary)
-    // Institutional markets add USDC-terms rewards on top of the supply rate for their current size
-    .map((marketSummary: MarketSummary): MarketSummary => {
-      const market = getMarket(marketSummary.chainId, marketSummary.comet.address);
-      if (!market?.institutional) {
-        return marketSummary;
-      }
-      const institutionalSupplyRewardsAPR = institutionalSupplyRewardRate(marketSummary.totalSupplyValue);
-      return {
-        ...marketSummary,
-        supplyAPR: marketSummary.supplyAPR + institutionalSupplyRewardsAPR,
-        ...(institutionalSupplyRewardsAPR > 0n ? { institutionalSupplyRewardsAPR } : {}),
-      };
-    });
+    .map(sanitizeMarketSummary);
 
   const historicalMarketSummariesResponse = await fetch(getHistoricalMarketSummaryEndpoint(includeTestnets));
   const historicalMarketSummaries = await historicalMarketSummariesResponse.json();
@@ -134,8 +122,6 @@ export const sanitizeMarketSummary = (marketSummary: MarketSummaryResponse): Mar
     comet: {
       address: getAddress(marketSummary.comet.address),
     },
-    borrowAPR: borrowAPR,
-    supplyAPR: supplyAPR,
     totalBorrowValue: totalBorrowValueInDollars,
     totalSupplyValue: totalSupplyValueInDollars,
     totalCollateralValue: totalCollateralValueInDollars,
@@ -147,5 +133,31 @@ export const sanitizeMarketSummary = (marketSummary: MarketSummaryResponse): Mar
       baseAsset,
       marketSummary.collateralAssetSymbols ?? []
     ),
+    borrowAPR: borrowAPR,
+    supplyAPR: supplyAPR,
+    ...((() => {
+      const market = getMarket(marketSummary.chainId, marketSummary.comet.address);
+
+      if (market?.rewardsOverwrite) {
+        return {
+          borrowRewardsAPR: market.rewardsOverwrite.borrowRewardsAPR,
+          supplyRewardsAPR: market.rewardsOverwrite.supplyRewardsAPR,
+          rewardAssetSymbol: market.rewardsOverwrite.rewardsAssetSymbol
+        };
+      }
+
+      if (market?.institutional) {
+        return {
+          borrowRewardsAPR: 0n,
+          supplyRewardsAPR: institutionalSupplyRewardRate(totalSupplyValueInDollars),
+          isInstitutional: true
+        };
+      }
+
+      return {
+        borrowRewardsAPR: 0n,
+        supplyRewardsAPR: 0n,
+      };
+    })())
   };
 };
