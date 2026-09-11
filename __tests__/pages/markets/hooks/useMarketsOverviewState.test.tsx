@@ -1,16 +1,13 @@
+import v8 from 'v8';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { ReactNode } from 'react';
 
 import RewardsStateContext from '@contexts/RewardsStateContext';
-import {MARKETS} from "@helpers/markets";
+import { MARKETS } from "@helpers/markets";
 import { useMarketsOverviewState } from '@pages/markets/hooks/useMarketsOverviewState';
 import { StateType } from '@types';
-
-for (const a of MARKETS) {
-  delete a.rewardsOverwrite;
-}
 
 const Provider = ({ children }: { children: ReactNode }) => {
   const queryClient = new QueryClient();
@@ -23,6 +20,14 @@ const Provider = ({ children }: { children: ReactNode }) => {
 };
 
 describe('useMarketsOverview', () => {
+  const initialMarkets = v8.deserialize(v8.serialize(MARKETS));
+  
+  beforeAll(() => {
+    for (const a of MARKETS) {
+      delete a.rewardsOverwrite;
+    }
+  });
+  
   test('should return loading state', () => {
     const { result } = renderHook(() => useMarketsOverviewState(), { wrapper: Provider });
     expect(result.current).toEqual([StateType.Loading]);
@@ -341,5 +346,9 @@ describe('useMarketsOverview', () => {
         },
       ])
     );
+  });
+  
+  afterAll(() => {
+    MARKETS.splice(0, MARKETS.length, ...initialMarkets);
   });
 });
