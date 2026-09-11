@@ -44,7 +44,7 @@ type MastheadHydrated = [
     baseAsset: BaseAssetWithAccountState;
     baseAssetPost: BaseAssetWithAccountState;
     borrowAPR: bigint;
-    borrowRewardsAPR: bigint | undefined;
+    borrowRewardsAPR?: bigint;
     collateralAssets: TokenWithAccountState[];
     collateralValue: bigint;
     collateralValuePost: bigint;
