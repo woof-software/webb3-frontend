@@ -87,7 +87,28 @@ export const MARKET_PRIORITY: string[] = [
   '59144:weth',
 ];
 
-export const MARKET_OVERRIDES: Record<string, Pick<MarketData, 'isNew'>> = {
+export const MARKET_OVERRIDES: Record<string, Pick<MarketData, 'isNew' | 'rewardsOverwrite'>> = {
+  '1:usdc': {
+    rewardsOverwrite: {
+      rewardsAssetSymbol: 'COMP',
+      supplyCompPerDay: 55n * 10n ** 18n,
+      borrowCompPerDay: 55n * 10n ** 18n,
+    },
+  },
+  '1:weth': {
+    rewardsOverwrite: {
+      rewardsAssetSymbol: 'COMP',
+      supplyCompPerDay: 10n * 10n ** 18n,
+      borrowCompPerDay: 20n * 10n ** 18n,
+    },
+  },
+  '1:usdt': {
+    rewardsOverwrite: {
+      rewardsAssetSymbol: 'COMP',
+      supplyCompPerDay: 30n * 10n ** 18n,
+      borrowCompPerDay: 30n * 10n ** 18n,
+    },
+  },
   '1:institutional_usdc': { isNew: true },
 };
 

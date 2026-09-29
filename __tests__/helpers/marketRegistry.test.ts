@@ -100,6 +100,20 @@ describe('registryToMarkets', () => {
     });
   });
 
+  test('applies rewards overrides to mainnet USDC, WETH and USDT only', () => {
+    const withRewards = withoutV2.filter((market) => market.rewardsOverwrite !== undefined);
+    expect(withRewards.map((market) => market.marketAddress)).toEqual([
+      LEGACY_ADDRESSES.mainnetUSDC.comet,
+      LEGACY_ADDRESSES.mainnetWETH.comet,
+      LEGACY_ADDRESSES.mainnetUSDT.comet,
+    ]);
+    expect(withRewards[1].rewardsOverwrite).toEqual({
+      rewardsAssetSymbol: 'COMP',
+      supplyCompPerDay: 10n * 10n ** 18n,
+      borrowCompPerDay: 20n * 10n ** 18n,
+    });
+  });
+
   test('takes chain information from the local CHAINS config', () => {
     withoutV2.forEach((market) => expect(market.chainInformation).toBe(CHAINS[market.chainInformation.chainId]));
   });

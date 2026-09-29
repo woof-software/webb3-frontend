@@ -1,25 +1,37 @@
 import { useQuery } from '@tanstack/react-query';
 import { getAddress } from 'ethers/lib/utils';
+import { useContext } from 'react';
 
 import { useMarketsContext } from '@contexts/MarketsContext';
+import RewardsStateContext from '@contexts/RewardsStateContext';
 import { isNonStablecoinMarket } from '@helpers/baseAssetPrice';
 import { convertApiResponse } from '@helpers/functions';
-import { institutionalSupplyRewardRate } from '@helpers/institutionalRates';
 import { filterLegacyCollateralSymbols } from '@helpers/legacyCollateral';
 import { getMarket, getMarketDescriptors } from '@helpers/markets';
 import { BASE_FACTOR, FACTOR_PRECISION, PRICE_PRECISION } from '@helpers/numbers';
+import { getMarketRewardsAPRs } from '@helpers/rewards';
 import { getHistoricalMarketSummaryEndpoint, getLatestMarketSummaryEndpoint } from '@helpers/urls';
-import { AggregatedHistoricalSummary, MarketData, MarketOverviewState, MarketSummary, StateType } from '@types';
+import {
+  AggregatedHistoricalSummary,
+  MarketData,
+  MarketOverviewState,
+  MarketSummary,
+  RewardsState,
+  RewardsStateHydrated,
+  RewardsStateNoWallet,
+  StateType,
+} from '@types';
 
 const LATEST_SUMMARY_REFRESH_INTERVAL = 1000 * 60 * 10; // 10 minutes
 
 export function useMarketsOverviewState(): MarketOverviewState {
   const { markets, registryVersionId } = useMarketsContext();
-  // TODO: This can also be modified to use react-query
+  const rewardsState = useContext(RewardsStateContext);
+
   const query = useQuery({
     // A new registry version re-derives the summaries from the new market list
-    queryKey: ['marketOverviewState', registryVersionId],
-    queryFn: () => getState(markets),
+    queryKey: ['marketOverviewState', registryVersionId, rewardsState[0]],
+    queryFn: () => getState(markets, rewardsState),
     initialData: [StateType.Loading],
     refetchInterval: LATEST_SUMMARY_REFRESH_INTERVAL,
     enabled: markets.length > 0,
@@ -45,26 +57,21 @@ type MarketSummaryResponse = {
   collateralAssetSymbols: string[];
 };
 
-const getState = async (markets: MarketData[], includeTestnets = false): Promise<MarketOverviewState> => {
+const getState = async (
+  markets: MarketData[],
+  rewardsState: RewardsState,
+  includeTestnets = false
+): Promise<MarketOverviewState> => {
+  if (rewardsState[0] === StateType.Loading) {
+    return [StateType.Loading];
+  }
+
   const latestMarketSummariesResponse = await fetch(getLatestMarketSummaryEndpoint(includeTestnets));
   const latestMarketSummaries = await latestMarketSummariesResponse.json();
 
   const sanitizedLatestMarketSummaries: MarketSummary[] = latestMarketSummaries
     .map(convertApiResponse)
-    .map((marketSummary: MarketSummaryResponse) => sanitizeMarketSummary(markets, marketSummary))
-    // Institutional markets add USDC-terms rewards on top of the supply rate for their current size
-    .map((marketSummary: MarketSummary): MarketSummary => {
-      const market = getMarket(markets, marketSummary.chainId, marketSummary.comet.address);
-      if (!market?.institutional) {
-        return marketSummary;
-      }
-      const institutionalSupplyRewardsAPR = institutionalSupplyRewardRate(marketSummary.totalSupplyValue);
-      return {
-        ...marketSummary,
-        supplyAPR: marketSummary.supplyAPR + institutionalSupplyRewardsAPR,
-        ...(institutionalSupplyRewardsAPR > 0n ? { institutionalSupplyRewardsAPR } : {}),
-      };
-    });
+    .map((marketSummary: MarketSummaryResponse) => sanitizeMarketSummary(markets, marketSummary, rewardsState));
 
   const historicalMarketSummariesResponse = await fetch(getHistoricalMarketSummaryEndpoint(includeTestnets));
   const historicalMarketSummaries = await historicalMarketSummariesResponse.json();
@@ -107,10 +114,16 @@ const getState = async (markets: MarketData[], includeTestnets = false): Promise
  * 1. Convert all numbers to BigInts (except timestamp)
  * 2. Use USD values of each asset amount field with a base of PRICE_SCALE
  *
+ * @param markets
  * @param marketSummary
+ * @param marketRewards
  * @returns
  */
-export const sanitizeMarketSummary = (markets: MarketData[], marketSummary: MarketSummaryResponse): MarketSummary => {
+export const sanitizeMarketSummary = (
+  markets: MarketData[],
+  marketSummary: MarketSummaryResponse,
+  marketRewards?: RewardsStateNoWallet | RewardsStateHydrated
+): MarketSummary => {
   const baseUsdPrice = BigInt(Math.floor(Number(marketSummary.baseUsdPrice) * 10 ** PRICE_PRECISION));
   const borrowAPR = BigInt(Math.floor(Number(marketSummary.borrowApr) * 10 ** FACTOR_PRECISION));
   const supplyAPR = BigInt(Math.floor(Number(marketSummary.supplyApr) * 10 ** FACTOR_PRECISION));
@@ -138,8 +151,6 @@ export const sanitizeMarketSummary = (markets: MarketData[], marketSummary: Mark
     comet: {
       address: getAddress(marketSummary.comet.address),
     },
-    borrowAPR: borrowAPR,
-    supplyAPR: supplyAPR,
     totalBorrowValue: totalBorrowValueInDollars,
     totalSupplyValue: totalSupplyValueInDollars,
     totalCollateralValue: totalCollateralValueInDollars,
@@ -151,5 +162,24 @@ export const sanitizeMarketSummary = (markets: MarketData[], marketSummary: Mark
       baseAsset,
       marketSummary.collateralAssetSymbols ?? []
     ),
+    borrowAPR: borrowAPR,
+    supplyAPR: supplyAPR,
+    ...((() => {
+      const market = getMarket(markets, marketSummary.chainId, marketSummary.comet.address);
+
+      if (!market || !marketRewards) {
+        return {
+          borrowRewardsAPR: 0n,
+          supplyRewardsAPR: 0n,
+        };
+      }
+
+      return getMarketRewardsAPRs(
+        market,
+        marketRewards,
+        totalSupplyValueInDollars,
+        totalBorrowValueInDollars
+      );
+    })())
   };
 };

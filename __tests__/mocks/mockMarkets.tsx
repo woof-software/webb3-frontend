@@ -16,12 +16,20 @@ if (registryMarkets.defaultMarket === undefined) {
 export const MOCK_MARKETS: MarketData[] = registryMarkets.markets;
 export const MOCK_DEFAULT_MARKET: MarketData = registryMarkets.defaultMarket;
 
-export const MockMarketsProvider = ({ children, isLoading = false }: { children: ReactNode; isLoading?: boolean }) => (
+export const MockMarketsProvider = ({
+  children,
+  isLoading = false,
+  markets = MOCK_MARKETS,
+}: {
+  children: ReactNode;
+  isLoading?: boolean;
+  markets?: MarketData[];
+}) => (
   <MarketsContext.Provider
     value={
       isLoading
         ? buildMarketsContextValue([], undefined, true)
-        : buildMarketsContextValue(MOCK_MARKETS, MOCK_DEFAULT_MARKET, false, MOCK_MARKET_REGISTRY.registryVersion.id)
+        : buildMarketsContextValue(markets, MOCK_DEFAULT_MARKET, false, MOCK_MARKET_REGISTRY.registryVersion.id)
     }
   >
     {children}

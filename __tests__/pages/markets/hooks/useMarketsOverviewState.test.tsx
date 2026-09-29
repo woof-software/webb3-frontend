@@ -2,17 +2,23 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { ReactNode } from 'react';
 
+import RewardsStateContext from '@contexts/RewardsStateContext';
 import { useMarketsOverviewState } from '@pages/markets/hooks/useMarketsOverviewState';
 import { StateType } from '@types';
 
-import { MockMarketsProvider } from '../../../mocks/mockMarkets';
+import { MOCK_MARKETS, MockMarketsProvider } from '../../../mocks/mockMarkets';
+
+// Rewards overrides would add rewards APRs to the expected summaries
+const MARKETS_WITHOUT_REWARDS_OVERWRITE = MOCK_MARKETS.map((market) => ({ ...market, rewardsOverwrite: undefined }));
 
 const Provider = ({ children }: { children: ReactNode }) => {
   const queryClient = new QueryClient();
 
   return (
     <QueryClientProvider client={queryClient}>
-      <MockMarketsProvider>{children}</MockMarketsProvider>
+      <MockMarketsProvider markets={MARKETS_WITHOUT_REWARDS_OVERWRITE}>
+        <RewardsStateContext.Provider value={[StateType.Hydrated, []]}>{children}</RewardsStateContext.Provider>
+      </MockMarketsProvider>
     </QueryClientProvider>
   );
 };
@@ -215,12 +221,14 @@ describe('useMarketsOverview', () => {
           latestMarketSummaries: [
             {
               borrowAPR: 40201180873488000n,
+              "borrowRewardsAPR": 0n,
               chainId: 1,
               comet: {
                 address: '0xc3d688B66703497DAA19211EEdff47f25384cdc3',
               },
               date: '2023-09-07',
               supplyAPR: 30836040536016000n,
+              supplyRewardsAPR: 0n,
               timestamp: 1694099375,
               totalBorrowValue: 28502368452920876n,
               totalCollateralValue: 53514681927004113n,
@@ -230,12 +238,14 @@ describe('useMarketsOverview', () => {
             },
             {
               borrowAPR: 33898024514016004n,
+              borrowRewardsAPR: 0n,
               chainId: 1,
               comet: {
                 address: '0xA17581A9E3356d9A858b789D68B4d866e593aE94',
               },
               date: '2023-09-07',
               supplyAPR: 18374010062832000n,
+              supplyRewardsAPR: 0n,
               timestamp: 1694099351,
               totalBorrowValue: 3852450502826696n,
               totalCollateralValue: 5071775730806631n,
@@ -245,12 +255,14 @@ describe('useMarketsOverview', () => {
             },
             {
               borrowAPR: 41637919658256000n,
+              borrowRewardsAPR: 0n,
               chainId: 137,
               comet: {
                 address: '0xF25212E676D1F7F89Cd72fFEe66158f541246445',
               },
               date: '2023-09-07',
               supplyAPR: 24735211142400000n,
+              supplyRewardsAPR: 0n,
               timestamp: 1694099375,
               totalBorrowValue: 1772672815086393n,
               totalCollateralValue: 3307331296344870n,
@@ -260,12 +272,14 @@ describe('useMarketsOverview', () => {
             },
             {
               borrowAPR: 46244384597376000n,
+              borrowRewardsAPR: 0n,
               chainId: 42161,
               comet: {
                 address: '0xA5EDBDD9646f8dFF606d7448e414884C7d905dCA',
               },
               date: '2023-09-07',
               supplyAPR: 31191015428496000n,
+              supplyRewardsAPR: 0n,
               timestamp: 1694099377,
               totalBorrowValue: 328125763640274n,
               totalCollateralValue: 810090339504329n,
@@ -275,12 +289,14 @@ describe('useMarketsOverview', () => {
             },
             {
               borrowAPR: 19339728476112000n,
+              borrowRewardsAPR: 0n,
               chainId: 42161,
               comet: {
                 address: '0x9c4ec768c28520B50860ea7a15bd7213a9fF58bf',
               },
               date: '2023-09-07',
               supplyAPR: 4029747879312000n,
+              supplyRewardsAPR: 0n,
               timestamp: 1694099357,
               totalBorrowValue: 39063581432039n,
               totalCollateralValue: 89935764341405n,
@@ -290,12 +306,14 @@ describe('useMarketsOverview', () => {
             },
             {
               borrowAPR: 18165959344512000n,
+              borrowRewardsAPR: 0n,
               chainId: 8453,
               comet: {
                 address: '0x46e6b214b524310239732D51387075E0e70970bf',
               },
               date: '2023-09-07',
               supplyAPR: 6306070443552000n,
+              supplyRewardsAPR: 0n,
               timestamp: 1694099345,
               totalBorrowValue: 141514294509716n,
               totalCollateralValue: 174554019184166n,
@@ -305,12 +323,14 @@ describe('useMarketsOverview', () => {
             },
             {
               borrowAPR: 31609869295680000n,
+              borrowRewardsAPR: 0n,
               chainId: 8453,
               comet: {
                 address: '0x9c4ec768c28520B50860ea7a15bd7213a9fF58bf',
               },
               date: '2023-09-07',
               supplyAPR: 15423450057648000n,
+              supplyRewardsAPR: 0n,
               timestamp: 1694099357,
               totalBorrowValue: 590761320826590n,
               totalCollateralValue: 1059542673866321n,
