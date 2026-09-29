@@ -1,5 +1,6 @@
 export const CONNECTOR_LOCALSTORAGE_KEY = 'webb3-preferred-connector';
 export const MARKET_LOCAL_STORAGE_KEY = 'webb3-preferred-market';
+export const MARKET_REGISTRY_LOCAL_STORAGE_KEY = 'webb3-market-registry';
 export const V2_ALERT_DISMISSED_KEY = 'webb3-v2-alert-dismissed';
 
 /*

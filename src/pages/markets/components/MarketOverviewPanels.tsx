@@ -8,9 +8,9 @@ import { CaretDown, CheckMark } from '@components/Icons';
 import PanelWithHeader from '@components/PanelWithHeader';
 import PanelWithNoHeader from '@components/PanelWithNoHeader';
 import { CHAINS, INACTIVE_CHAIN_IDS } from '@constants/chains';
+import { useMarketsContext } from '@contexts/MarketsContext';
 import { assetIconForAssetSymbol, iconNameForChainId } from '@helpers/assets';
 import { InstitutionalWhitelistStatus } from '@helpers/institutionalWhitelist';
-import { getMarket, getMarketDescriptors } from '@helpers/markets';
 import { BASE_FACTOR, PRICE_PRECISION, formatValueInDollars } from '@helpers/numbers';
 import useOnClickOutside from '@hooks/useOnClickOutside';
 
@@ -228,6 +228,7 @@ type PanelProps = {
   institutionalWhitelistStatus?: InstitutionalWhitelistStatus;
 };
 const Panel = ({ chainId, marketSummaries, institutionalWhitelistStatus }: PanelProps) => {
+  const { getMarket } = useMarketsContext();
   const chainName = CHAINS[chainId].name;
 
   const headerWithLogo = (
@@ -287,6 +288,7 @@ type PanelRowProps = {
   institutionalWhitelistStatus?: InstitutionalWhitelistStatus;
 };
 const PanelRow = ({ marketSummary, institutionalWhitelistStatus }: PanelRowProps) => {
+  const { getMarket, getMarketDescriptors } = useMarketsContext();
   const [assetSymbol, chainName, assetName] = getMarketDescriptors(marketSummary.comet.address, marketSummary.chainId);
   const market = getMarket(marketSummary.chainId, marketSummary.comet.address);
   const showNewBadge = market?.isNew === true;

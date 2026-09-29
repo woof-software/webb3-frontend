@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { getAddress } from 'ethers/lib/utils';
 
+import { useMarketsContext } from '@contexts/MarketsContext';
 import { isNonStablecoinMarket } from '@helpers/baseAssetPrice';
 import { convertApiResponse } from '@helpers/functions';
 import { institutionalSupplyRewardRate } from '@helpers/institutionalRates';
@@ -8,17 +9,20 @@ import { filterLegacyCollateralSymbols } from '@helpers/legacyCollateral';
 import { getMarket, getMarketDescriptors } from '@helpers/markets';
 import { BASE_FACTOR, FACTOR_PRECISION, PRICE_PRECISION } from '@helpers/numbers';
 import { getHistoricalMarketSummaryEndpoint, getLatestMarketSummaryEndpoint } from '@helpers/urls';
-import { AggregatedHistoricalSummary, MarketOverviewState, MarketSummary, StateType } from '@types';
+import { AggregatedHistoricalSummary, MarketData, MarketOverviewState, MarketSummary, StateType } from '@types';
 
 const LATEST_SUMMARY_REFRESH_INTERVAL = 1000 * 60 * 10; // 10 minutes
 
 export function useMarketsOverviewState(): MarketOverviewState {
+  const { markets, registryVersionId } = useMarketsContext();
   // TODO: This can also be modified to use react-query
   const query = useQuery({
-    queryKey: ['marketOverviewState'],
-    queryFn: () => getState(),
+    // A new registry version re-derives the summaries from the new market list
+    queryKey: ['marketOverviewState', registryVersionId],
+    queryFn: () => getState(markets),
     initialData: [StateType.Loading],
     refetchInterval: LATEST_SUMMARY_REFRESH_INTERVAL,
+    enabled: markets.length > 0,
   });
 
   return query.data;
@@ -41,16 +45,16 @@ type MarketSummaryResponse = {
   collateralAssetSymbols: string[];
 };
 
-const getState = async (includeTestnets = false): Promise<MarketOverviewState> => {
+const getState = async (markets: MarketData[], includeTestnets = false): Promise<MarketOverviewState> => {
   const latestMarketSummariesResponse = await fetch(getLatestMarketSummaryEndpoint(includeTestnets));
   const latestMarketSummaries = await latestMarketSummariesResponse.json();
 
   const sanitizedLatestMarketSummaries: MarketSummary[] = latestMarketSummaries
     .map(convertApiResponse)
-    .map(sanitizeMarketSummary)
+    .map((marketSummary: MarketSummaryResponse) => sanitizeMarketSummary(markets, marketSummary))
     // Institutional markets add USDC-terms rewards on top of the supply rate for their current size
     .map((marketSummary: MarketSummary): MarketSummary => {
-      const market = getMarket(marketSummary.chainId, marketSummary.comet.address);
+      const market = getMarket(markets, marketSummary.chainId, marketSummary.comet.address);
       if (!market?.institutional) {
         return marketSummary;
       }
@@ -66,7 +70,7 @@ const getState = async (includeTestnets = false): Promise<MarketOverviewState> =
   const historicalMarketSummaries = await historicalMarketSummariesResponse.json();
   const sanitizedHistoricalMarketSummaries: MarketSummary[] = historicalMarketSummaries
     .map(convertApiResponse)
-    .map(sanitizeMarketSummary);
+    .map((marketSummary: MarketSummaryResponse) => sanitizeMarketSummary(markets, marketSummary));
 
   // Aggregate historical summaries by date
   const aggregatedHistoricalSummaries = sanitizedHistoricalMarketSummaries.reduce<AggregatedHistoricalSummary[]>(
@@ -106,7 +110,7 @@ const getState = async (includeTestnets = false): Promise<MarketOverviewState> =
  * @param marketSummary
  * @returns
  */
-export const sanitizeMarketSummary = (marketSummary: MarketSummaryResponse): MarketSummary => {
+export const sanitizeMarketSummary = (markets: MarketData[], marketSummary: MarketSummaryResponse): MarketSummary => {
   const baseUsdPrice = BigInt(Math.floor(Number(marketSummary.baseUsdPrice) * 10 ** PRICE_PRECISION));
   const borrowAPR = BigInt(Math.floor(Number(marketSummary.borrowApr) * 10 ** FACTOR_PRECISION));
   const supplyAPR = BigInt(Math.floor(Number(marketSummary.supplyApr) * 10 ** FACTOR_PRECISION));
@@ -114,7 +118,7 @@ export const sanitizeMarketSummary = (marketSummary: MarketSummaryResponse): Mar
   // Comet prices non-native markets in USD terms already. Thus, the API returns
   // USD values already for non-native markets. For the native token markets,
   // we need to convert the values to USD.
-  const [baseAsset] = getMarketDescriptors(marketSummary.comet.address, marketSummary.chainId);
+  const [baseAsset] = getMarketDescriptors(markets, marketSummary.comet.address, marketSummary.chainId);
   const isNativeAssetMarket = isNonStablecoinMarket(baseAsset);
   const usdPrice = isNativeAssetMarket ? baseUsdPrice : BigInt(10 ** PRICE_PRECISION);
 

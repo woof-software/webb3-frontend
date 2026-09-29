@@ -5,10 +5,16 @@ import { ReactNode } from 'react';
 import { useMarketsOverviewState } from '@pages/markets/hooks/useMarketsOverviewState';
 import { StateType } from '@types';
 
+import { MockMarketsProvider } from '../../../mocks/mockMarkets';
+
 const Provider = ({ children }: { children: ReactNode }) => {
   const queryClient = new QueryClient();
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <MockMarketsProvider>{children}</MockMarketsProvider>
+    </QueryClientProvider>
+  );
 };
 
 describe('useMarketsOverview', () => {

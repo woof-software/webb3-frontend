@@ -1,9 +1,10 @@
 import { useState, useRef, useContext, Fragment } from 'react';
 import { useSearchParams } from 'react-router';
 
+import { useMarketsContext } from '@contexts/MarketsContext';
 import { getSelectedMarketContext } from '@contexts/SelectedMarketContext';
 import { iconNameForChainId } from '@helpers/assets';
-import { areSameMarket, getMarketsByNetwork, isV2Market, V2_MARKET_KEY } from '@helpers/markets';
+import { areSameMarket, isV2Market, V2_MARKET_KEY } from '@helpers/markets';
 import { V2_URL } from '@helpers/urls';
 import useOnClickOutside from '@hooks/useOnClickOutside';
 import { MarketData, MarketDataLoaded, MarketsByNetwork } from '@types';
@@ -24,6 +25,7 @@ const MarketSelector = () => {
   const [selectedChainId, setSelectedChainId] = useState<number>(selectedMarket[1]?.chainInformation.chainId ?? 1);
   const [, currentMarket] = selectedMarket;
   const [searchParams] = useSearchParams();
+  const { getMarketsByNetwork } = useMarketsContext();
   const marketsByNetwork = getMarketsByNetwork(searchParams.has('testnet'));
 
   const ref = useRef(null);

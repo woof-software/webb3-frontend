@@ -2,6 +2,7 @@ import { ReactNode, useContext, useEffect, useState } from 'react';
 
 import { isUnwrappedCollateralAsset } from '@constants/chains';
 import { getActionQueueContext } from '@contexts/ActionQueueContext';
+import { useMarketsContext } from '@contexts/MarketsContext';
 import { getSelectedMarketContext } from '@contexts/SelectedMarketContext';
 import type { Web3 } from '@contexts/Web3Context';
 import {
@@ -14,7 +15,6 @@ import { arrayPartition } from '@helpers/functions';
 import { getKeyForActions, PreEstimatedAction } from '@helpers/gasEstimator';
 import { institutionalSupplyRewards } from '@helpers/institutionalRates';
 import { institutionalWhitelistStatus } from '@helpers/institutionalWhitelist';
-import { DEFAULT_MARKET } from '@helpers/markets';
 import { MAX_UINT256 } from '@helpers/numbers';
 import { isStETH, isWrappedStETH } from '@helpers/steth';
 import { Theme } from '@hooks/useThemeManager';
@@ -69,13 +69,15 @@ const Home = ({
 }: HomeProps) => {
   // when V2 market was selected from market page and open up a new window default dashboard with default market
   const { selectedMarket, selectMarket } = useContext(getSelectedMarketContext());
+  const { defaultMarket } = useMarketsContext();
 
   // We use a useEffect here to prevent infinite renders by the state update in selectMarket
   useEffect(() => {
-    if (selectedMarket[0] === 'hydrated' && selectedMarket[1].baseAsset.symbol == 'Compound V2') {
-      selectMarket(DEFAULT_MARKET);
+    const isV2Selected = selectedMarket[0] === 'hydrated' && selectedMarket[1].baseAsset.symbol == 'Compound V2';
+    if (isV2Selected && defaultMarket !== undefined) {
+      selectMarket(defaultMarket);
     }
-  }, [selectedMarket[0], selectedMarket[1]?.baseAsset?.symbol]);
+  }, [selectedMarket[0], selectedMarket[1]?.baseAsset?.symbol, defaultMarket]);
 
   const writeState = useWriteCometState(web3, addTransaction);
   const { addOrUpdateAction, clearActions, getActions, getPendingAction, removeAction, setPendingAction } = useContext(

@@ -3,15 +3,16 @@ import {
   institutionalSupplyRewardRate,
   institutionalSupplyRewards,
 } from '@helpers/institutionalRates';
-import { getMarkets } from '@helpers/markets';
 import { FACTOR_PRECISION, PRICE_PRECISION } from '@helpers/numbers';
 import { Token } from '@types';
+
+import { MOCK_MARKETS } from '../mocks/mockMarkets';
 
 const dollars = (amount: number) => BigInt(amount) * 10n ** BigInt(PRICE_PRECISION);
 const rate = (fraction: number) => BigInt(Math.round(fraction * 10 ** 6)) * 10n ** BigInt(FACTOR_PRECISION - 6);
 
-const institutionalMarket = getMarkets(true).find((market) => market.institutional);
-const standardMarket = getMarkets(true).find((market) => !market.institutional);
+const institutionalMarket = MOCK_MARKETS.find((market) => market.institutional);
+const standardMarket = MOCK_MARKETS.find((market) => !market.institutional);
 
 if (institutionalMarket === undefined || standardMarket === undefined) {
   throw new Error('Expected both an institutional and a standard market to be configured');
