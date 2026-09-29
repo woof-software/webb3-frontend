@@ -118,18 +118,16 @@ export const CurrencyContextProvider = ({ children }: { children: ReactNode | Re
     setCurrency(preferredCurrency);
   }
 
-  const [counterCurrency, setCounterCurrency] = useState<Currency>(getCounterCurrency(currency, baseAssetSymbol));
+  const counterCurrency = getCounterCurrency(currency, baseAssetSymbol);
 
   // toggle between baseAsset and $, within the same market
   const toggleCurrency = (currency: Currency): void => {
     // toggle between base asset  and usd
     if (currency === baseAssetSymbol) {
       setCurrency(Currency.USD);
-      setCounterCurrency(baseAssetSymbol);
       window.localStorage.setItem(PREFERRED_CURRENCY_KEY, Currency.USD);
     } else {
       setCurrency(baseAssetSymbol as Currency);
-      setCounterCurrency(Currency.USD);
       window.localStorage.setItem(PREFERRED_CURRENCY_KEY, baseAssetSymbol as Currency);
     }
   };
