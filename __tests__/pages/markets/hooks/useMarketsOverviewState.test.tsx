@@ -3,6 +3,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { ReactNode } from 'react';
 
 import RewardsStateContext from '@contexts/RewardsStateContext';
+import { ErrorMarket } from '@helpers/marketRegistry';
 import { useMarketsOverviewState } from '@pages/markets/hooks/useMarketsOverviewState';
 import { StateType } from '@types';
 
@@ -11,19 +12,35 @@ import { MOCK_MARKETS, MockMarketsProvider } from '../../../mocks/mockMarkets';
 // Rewards overrides would add rewards APRs to the expected summaries
 const MARKETS_WITHOUT_REWARDS_OVERWRITE = MOCK_MARKETS.map((market) => ({ ...market, rewardsOverwrite: undefined }));
 
-const Provider = ({ children }: { children: ReactNode }) => {
-  const queryClient = new QueryClient();
+const renderProvider = (errorMarkets: ErrorMarket[] = []) =>
+  function Provider({ children }: { children: ReactNode }) {
+    const queryClient = new QueryClient();
 
-  return (
-    <QueryClientProvider client={queryClient}>
-      <MockMarketsProvider markets={MARKETS_WITHOUT_REWARDS_OVERWRITE}>
-        <RewardsStateContext.Provider value={[StateType.Hydrated, []]}>{children}</RewardsStateContext.Provider>
-      </MockMarketsProvider>
-    </QueryClientProvider>
-  );
-};
+    return (
+      <QueryClientProvider client={queryClient}>
+        <MockMarketsProvider markets={MARKETS_WITHOUT_REWARDS_OVERWRITE} errorMarkets={errorMarkets}>
+          <RewardsStateContext.Provider value={[StateType.Hydrated, []]}>{children}</RewardsStateContext.Provider>
+        </MockMarketsProvider>
+      </QueryClientProvider>
+    );
+  };
+
+const Provider = renderProvider();
 
 describe('useMarketsOverview', () => {
+  test('hides the latest summary of a market in the error status', async () => {
+    const mainnetWETHComet = '0xA17581A9E3356d9A858b789D68B4d866e593aE94';
+    const { result } = renderHook(() => useMarketsOverviewState(), {
+      wrapper: renderProvider([{ chainId: 1, marketAddress: mainnetWETHComet.toLowerCase() }]),
+    });
+
+    await waitFor(() => expect(result.current[0]).toEqual(StateType.Hydrated));
+    const [, state] = result.current;
+    const addresses = state?.latestMarketSummaries.map((summary) => summary.comet.address);
+    expect(addresses).toHaveLength(6);
+    expect(addresses).not.toContain(mainnetWETHComet);
+  });
+
   test('should return loading state', () => {
     const { result } = renderHook(() => useMarketsOverviewState(), { wrapper: Provider });
     expect(result.current).toEqual([StateType.Loading]);

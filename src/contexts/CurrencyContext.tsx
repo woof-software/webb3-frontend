@@ -91,7 +91,7 @@ export const CurrencyContextProvider = ({ children }: { children: ReactNode | Re
   const [pressDownAnimate, setPressDownAnimate] = useState(false);
   const [pressUpAnimate, setPressUpAnimate] = useState(false);
   const [showCurrencyToggle, updateShowCurrencyToggle] = useState(false);
-  const { markets, defaultMarket } = useMarketsContext();
+  const { isLoading: marketsLoading, markets, defaultMarket } = useMarketsContext();
 
   const getPreferredCurrency = () => {
     const market = getMarketData();
@@ -100,7 +100,7 @@ export const CurrencyContextProvider = ({ children }: { children: ReactNode | Re
   };
 
   const getMarketData = (): MarketData | undefined => {
-    if (defaultMarket === undefined) return undefined;
+    if (marketsLoading) return undefined;
     const marketKey = searchParams.get('market') ?? window.localStorage.getItem(MARKET_LOCAL_STORAGE_KEY);
     return parseMarketKeyOrDefault(markets, defaultMarket, marketKey);
   };

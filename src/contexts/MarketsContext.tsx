@@ -2,51 +2,73 @@ import { useQuery } from '@tanstack/react-query';
 import { createContext, ReactNode, useContext, useMemo } from 'react';
 
 import {
+  ErrorMarket,
   fetchMarketRegistry,
   MARKET_REGISTRY_CACHE_MAX_AGE,
   MARKET_REGISTRY_QUERY_KEY,
   MARKET_REGISTRY_REFRESH_INTERVAL,
+  MarketRegistryResponse,
+  RegistryMarkets,
   registryToMarkets,
 } from '@helpers/marketRegistry';
-import { getDefaultMarket, getMarket, getMarketDescriptors, getMarkets, getMarketsByNetwork } from '@helpers/markets';
+import { getMarket, getMarketDescriptors, getMarkets, getMarketsByNetwork } from '@helpers/markets';
 import { MarketData, MarketsByNetwork } from '@types';
 
-export type MarketsContextValue = {
-  markets: MarketData[];
-  defaultMarket: MarketData | undefined;
-  // True only until the first registry response (or restored cache) is available
-  isLoading: boolean;
-  registryVersionId: string | undefined;
+type MarketsHelpers = {
   getMarket: (chainId: number, marketAddress: string) => MarketData | undefined;
   getMarkets: (showTestnet: boolean) => MarketData[];
   getMarketsByNetwork: (showTestnet: boolean) => MarketsByNetwork;
   getMarketDescriptors: (cometAddress: string, chainId: number) => string[];
 };
 
+// Loading only until the first registry response (or restored cache) is available.
+// Checking `isLoading` narrows `defaultMarket` and `registryVersionId` to defined values.
+export type MarketsContextValue = MarketsHelpers &
+  (
+    | {
+        isLoading: true;
+        markets: MarketData[];
+        defaultMarket: undefined;
+        registryVersionId: undefined;
+        errorMarkets: ErrorMarket[];
+      }
+    | ({ isLoading: false } & RegistryMarkets)
+  );
+
 export const MarketsContext = createContext<MarketsContextValue | undefined>(undefined);
 
-export function buildMarketsContextValue(
-  markets: MarketData[],
-  defaultMarket: MarketData | undefined,
-  isLoading: boolean,
-  registryVersionId?: string,
-): MarketsContextValue {
-  return {
-    markets,
-    defaultMarket: defaultMarket ?? getDefaultMarket(markets),
-    isLoading,
-    registryVersionId,
+const NO_MARKETS: MarketData[] = [];
+
+export function buildMarketsContextValue(registryMarkets: RegistryMarkets | undefined): MarketsContextValue {
+  const markets = registryMarkets?.markets ?? NO_MARKETS;
+  const helpers: MarketsHelpers = {
     getMarket: (chainId, marketAddress) => getMarket(markets, chainId, marketAddress),
     getMarkets: (showTestnet) => getMarkets(markets, showTestnet),
     getMarketsByNetwork: (showTestnet) => getMarketsByNetwork(markets, showTestnet),
     getMarketDescriptors: (cometAddress, chainId) => getMarketDescriptors(markets, cometAddress, chainId),
   };
+
+  return registryMarkets === undefined
+    ? { ...helpers, isLoading: true, markets, defaultMarket: undefined, registryVersionId: undefined, errorMarkets: [] }
+    : { ...helpers, isLoading: false, ...registryMarkets };
+}
+
+// A malformed cached/fetched registry must not crash the app (no ErrorBoundary wraps this provider).
+// A throwing select leaves the query without data, so it is treated as loading while it keeps refetching.
+function selectRegistryMarkets(response: MarketRegistryResponse): RegistryMarkets {
+  try {
+    return registryToMarkets(response);
+  } catch (error) {
+    console.warn('Market registry: failed to map response, treating as loading', error);
+    throw error;
+  }
 }
 
 export const MarketsProvider = ({ children }: { children: ReactNode }) => {
   const { data } = useQuery({
     queryKey: MARKET_REGISTRY_QUERY_KEY,
     queryFn: fetchMarketRegistry,
+    select: selectRegistryMarkets,
     staleTime: MARKET_REGISTRY_REFRESH_INTERVAL,
     refetchInterval: MARKET_REGISTRY_REFRESH_INTERVAL,
     // Must outlive the persisted cache, otherwise the restored registry is garbage collected
@@ -55,20 +77,7 @@ export const MarketsProvider = ({ children }: { children: ReactNode }) => {
     retry: true,
   });
 
-  const value = useMemo(() => {
-    if (data === undefined) {
-      return buildMarketsContextValue([], undefined, true);
-    }
-    try {
-      const { markets, defaultMarket } = registryToMarkets(data);
-      return buildMarketsContextValue(markets, defaultMarket, false, data.registryVersion.id);
-    } catch (error) {
-      // A malformed cached/fetched registry must not crash the app (no ErrorBoundary wraps this provider).
-      // Treat it as "no data": skeletons are shown while the query keeps refetching/retrying in the background.
-      console.warn('Market registry: failed to map response, treating as loading', error);
-      return buildMarketsContextValue([], undefined, true);
-    }
-  }, [data]);
+  const value = useMemo(() => buildMarketsContextValue(data), [data]);
 
   return <MarketsContext.Provider value={value}>{children}</MarketsContext.Provider>;
 };

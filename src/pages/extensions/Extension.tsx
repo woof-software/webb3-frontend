@@ -64,7 +64,7 @@ const Extension = ({
   const [extensionLoaded, setExtensionLoaded] = useState<boolean>(false);
   const iFrameHeight = 1000;
   const [extensionState, setExtensionState] = useState<ExtensionState>(undefined);
-  const { getMarkets, defaultMarket } = useMarketsContext();
+  const { isLoading: marketsLoading, getMarkets, defaultMarket } = useMarketsContext();
   const markets = useMemo(() => getMarkets(showTestnet), [getMarkets, showTestnet]);
   const timer = usePoll(10000);
   const iFrameRef = useRef<HTMLIFrameElement>(null);
@@ -349,7 +349,7 @@ const Extension = ({
             <div className="extension-banner L4 body text-color--3">
               <p
                 onClick={() => {
-                  if (defaultMarket !== undefined) selectMarket(defaultMarket);
+                  if (!marketsLoading) selectMarket(defaultMarket);
                 }}
                 className="call-to-action"
               >

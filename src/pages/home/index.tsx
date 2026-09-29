@@ -69,12 +69,12 @@ const Home = ({
 }: HomeProps) => {
   // when V2 market was selected from market page and open up a new window default dashboard with default market
   const { selectedMarket, selectMarket } = useContext(getSelectedMarketContext());
-  const { defaultMarket } = useMarketsContext();
+  const { isLoading: marketsLoading, defaultMarket } = useMarketsContext();
 
   // We use a useEffect here to prevent infinite renders by the state update in selectMarket
   useEffect(() => {
     const isV2Selected = selectedMarket[0] === 'hydrated' && selectedMarket[1].baseAsset.symbol == 'Compound V2';
-    if (isV2Selected && defaultMarket !== undefined) {
+    if (isV2Selected && !marketsLoading) {
       selectMarket(defaultMarket);
     }
   }, [selectedMarket[0], selectedMarket[1]?.baseAsset?.symbol, defaultMarket]);

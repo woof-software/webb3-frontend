@@ -3,7 +3,7 @@ import { getAddress } from 'ethers/lib/utils';
 
 import { CHAINS } from '@constants/chains';
 import { iconNameForChainId } from '@helpers/assets';
-import { isV2Market, V2_MARKET } from '@helpers/markets';
+import { V2_MARKET } from '@helpers/markets';
 import { getMarketRegistryEndpoint } from '@helpers/urls';
 import { ChainInformation, MarketData } from '@types';
 
@@ -14,6 +14,7 @@ export type RegistryMarket = {
   slug: string | null;
   isDefault: boolean;
   isInstitutional: boolean;
+  status: string;
   contracts: {
     comet: string;
     bulker: string;
@@ -37,6 +38,7 @@ export type MarketRegistryResponse = {
 };
 
 export const MARKET_REGISTRY_SCHEMA_VERSION = 1;
+export const MARKET_STATUS_ERROR = 'error';
 
 export const MARKET_REGISTRY_QUERY_KEY = ['marketRegistry'] as const;
 export const MARKET_REGISTRY_REFRESH_INTERVAL = 1000 * 60 * 10; // 10 minutes
@@ -148,13 +150,25 @@ function toMarketData(chainId: number, chainInformation: ChainInformation, marke
   };
 }
 
+export type ErrorMarket = { chainId: number; marketAddress: string };
+
 export type RegistryMarkets = {
   markets: MarketData[];
-  defaultMarket: MarketData | undefined;
+  defaultMarket: MarketData;
+  registryVersionId: string;
+  // Markets in the error status; they are left out of `markets` and hidden from the UI
+  errorMarkets: ErrorMarket[];
 };
+
+export function isErrorMarket(errorMarkets: ErrorMarket[], chainId: number, marketAddress: string): boolean {
+  return errorMarkets.some(
+    (market) => market.chainId === chainId && market.marketAddress.toLowerCase() === marketAddress.toLowerCase()
+  );
+}
 
 export function registryToMarkets(response: MarketRegistryResponse): RegistryMarkets {
   const entries: { id: string; isDefault: boolean; market: MarketData }[] = [];
+  const errorMarkets: ErrorMarket[] = [];
 
   for (const network of response.networks) {
     const chainInformation = CHAINS[network.chainId];
@@ -165,6 +179,12 @@ export function registryToMarkets(response: MarketRegistryResponse): RegistryMar
     }
 
     for (const market of network.markets) {
+      // Markets in the error status are not shown anywhere in the UI
+      if (market.status === MARKET_STATUS_ERROR) {
+        errorMarkets.push({ chainId: network.chainId, marketAddress: market.contracts.comet });
+        continue;
+      }
+
       const id = registryMarketId(network.chainId, market.deploymentKey);
       const marketData = tryOrWarn(
         () => toMarketData(network.chainId, chainInformation, market),
@@ -177,10 +197,18 @@ export function registryToMarkets(response: MarketRegistryResponse): RegistryMar
 
   entries.sort((a, b) => priorityOf(a.id) - priorityOf(b.id));
 
+  // Without a registry default the first market in selector order is used
+  const defaultMarket = (entries.find((entry) => entry.isDefault) ?? entries[0])?.market;
+  if (defaultMarket === undefined) {
+    throw new Error('Market registry response has no supported markets');
+  }
+
   return {
     // This is a faux supported market for Compound V2 and points to comptroller address
     markets: [...entries.map((entry) => entry.market), V2_MARKET],
-    defaultMarket: entries.find((entry) => entry.isDefault)?.market,
+    defaultMarket,
+    registryVersionId: response.registryVersion.id,
+    errorMarkets,
   };
 }
 
@@ -194,9 +222,8 @@ export function validateMarketRegistry(json: unknown): MarketRegistryResponse {
   }
 
   const registry = response as MarketRegistryResponse;
-  if (registryToMarkets(registry).markets.every(isV2Market)) {
-    throw new Error('Market registry response has no supported markets');
-  }
+  // Throws when the response has no supported markets
+  registryToMarkets(registry);
   return registry;
 }
 

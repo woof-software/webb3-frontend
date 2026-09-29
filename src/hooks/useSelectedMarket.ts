@@ -50,7 +50,7 @@ setMulticallAddress(2020, '0xcA11bde05977b3631167028862bE2a173976CA11');
  */
 export function useSelectedMarketState(web3: Web3): SelectedMarketData {
   const location = useLocation();
-  const { markets, defaultMarket, getMarket } = useMarketsContext();
+  const { isLoading: marketsLoading, markets, defaultMarket, getMarket } = useMarketsContext();
 
   // Most routes use <route>/?market=<marketId> to select a market
   const [searchParams, setSearchParams] = useSearchParams();
@@ -111,7 +111,7 @@ export function useSelectedMarketState(web3: Web3): SelectedMarketData {
 
   useEffect(() => {
     // Markets come from the registry; until it loads the selected market stays in the loading state
-    if (defaultMarket === undefined) return;
+    if (marketsLoading) return;
 
     const maybePreferredMarket =
       marketId ?? searchParams.get('market') ?? window.localStorage.getItem(MARKET_LOCAL_STORAGE_KEY) ?? undefined;

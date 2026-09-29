@@ -69,8 +69,3 @@ export function getMarket(markets: MarketData[], chainId: number, marketAddress:
       market.chainInformation.chainId === chainId && market.marketAddress.toLowerCase() === marketAddress.toLowerCase()
   );
 }
-
-// Fallback for a registry without a default market
-export function getDefaultMarket(markets: MarketData[]): MarketData | undefined {
-  return markets.find((market) => !isV2Market(market));
-}

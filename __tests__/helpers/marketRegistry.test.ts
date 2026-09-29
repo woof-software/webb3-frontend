@@ -1,5 +1,10 @@
 import { CHAINS } from '@constants/chains';
-import { MarketRegistryResponse, registryToMarkets, validateMarketRegistry } from '@helpers/marketRegistry';
+import {
+  isErrorMarket,
+  MarketRegistryResponse,
+  registryToMarkets,
+  validateMarketRegistry,
+} from '@helpers/marketRegistry';
 import { isV2Market, marketKey, V2_MARKET } from '@helpers/markets';
 import { shortMarketKey } from '@hooks/useSelectedMarket';
 import { extensions } from '@pages/extensions/helpers/core';
@@ -126,15 +131,48 @@ describe('registryToMarkets', () => {
     expect(defaultMarket?.marketAddress).toEqual(LEGACY_ADDRESSES.mainnetUSDC.comet);
   });
 
-  test('returns no default market when the registry has none', () => {
+  test('falls back to the first market in selector order when the registry has no default', () => {
     const noDefault: MarketRegistryResponse = {
       ...registry,
-      networks: registry.networks.map((network) => ({
+      networks: [...registry.networks].reverse().map((network) => ({
         ...network,
         markets: network.markets.map((market) => ({ ...market, isDefault: false })),
       })),
     };
-    expect(registryToMarkets(noDefault).defaultMarket).toBeUndefined();
+    expect(registryToMarkets(noDefault).defaultMarket.marketAddress).toEqual(LEGACY_ADDRESSES.mainnetUSDC.comet);
+  });
+
+  test('skips markets in the error status', () => {
+    const [mainnet, ...restNetworks] = registry.networks;
+    const [usdc, weth, ...restMarkets] = mainnet.markets;
+    const withErrorMarket: MarketRegistryResponse = {
+      ...registry,
+      networks: [{ ...mainnet, markets: [usdc, { ...weth, status: 'error' }, ...restMarkets] }, ...restNetworks],
+    };
+    const { markets: mappedMarkets, errorMarkets } = registryToMarkets(withErrorMarket);
+    const mapped = mappedMarkets.filter((market) => !isV2Market(market));
+    expect(mapped.length).toEqual(LEGACY_MARKETS.length - 1);
+    expect(mapped.some((market) => market.marketAddress === LEGACY_ADDRESSES.mainnetWETH.comet)).toBe(false);
+    expect(errorMarkets).toEqual([{ chainId: 1, marketAddress: weth.contracts.comet }]);
+    expect(isErrorMarket(errorMarkets, 1, LEGACY_ADDRESSES.mainnetWETH.comet.toLowerCase())).toBe(true);
+    expect(isErrorMarket(errorMarkets, 1, LEGACY_ADDRESSES.mainnetUSDC.comet)).toBe(false);
+    expect(isErrorMarket(errorMarkets, 8453, LEGACY_ADDRESSES.mainnetWETH.comet)).toBe(false);
+  });
+
+  test('falls back to another default market when the default market is in the error status', () => {
+    const [mainnet, ...restNetworks] = registry.networks;
+    const [usdc, ...restMarkets] = mainnet.markets;
+    const withErrorDefault: MarketRegistryResponse = {
+      ...registry,
+      networks: [{ ...mainnet, markets: [{ ...usdc, status: 'error' }, ...restMarkets] }, ...restNetworks],
+    };
+    expect(registryToMarkets(withErrorDefault).defaultMarket.marketAddress).toEqual(
+      LEGACY_ADDRESSES.mainnetWETH.comet,
+    );
+  });
+
+  test('returns the registry version id', () => {
+    expect(registryToMarkets(registry).registryVersionId).toEqual(registry.registryVersion.id);
   });
 
   test('puts markets missing from the priority list after the listed ones, in registry order', () => {
