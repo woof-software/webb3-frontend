@@ -3,7 +3,6 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { ReactNode } from 'react';
 
 import RewardsStateContext from '@contexts/RewardsStateContext';
-import { ErrorMarket } from '@helpers/marketRegistry';
 import { useMarketsOverviewState } from '@pages/markets/hooks/useMarketsOverviewState';
 import { StateType } from '@types';
 
@@ -12,35 +11,19 @@ import { MOCK_MARKETS, MockMarketsProvider } from '../../../mocks/mockMarkets';
 // Rewards overrides would add rewards APRs to the expected summaries
 const MARKETS_WITHOUT_REWARDS_OVERWRITE = MOCK_MARKETS.map((market) => ({ ...market, rewardsOverwrite: undefined }));
 
-const renderProvider = (errorMarkets: ErrorMarket[] = []) =>
-  function Provider({ children }: { children: ReactNode }) {
-    const queryClient = new QueryClient();
+const Provider = ({ children }: { children: ReactNode }) => {
+  const queryClient = new QueryClient();
 
-    return (
-      <QueryClientProvider client={queryClient}>
-        <MockMarketsProvider markets={MARKETS_WITHOUT_REWARDS_OVERWRITE} errorMarkets={errorMarkets}>
-          <RewardsStateContext.Provider value={[StateType.Hydrated, []]}>{children}</RewardsStateContext.Provider>
-        </MockMarketsProvider>
-      </QueryClientProvider>
-    );
-  };
-
-const Provider = renderProvider();
+  return (
+    <QueryClientProvider client={queryClient}>
+      <MockMarketsProvider markets={MARKETS_WITHOUT_REWARDS_OVERWRITE}>
+        <RewardsStateContext.Provider value={[StateType.Hydrated, []]}>{children}</RewardsStateContext.Provider>
+      </MockMarketsProvider>
+    </QueryClientProvider>
+  );
+};
 
 describe('useMarketsOverview', () => {
-  test('hides the latest summary of a market in the error status', async () => {
-    const mainnetWETHComet = '0xA17581A9E3356d9A858b789D68B4d866e593aE94';
-    const { result } = renderHook(() => useMarketsOverviewState(), {
-      wrapper: renderProvider([{ chainId: 1, marketAddress: mainnetWETHComet.toLowerCase() }]),
-    });
-
-    await waitFor(() => expect(result.current[0]).toEqual(StateType.Hydrated));
-    const [, state] = result.current;
-    const addresses = state?.latestMarketSummaries.map((summary) => summary.comet.address);
-    expect(addresses).toHaveLength(6);
-    expect(addresses).not.toContain(mainnetWETHComet);
-  });
-
   test('should return loading state', () => {
     const { result } = renderHook(() => useMarketsOverviewState(), { wrapper: Provider });
     expect(result.current).toEqual([StateType.Loading]);
@@ -247,6 +230,7 @@ describe('useMarketsOverview', () => {
               isRewardsLoading: false,
               supplyAPR: 30836040536016000n,
               supplyRewardsAPR: 0n,
+              status: 'success',
               timestamp: 1694099375,
               totalBorrowValue: 28502368452920876n,
               totalCollateralValue: 53514681927004113n,
@@ -265,6 +249,7 @@ describe('useMarketsOverview', () => {
               isRewardsLoading: false,
               supplyAPR: 18374010062832000n,
               supplyRewardsAPR: 0n,
+              status: 'success',
               timestamp: 1694099351,
               totalBorrowValue: 3852450502826696n,
               totalCollateralValue: 5071775730806631n,
@@ -283,6 +268,7 @@ describe('useMarketsOverview', () => {
               isRewardsLoading: false,
               supplyAPR: 24735211142400000n,
               supplyRewardsAPR: 0n,
+              status: 'success',
               timestamp: 1694099375,
               totalBorrowValue: 1772672815086393n,
               totalCollateralValue: 3307331296344870n,
@@ -301,6 +287,7 @@ describe('useMarketsOverview', () => {
               isRewardsLoading: false,
               supplyAPR: 31191015428496000n,
               supplyRewardsAPR: 0n,
+              status: 'success',
               timestamp: 1694099377,
               totalBorrowValue: 328125763640274n,
               totalCollateralValue: 810090339504329n,
@@ -319,6 +306,7 @@ describe('useMarketsOverview', () => {
               isRewardsLoading: false,
               supplyAPR: 4029747879312000n,
               supplyRewardsAPR: 0n,
+              status: 'success',
               timestamp: 1694099357,
               totalBorrowValue: 39063581432039n,
               totalCollateralValue: 89935764341405n,
@@ -337,6 +325,7 @@ describe('useMarketsOverview', () => {
               isRewardsLoading: false,
               supplyAPR: 6306070443552000n,
               supplyRewardsAPR: 0n,
+              status: 'success',
               timestamp: 1694099345,
               totalBorrowValue: 141514294509716n,
               totalCollateralValue: 174554019184166n,
@@ -355,6 +344,7 @@ describe('useMarketsOverview', () => {
               isRewardsLoading: false,
               supplyAPR: 15423450057648000n,
               supplyRewardsAPR: 0n,
+              status: 'success',
               timestamp: 1694099357,
               totalBorrowValue: 590761320826590n,
               totalCollateralValue: 1059542673866321n,

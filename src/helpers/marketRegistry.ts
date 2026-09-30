@@ -5,7 +5,7 @@ import { CHAINS } from '@constants/chains';
 import { iconNameForChainId } from '@helpers/assets';
 import { V2_MARKET } from '@helpers/markets';
 import { getMarketRegistryEndpoint } from '@helpers/urls';
-import { ChainInformation, MarketData } from '@types';
+import { ChainInformation, MarketData, MarketStatus } from '@types';
 
 export type RegistryMarket = {
   deploymentKey: string;
@@ -13,7 +13,7 @@ export type RegistryMarket = {
   slug: string | null;
   isDefault: boolean;
   isInstitutional: boolean;
-  status: string;
+  status: MarketStatus;
   contracts: {
     comet: string;
     bulker: string;
@@ -37,7 +37,6 @@ export type MarketRegistryResponse = {
 };
 
 export const MARKET_REGISTRY_SCHEMA_VERSION = 1;
-export const MARKET_STATUS_ERROR = 'error';
 
 export const MARKET_REGISTRY_QUERY_KEY = ['marketRegistry'] as const;
 export const MARKET_REGISTRY_REFRESH_INTERVAL = 1000 * 60 * 10; // 10 minutes
@@ -50,13 +49,7 @@ export function shouldPersistQuery(query: Query): boolean {
   return query.queryKey[0] === MARKET_REGISTRY_QUERY_KEY[0] && query.state.status === 'success';
 }
 
-// Base assets that are wrapped native tokens shown unwrapped in the UI (e.g. ETH for the WETH market).
-// Their URL key uses the wrapped symbol ('weth-mainnet').
-const WRAPPED_BASE_ASSETS = ['ETH'];
-
-const registryMarketId = (chainId: number, deploymentKey: string) => `${chainId}:${deploymentKey}`;
-
-export const MARKET_PRIORITY: string[] = [
+export const MARKET_PRIORITY = [
   '1:usdc',
   '1:weth',
   '1:usdt',
@@ -119,86 +112,71 @@ function toMarketData(chainId: number, chainInformation: ChainInformation, marke
     baseAsset: {
       symbol: market.displayName,
       name: market.baseAsset.displayName,
-      isWrapped: WRAPPED_BASE_ASSETS.includes(market.displayName),
+      // The ETH market's base asset is WETH, shown unwrapped; its URL key uses the wrapped symbol ('weth-mainnet')
+      isWrapped: market.displayName === 'ETH',
     },
     chainInformation,
     iconPair: [market.isInstitutional ? 'INSTITUTIONAL' : iconNameForChainId(chainId), market.displayName],
     marketAddress: getAddress(contracts.comet),
     bulkerAddress: getAddress(contracts.bulker),
-    ...(contracts.rewards ? { rewardsAddress: getAddress(contracts.rewards) } : {}),
-    ...(contracts.fauceteer ? { fauceteerAddress: getAddress(contracts.fauceteer) } : {}),
-    ...(market.slug ? { slug: market.slug } : {}),
-    ...(market.isInstitutional ? { institutional: true } : {}),
-    ...MARKET_OVERRIDES[registryMarketId(chainId, market.deploymentKey)],
+    rewardsAddress: contracts.rewards ? getAddress(contracts.rewards) : undefined,
+    fauceteerAddress: contracts.fauceteer ? getAddress(contracts.fauceteer) : undefined,
+    slug: market.slug ?? undefined,
+    institutional: market.isInstitutional || undefined,
+    status: market.status,
+    ...MARKET_OVERRIDES[`${chainId}:${market.deploymentKey}`],
     type: 'MarketData',
   };
 }
-
-export type ErrorMarket = { chainId: number; marketAddress: string };
 
 export type RegistryMarkets = {
   markets: MarketData[];
   defaultMarket: MarketData;
   registryVersionId: string;
-  // Markets in the error status; they are left out of `markets` and hidden from the UI
-  errorMarkets: ErrorMarket[];
 };
-
-export function isErrorMarket(errorMarkets: ErrorMarket[], chainId: number, marketAddress: string): boolean {
-  return errorMarkets.some(
-    (market) => market.chainId === chainId && market.marketAddress.toLowerCase() === marketAddress.toLowerCase()
-  );
-}
 
 const MARKET_PRIORITY_INDEX = new Map(MARKET_PRIORITY.map((id, index) => [id, index]));
 
-type RegistryEntries = {
+type CollectedMarkets = {
   entries: { priority: number; market: MarketData }[];
   registryDefaultMarket?: MarketData;
-  errorMarkets: ErrorMarket[];
 };
 
-function collectRegistryMarkets(response: MarketRegistryResponse): RegistryEntries {
-  return response.networks.reduce<RegistryEntries>(
-    (acc, network) => {
-      const chainInformation = CHAINS[network.chainId];
+function collectRegistryMarkets(response: MarketRegistryResponse): CollectedMarkets {
+  const collected: CollectedMarkets = { entries: [] };
 
-      if (chainInformation === undefined) {
-        console.warn(`Market registry: skipping markets on unsupported chain ${network.chainId}`);
-        return acc;
+  for (const network of response.networks) {
+    const chainInformation = CHAINS[network.chainId];
+
+    if (chainInformation === undefined) {
+      console.warn(`Market registry: skipping markets on unsupported chain ${network.chainId}`);
+      continue;
+    }
+
+    for (const market of network.markets) {
+      const id = `${network.chainId}:${market.deploymentKey}`;
+
+      const { comet, bulker, rewards, fauceteer } = market.contracts;
+
+      if (![comet, bulker, rewards, fauceteer].every((address) => address === null || isAddress(address))) {
+        console.warn(`Market registry: skipping market ${id} (invalid address)`);
+        continue;
       }
 
-      return network.markets.reduce((acc, market) => {
-        // Markets in the error status are not shown anywhere in the UI
-        if (market.status === MARKET_STATUS_ERROR) {
-          acc.errorMarkets.push({ chainId: network.chainId, marketAddress: market.contracts.comet });
-          return acc;
-        }
+      const marketData = toMarketData(network.chainId, chainInformation, market);
 
-        const id = registryMarketId(network.chainId, market.deploymentKey);
+      // Markets missing from the priority list go after the listed ones, in registry order
+      collected.entries.push({ priority: MARKET_PRIORITY_INDEX.get(id) ?? MARKET_PRIORITY.length, market: marketData });
 
-        const { comet, bulker, rewards, fauceteer } = market.contracts;
+      if (market.isDefault) collected.registryDefaultMarket ??= marketData;
+    }
+  }
 
-        if (![comet, bulker, rewards, fauceteer].every((address) => address === null || isAddress(address))) {
-          console.warn(`Market registry: skipping market ${id} (invalid address)`);
-          return acc;
-        }
-
-        const marketData = toMarketData(network.chainId, chainInformation, market);
-
-        // Markets missing from the priority list go after the listed ones, in registry order
-        acc.entries.push({ priority: MARKET_PRIORITY_INDEX.get(id) ?? MARKET_PRIORITY.length, market: marketData });
-
-        if (market.isDefault) acc.registryDefaultMarket ??= marketData;
-        return acc;
-      }, acc);
-    },
-    { entries: [], errorMarkets: [] }
-  );
+  return collected;
 }
 
 export function registryToMarkets(response: MarketRegistryResponse): RegistryMarkets {
-  const { entries, registryDefaultMarket, errorMarkets } = collectRegistryMarkets(response);
+  const { entries, registryDefaultMarket } = collectRegistryMarkets(response);
 
   entries.sort((a, b) => a.priority - b.priority);
 
@@ -214,7 +192,6 @@ export function registryToMarkets(response: MarketRegistryResponse): RegistryMar
     markets: [...entries.map((entry) => entry.market), V2_MARKET],
     defaultMarket,
     registryVersionId: response.registryVersion.id,
-    errorMarkets,
   };
 }
 

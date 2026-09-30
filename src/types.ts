@@ -341,6 +341,8 @@ export interface ChainInformation {
   walletRpcUrls: string[];
 }
 
+export type MarketStatus = 'success' | 'partially' | 'error';
+
 export type MarketData = {
   baseAsset: BaseAssetConfig;
   chainInformation: ChainInformation;
@@ -356,6 +358,7 @@ export type MarketData = {
   institutional?: boolean;
   // Recently launched markets get a 'New' badge in the market selector
   isNew?: boolean;
+  status?: MarketStatus;
   type: 'MarketData';
   rewardsOverwrite?: {
     rewardsAssetSymbol: string;
@@ -407,6 +410,7 @@ export type MarketSummary = {
   date: string;
   isInstitutional?: boolean;
   isRewardsLoading?: boolean;
+  status?: MarketStatus;
 };
 
 export type AggregatedHistoricalSummary = {

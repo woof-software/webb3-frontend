@@ -78,7 +78,7 @@ export const MarketsProvider = (props: MarketsProviderProps) => {
     };
 
     return data === undefined
-      ? { ...helpers, isLoading: true, markets, defaultMarket: undefined, registryVersionId: undefined, errorMarkets: [] }
+      ? { ...helpers, isLoading: true, markets, defaultMarket: undefined, registryVersionId: undefined }
       : { ...helpers, isLoading: false, ...data };
   }, [data, loadFailed]);
 

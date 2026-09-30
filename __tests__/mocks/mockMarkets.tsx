@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 
 import { MarketsContext, MarketsContextValue } from '@contexts/MarketsContext';
-import { ErrorMarket, MarketRegistryResponse, registryToMarkets } from '@helpers/marketRegistry';
+import { MarketRegistryResponse, registryToMarkets } from '@helpers/marketRegistry';
 import { getMarket, getMarketDescriptors, getMarkets, getMarketsByNetwork } from '@helpers/markets';
 import { MarketData } from '@types';
 
@@ -18,12 +18,10 @@ export const MockMarketsProvider = ({
   children,
   isLoading = false,
   markets = MOCK_MARKETS,
-  errorMarkets = registryMarkets.errorMarkets,
 }: {
   children: ReactNode;
   isLoading?: boolean;
   markets?: MarketData[];
-  errorMarkets?: ErrorMarket[];
 }) => {
   const contextMarkets = isLoading ? [] : markets;
   const helpers = {
@@ -42,9 +40,8 @@ export const MockMarketsProvider = ({
         markets: contextMarkets,
         defaultMarket: undefined,
         registryVersionId: undefined,
-        errorMarkets: [],
       }
-    : { ...helpers, isLoading: false, ...registryMarkets, markets, errorMarkets };
+    : { ...helpers, isLoading: false, ...registryMarkets, markets };
 
   return <MarketsContext.Provider value={value}>{children}</MarketsContext.Provider>;
 };

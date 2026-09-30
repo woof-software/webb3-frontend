@@ -7,7 +7,6 @@ import RewardsStateContext from '@contexts/RewardsStateContext';
 import { isNonStablecoinMarket } from '@helpers/baseAssetPrice';
 import { convertApiResponse } from '@helpers/functions';
 import { filterLegacyCollateralSymbols } from '@helpers/legacyCollateral';
-import { ErrorMarket, isErrorMarket } from '@helpers/marketRegistry';
 import { getMarket, getMarketDescriptors } from '@helpers/markets';
 import { BASE_FACTOR, FACTOR_PRECISION, PRICE_PRECISION } from '@helpers/numbers';
 import { getMarketRewardsAPRs } from '@helpers/rewards';
@@ -16,6 +15,7 @@ import {
   AggregatedHistoricalSummary,
   MarketData,
   MarketOverviewState,
+  MarketStatus,
   MarketSummary,
   RewardsState,
   StateType,
@@ -24,13 +24,13 @@ import {
 const LATEST_SUMMARY_REFRESH_INTERVAL = 1000 * 60 * 10; // 10 minutes
 
 export function useMarketsOverviewState(): MarketOverviewState {
-  const { isLoading: marketsLoading, markets, errorMarkets, registryVersionId } = useMarketsContext();
+  const { isLoading: marketsLoading, markets, registryVersionId } = useMarketsContext();
   const rewardsState = useContext(RewardsStateContext);
 
   const query = useQuery({
     // A new registry version re-derives the summaries from the new market list
     queryKey: ['marketOverviewState', registryVersionId, rewardsState[0]],
-    queryFn: () => getState(markets, errorMarkets, rewardsState),
+    queryFn: () => getState(markets, rewardsState),
     // Keep showing the summaries fetched before rewards loaded while the query refetches with them
     placeholderData: keepPreviousData,
     refetchInterval: LATEST_SUMMARY_REFRESH_INTERVAL,
@@ -45,6 +45,7 @@ type MarketSummaryResponse = {
   comet: {
     address: string;
   };
+  status?: MarketStatus;
   borrowApr: string;
   supplyApr: string;
   totalBorrowValue: string;
@@ -59,7 +60,6 @@ type MarketSummaryResponse = {
 
 const getState = async (
   markets: MarketData[],
-  errorMarkets: ErrorMarket[],
   rewardsState: RewardsState,
   includeTestnets = false
 ): Promise<MarketOverviewState> => {
@@ -68,11 +68,6 @@ const getState = async (
 
   const sanitizedLatestMarketSummaries: MarketSummary[] = latestMarketSummaries
     .map(convertApiResponse)
-    // Markets in the error status are hidden; the historical totals below still include them
-    .filter(
-      (marketSummary: MarketSummaryResponse) =>
-        !isErrorMarket(errorMarkets, marketSummary.chainId, marketSummary.comet.address)
-    )
     .map((marketSummary: MarketSummaryResponse) => sanitizeMarketSummary(markets, marketSummary, rewardsState));
 
   const historicalMarketSummariesResponse = await fetch(getHistoricalMarketSummaryEndpoint(includeTestnets));
@@ -168,6 +163,7 @@ export const sanitizeMarketSummary = (
     ),
     borrowAPR: borrowAPR,
     supplyAPR: supplyAPR,
+    status: marketSummary.status,
     ...((() => {
       if (!market || !marketRewards) {
         return {
