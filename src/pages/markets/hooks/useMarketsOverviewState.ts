@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { getAddress } from 'ethers/lib/utils';
 import { useContext } from 'react';
 
@@ -18,8 +18,6 @@ import {
   MarketOverviewState,
   MarketSummary,
   RewardsState,
-  RewardsStateHydrated,
-  RewardsStateNoWallet,
   StateType,
 } from '@types';
 
@@ -33,12 +31,13 @@ export function useMarketsOverviewState(): MarketOverviewState {
     // A new registry version re-derives the summaries from the new market list
     queryKey: ['marketOverviewState', registryVersionId, rewardsState[0]],
     queryFn: () => getState(markets, errorMarkets, rewardsState),
-    initialData: [StateType.Loading],
+    // Keep showing the summaries fetched before rewards loaded while the query refetches with them
+    placeholderData: keepPreviousData,
     refetchInterval: LATEST_SUMMARY_REFRESH_INTERVAL,
     enabled: !marketsLoading,
   });
 
-  return query.data;
+  return query.data ?? [StateType.Loading];
 }
 
 type MarketSummaryResponse = {
@@ -64,10 +63,6 @@ const getState = async (
   rewardsState: RewardsState,
   includeTestnets = false
 ): Promise<MarketOverviewState> => {
-  if (rewardsState[0] === StateType.Loading) {
-    return [StateType.Loading];
-  }
-
   const latestMarketSummariesResponse = await fetch(getLatestMarketSummaryEndpoint(includeTestnets));
   const latestMarketSummaries = await latestMarketSummariesResponse.json();
 
@@ -129,7 +124,7 @@ const getState = async (
 export const sanitizeMarketSummary = (
   markets: MarketData[],
   marketSummary: MarketSummaryResponse,
-  marketRewards?: RewardsStateNoWallet | RewardsStateHydrated
+  marketRewards?: RewardsState
 ): MarketSummary => {
   const baseUsdPrice = BigInt(Math.floor(Number(marketSummary.baseUsdPrice) * 10 ** PRICE_PRECISION));
   const borrowAPR = BigInt(Math.floor(Number(marketSummary.borrowApr) * 10 ** FACTOR_PRECISION));
@@ -153,6 +148,8 @@ export const sanitizeMarketSummary = (
 
   const utilization = BigInt(marketSummary.utilization);
 
+  const market = getMarket(markets, marketSummary.chainId, marketSummary.comet.address);
+
   return {
     chainId: marketSummary.chainId,
     comet: {
@@ -172,8 +169,6 @@ export const sanitizeMarketSummary = (
     borrowAPR: borrowAPR,
     supplyAPR: supplyAPR,
     ...((() => {
-      const market = getMarket(markets, marketSummary.chainId, marketSummary.comet.address);
-
       if (!market || !marketRewards) {
         return {
           borrowRewardsAPR: 0n,
@@ -187,6 +182,7 @@ export const sanitizeMarketSummary = (
         totalSupplyValueInDollars,
         totalBorrowValueInDollars
       );
-    })())
+    })()),
+    isRewardsLoading: !!market?.rewardsOverwrite && marketRewards?.[0] === StateType.Loading,
   };
 };
