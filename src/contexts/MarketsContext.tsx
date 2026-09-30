@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { createContext, ReactNode, useContext, useMemo } from 'react';
 
 import {
-  ErrorMarket,
   fetchMarketRegistry,
   MARKET_REGISTRY_CACHE_MAX_AGE,
   MARKET_REGISTRY_QUERY_KEY,
@@ -14,6 +13,10 @@ import {
 import { getMarket, getMarketDescriptors, getMarkets, getMarketsByNetwork } from '@helpers/markets';
 import { MarketData, MarketsByNetwork } from '@types';
 
+type MarketsProviderProps = {
+  children: ReactNode;
+};
+
 type MarketsHelpers = {
   getMarket: (chainId: number, marketAddress: string) => MarketData | undefined;
   getMarkets: (showTestnet: boolean) => MarketData[];
@@ -21,40 +24,22 @@ type MarketsHelpers = {
   getMarketDescriptors: (cometAddress: string, chainId: number) => string[];
 };
 
-// Loading only until the first registry response (or restored cache) is available.
-// Checking `isLoading` narrows `defaultMarket` and `registryVersionId` to defined values.
-export type MarketsContextValue = MarketsHelpers &
-  (
-    | {
-        isLoading: true;
-        markets: MarketData[];
-        defaultMarket: undefined;
-        registryVersionId: undefined;
-        errorMarkets: ErrorMarket[];
-      }
-    | ({ isLoading: false } & RegistryMarkets)
-  );
+type MarketsLoading = Omit<RegistryMarkets, 'defaultMarket' | 'registryVersionId'> & {
+  isLoading: true;
+  defaultMarket: undefined;
+  registryVersionId: undefined;
+};
+
+type MarketsLoaded = RegistryMarkets & {
+  isLoading: false;
+};
+
+type MarketsState = MarketsLoading | MarketsLoaded;
+
+export type MarketsContextValue = MarketsState & MarketsHelpers & { loadFailed: boolean };
 
 export const MarketsContext = createContext<MarketsContextValue | undefined>(undefined);
 
-const NO_MARKETS: MarketData[] = [];
-
-export function buildMarketsContextValue(registryMarkets: RegistryMarkets | undefined): MarketsContextValue {
-  const markets = registryMarkets?.markets ?? NO_MARKETS;
-  const helpers: MarketsHelpers = {
-    getMarket: (chainId, marketAddress) => getMarket(markets, chainId, marketAddress),
-    getMarkets: (showTestnet) => getMarkets(markets, showTestnet),
-    getMarketsByNetwork: (showTestnet) => getMarketsByNetwork(markets, showTestnet),
-    getMarketDescriptors: (cometAddress, chainId) => getMarketDescriptors(markets, cometAddress, chainId),
-  };
-
-  return registryMarkets === undefined
-    ? { ...helpers, isLoading: true, markets, defaultMarket: undefined, registryVersionId: undefined, errorMarkets: [] }
-    : { ...helpers, isLoading: false, ...registryMarkets };
-}
-
-// A malformed cached/fetched registry must not crash the app (no ErrorBoundary wraps this provider).
-// A throwing select leaves the query without data, so it is treated as loading while it keeps refetching.
 function selectRegistryMarkets(response: MarketRegistryResponse): RegistryMarkets {
   try {
     return registryToMarkets(response);
@@ -64,8 +49,10 @@ function selectRegistryMarkets(response: MarketRegistryResponse): RegistryMarket
   }
 }
 
-export const MarketsProvider = ({ children }: { children: ReactNode }) => {
-  const { data } = useQuery({
+export const MarketsProvider = (props: MarketsProviderProps) => {
+  const { children } = props;
+
+  const { data, failureCount, isError } = useQuery({
     queryKey: MARKET_REGISTRY_QUERY_KEY,
     queryFn: fetchMarketRegistry,
     select: selectRegistryMarkets,
@@ -77,9 +64,29 @@ export const MarketsProvider = ({ children }: { children: ReactNode }) => {
     retry: true,
   });
 
-  const value = useMemo(() => buildMarketsContextValue(data), [data]);
+  const loadFailed = data === undefined && (isError || failureCount >= 3);
 
-  return <MarketsContext.Provider value={value}>{children}</MarketsContext.Provider>;
+  const value = useMemo((): MarketsContextValue => {
+    const markets = data?.markets ?? [];
+
+    const helpers: MarketsHelpers & { loadFailed: boolean } = {
+      loadFailed,
+      getMarket: (chainId, marketAddress) => getMarket(markets, chainId, marketAddress),
+      getMarkets: (showTestnet) => getMarkets(markets, showTestnet),
+      getMarketsByNetwork: (showTestnet) => getMarketsByNetwork(markets, showTestnet),
+      getMarketDescriptors: (cometAddress, chainId) => getMarketDescriptors(markets, cometAddress, chainId),
+    };
+
+    return data === undefined
+      ? { ...helpers, isLoading: true, markets, defaultMarket: undefined, registryVersionId: undefined, errorMarkets: [] }
+      : { ...helpers, isLoading: false, ...data };
+  }, [data, loadFailed]);
+
+  return (
+    <MarketsContext.Provider value={value}>
+      {children}
+    </MarketsContext.Provider>
+  )
 };
 
 export function useMarketsContext() {

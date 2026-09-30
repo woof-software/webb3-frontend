@@ -1,7 +1,8 @@
 import { ReactNode } from 'react';
 
-import { buildMarketsContextValue, MarketsContext } from '@contexts/MarketsContext';
+import { MarketsContext, MarketsContextValue } from '@contexts/MarketsContext';
 import { ErrorMarket, MarketRegistryResponse, registryToMarkets } from '@helpers/marketRegistry';
+import { getMarket, getMarketDescriptors, getMarkets, getMarketsByNetwork } from '@helpers/markets';
 import { MarketData } from '@types';
 
 import mockMarketRegistryResponse from './mockMarketRegistryResponse.json';
@@ -23,10 +24,27 @@ export const MockMarketsProvider = ({
   isLoading?: boolean;
   markets?: MarketData[];
   errorMarkets?: ErrorMarket[];
-}) => (
-  <MarketsContext.Provider
-    value={buildMarketsContextValue(isLoading ? undefined : { ...registryMarkets, markets, errorMarkets })}
-  >
-    {children}
-  </MarketsContext.Provider>
-);
+}) => {
+  const contextMarkets = isLoading ? [] : markets;
+  const helpers = {
+    loadFailed: false,
+    getMarket: (chainId: number, marketAddress: string) => getMarket(contextMarkets, chainId, marketAddress),
+    getMarkets: (showTestnet: boolean) => getMarkets(contextMarkets, showTestnet),
+    getMarketsByNetwork: (showTestnet: boolean) => getMarketsByNetwork(contextMarkets, showTestnet),
+    getMarketDescriptors: (cometAddress: string, chainId: number) =>
+      getMarketDescriptors(contextMarkets, cometAddress, chainId),
+  };
+
+  const value: MarketsContextValue = isLoading
+    ? {
+        ...helpers,
+        isLoading: true,
+        markets: contextMarkets,
+        defaultMarket: undefined,
+        registryVersionId: undefined,
+        errorMarkets: [],
+      }
+    : { ...helpers, isLoading: false, ...registryMarkets, markets, errorMarkets };
+
+  return <MarketsContext.Provider value={value}>{children}</MarketsContext.Provider>;
+};
