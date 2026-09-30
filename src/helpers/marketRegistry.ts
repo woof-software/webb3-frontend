@@ -1,5 +1,5 @@
 import type { Query } from '@tanstack/react-query';
-import { getAddress } from 'ethers/lib/utils';
+import { getAddress, isAddress } from 'ethers/lib/utils';
 
 import { CHAINS } from '@constants/chains';
 import { iconNameForChainId } from '@helpers/assets';
@@ -7,7 +7,6 @@ import { V2_MARKET } from '@helpers/markets';
 import { getMarketRegistryEndpoint } from '@helpers/urls';
 import { ChainInformation, MarketData } from '@types';
 
-// Only the parts of the /registry/v1/active response the app reads are typed here.
 export type RegistryMarket = {
   deploymentKey: string;
   displayName: string;
@@ -114,21 +113,6 @@ export const MARKET_OVERRIDES: Record<string, Pick<MarketData, 'isNew' | 'reward
   '1:institutional_usdc': { isNew: true },
 };
 
-const priorityOf = (id: string): number => {
-  const index = MARKET_PRIORITY.indexOf(id);
-  return index === -1 ? MARKET_PRIORITY.length : index;
-};
-
-// Runs `build`, warning and skipping (returning undefined) instead of throwing on malformed registry data
-function tryOrWarn<T>(build: () => T, warning: string): T | undefined {
-  try {
-    return build();
-  } catch {
-    console.warn(warning);
-    return undefined;
-  }
-}
-
 function toMarketData(chainId: number, chainInformation: ChainInformation, market: RegistryMarket): MarketData {
   const { contracts } = market;
   return {
@@ -166,39 +150,61 @@ export function isErrorMarket(errorMarkets: ErrorMarket[], chainId: number, mark
   );
 }
 
-export function registryToMarkets(response: MarketRegistryResponse): RegistryMarkets {
-  const entries: { id: string; isDefault: boolean; market: MarketData }[] = [];
-  const errorMarkets: ErrorMarket[] = [];
+const MARKET_PRIORITY_INDEX = new Map(MARKET_PRIORITY.map((id, index) => [id, index]));
 
-  for (const network of response.networks) {
-    const chainInformation = CHAINS[network.chainId];
-    if (chainInformation === undefined) {
-      // Without a CHAINS entry there is no RPC, URL key or wallet config for the network
-      console.warn(`Market registry: skipping markets on unsupported chain ${network.chainId}`);
-      continue;
-    }
+type RegistryEntries = {
+  entries: { priority: number; market: MarketData }[];
+  registryDefaultMarket?: MarketData;
+  errorMarkets: ErrorMarket[];
+};
 
-    for (const market of network.markets) {
-      // Markets in the error status are not shown anywhere in the UI
-      if (market.status === MARKET_STATUS_ERROR) {
-        errorMarkets.push({ chainId: network.chainId, marketAddress: market.contracts.comet });
-        continue;
+function collectRegistryMarkets(response: MarketRegistryResponse): RegistryEntries {
+  return response.networks.reduce<RegistryEntries>(
+    (acc, network) => {
+      const chainInformation = CHAINS[network.chainId];
+
+      if (chainInformation === undefined) {
+        console.warn(`Market registry: skipping markets on unsupported chain ${network.chainId}`);
+        return acc;
       }
 
-      const id = registryMarketId(network.chainId, market.deploymentKey);
-      const marketData = tryOrWarn(
-        () => toMarketData(network.chainId, chainInformation, market),
-        `Market registry: skipping market ${id} (invalid data)`,
-      );
-      if (marketData === undefined) continue;
-      entries.push({ id, isDefault: market.isDefault, market: marketData });
-    }
-  }
+      return network.markets.reduce((acc, market) => {
+        // Markets in the error status are not shown anywhere in the UI
+        if (market.status === MARKET_STATUS_ERROR) {
+          acc.errorMarkets.push({ chainId: network.chainId, marketAddress: market.contracts.comet });
+          return acc;
+        }
 
-  entries.sort((a, b) => priorityOf(a.id) - priorityOf(b.id));
+        const id = registryMarketId(network.chainId, market.deploymentKey);
+
+        const { comet, bulker, rewards, fauceteer } = market.contracts;
+
+        if (![comet, bulker, rewards, fauceteer].every((address) => address === null || isAddress(address))) {
+          console.warn(`Market registry: skipping market ${id} (invalid address)`);
+          return acc;
+        }
+
+        const marketData = toMarketData(network.chainId, chainInformation, market);
+
+        // Markets missing from the priority list go after the listed ones, in registry order
+        acc.entries.push({ priority: MARKET_PRIORITY_INDEX.get(id) ?? MARKET_PRIORITY.length, market: marketData });
+
+        if (market.isDefault) acc.registryDefaultMarket ??= marketData;
+        return acc;
+      }, acc);
+    },
+    { entries: [], errorMarkets: [] }
+  );
+}
+
+export function registryToMarkets(response: MarketRegistryResponse): RegistryMarkets {
+  const { entries, registryDefaultMarket, errorMarkets } = collectRegistryMarkets(response);
+
+  entries.sort((a, b) => a.priority - b.priority);
 
   // Without a registry default the first market in selector order is used
-  const defaultMarket = (entries.find((entry) => entry.isDefault) ?? entries[0])?.market;
+  const defaultMarket = registryDefaultMarket ?? entries[0]?.market;
+
   if (defaultMarket === undefined) {
     throw new Error('Market registry response has no supported markets');
   }
