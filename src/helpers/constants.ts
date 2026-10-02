@@ -1,5 +1,6 @@
 export const CONNECTOR_LOCALSTORAGE_KEY = 'webb3-preferred-connector';
 export const MARKET_LOCAL_STORAGE_KEY = 'webb3-preferred-market';
+export const MARKET_REGISTRY_LOCAL_STORAGE_KEY = 'webb3-market-registry';
 export const V2_ALERT_DISMISSED_KEY = 'webb3-v2-alert-dismissed';
 
 /*
@@ -16,3 +17,5 @@ export const PREFERRED_CURRENCY_KEY = 'webb3-preferred-currency';
 export const BREAKPOINT_SM_PX = 1120;
 
 export const DAYS_PER_YEAR = 365n;
+
+export const ALLOWED_REWARDS_CHAIN_IDS = new Set([5000, 59144]);

@@ -9,9 +9,9 @@ import PanelWithHeader from '@components/PanelWithHeader';
 import PanelWithNoHeader from '@components/PanelWithNoHeader';
 import { NetRatesTooltipView } from '@components/Tooltips/NetRatesTooltip';
 import { CHAINS, INACTIVE_CHAIN_IDS } from '@constants/chains';
+import { useMarketsContext } from '@contexts/MarketsContext';
 import { assetIconForAssetSymbol, iconNameForChainId } from '@helpers/assets';
 import { InstitutionalWhitelistStatus } from '@helpers/institutionalWhitelist';
-import { getMarket, getMarketDescriptors } from '@helpers/markets';
 import { formatRateFactor, formatValueInDollars, PRICE_PRECISION } from '@helpers/numbers';
 import useOnClickOutside from '@hooks/useOnClickOutside';
 
@@ -61,21 +61,27 @@ const MarketOverviewPanels = ({ latestMarketSummaries, institutionalWhitelistSta
 
   // Sort the markets in place
   Object.values(marketSummariesByChain).forEach((marketSummaries) => {
-    const sortByMap = {
-      Utilization: 'utilization',
-      'Earn APR': 'supplyAPR',
-      'Borrow APR': 'borrowAPR',
-      'Total Earning': 'totalSupplyValue',
-      'Total Borrowing': 'totalBorrowValue',
-      'Total Collateral': 'totalCollateralValue',
+    const getSortValue = (marketSummary: MarketSummary): bigint => {
+      switch (sortBy) {
+        case 'Utilization':
+          return marketSummary.utilization;
+        case 'Earn APR':
+          return marketSummary.supplyAPR + marketSummary.supplyRewardsAPR;
+        case 'Borrow APR':
+          return marketSummary.borrowAPR - marketSummary.borrowRewardsAPR;
+        case 'Total Earning':
+          return marketSummary.totalSupplyValue;
+        case 'Total Borrowing':
+          return marketSummary.totalBorrowValue;
+        case 'Total Collateral':
+          return marketSummary.totalCollateralValue;
+      }
     };
-
-    const sortByKey = sortByMap[sortBy];
 
     // Ascending, sort "a to z", descending sort "z to a"
     marketSummaries.sort((a, z) => {
-      const aVal = a[sortByKey as keyof MarketSummary] as bigint;
-      const zVal = z[sortByKey as keyof MarketSummary] as bigint;
+      const aVal = getSortValue(a);
+      const zVal = getSortValue(z);
 
       if (sortOrder === 'Ascending') {
         return Number(aVal - zVal);
@@ -229,8 +235,8 @@ type PanelProps = {
   marketSummaries: LatestMarketSummaries;
   institutionalWhitelistStatus?: InstitutionalWhitelistStatus;
 };
-
 const Panel = ({ chainId, marketSummaries, institutionalWhitelistStatus }: PanelProps) => {
+  const { getMarket } = useMarketsContext();
   const chainName = CHAINS[chainId].name;
 
   const headerWithLogo = (
@@ -294,6 +300,7 @@ type PanelRowProps = {
 };
 
 const PanelRow = ({ marketSummary, institutionalWhitelistStatus }: PanelRowProps) => {
+  const { getMarket, getMarketDescriptors } = useMarketsContext();
   const [assetSymbol, chainName, assetName] = getMarketDescriptors(marketSummary.comet.address, marketSummary.chainId);
   const market = getMarket(marketSummary.chainId, marketSummary.comet.address);
   const showNewBadge = market?.isNew === true;
@@ -356,36 +363,44 @@ const PanelRow = ({ marketSummary, institutionalWhitelistStatus }: PanelRowProps
         </div>
       </td>
       <td>
-        <div className="market-overview-panels__apr-container">
-          <div className="body text-color--1 L3">{netEarnAPR}</div>
-          {marketSummary.isInstitutional && (
-            <InstitutionalRateInfo
-              marketSummary={marketSummary}
-              whitelistStatus={institutionalWhitelistStatus}
-            />
-          )}
-          {(hasEarnRewards && !marketSummary.isInstitutional) &&
-            <BoostedRateInfo
-              view={NetRatesTooltipView.Supply}
-              earnAPR={marketSummary.supplyAPR}
-              earnRewardsAPR={marketSummary.supplyRewardsAPR}
-              rewardsAssetSymbol={marketSummary.rewardsAssetSymbol}
-            />
-          }
-        </div>
+        {marketSummary.isRewardsLoading ? (
+          <div className="placeholder-content" style={{ width: '4rem', height: '1.25rem' }}></div>
+        ) : (
+          <div className="market-overview-panels__apr-container">
+            <div className="body text-color--1 L3">{netEarnAPR}</div>
+            {marketSummary.isInstitutional && (
+              <InstitutionalRateInfo
+                marketSummary={marketSummary}
+                whitelistStatus={institutionalWhitelistStatus}
+              />
+            )}
+            {(hasEarnRewards && !marketSummary.isInstitutional) &&
+              <BoostedRateInfo
+                view={NetRatesTooltipView.Supply}
+                earnAPR={marketSummary.supplyAPR}
+                earnRewardsAPR={marketSummary.supplyRewardsAPR}
+                rewardsAssetSymbol={marketSummary.rewardsAssetSymbol}
+              />
+            }
+          </div>
+        )}
       </td>
       <td>
-        <div className="market-overview-panels__apr-container">
-          <div className="body text-color--1 L3">{netBorrowAPR}</div>
-          {(hasBorrowRewards && !marketSummary.isInstitutional) &&
-            <BoostedRateInfo 
-              view={NetRatesTooltipView.Borrow}
-              borrowAPR={marketSummary.borrowAPR}
-              borrowRewardsAPR={marketSummary.borrowRewardsAPR}
-              rewardsAssetSymbol={marketSummary.rewardsAssetSymbol}
-            />
-          }
-        </div>
+        {marketSummary.isRewardsLoading ? (
+          <div className="placeholder-content" style={{ width: '4rem', height: '1.25rem' }}></div>
+        ) : (
+          <div className="market-overview-panels__apr-container">
+            <div className="body text-color--1 L3">{netBorrowAPR}</div>
+            {(hasBorrowRewards && !marketSummary.isInstitutional) &&
+              <BoostedRateInfo
+                view={NetRatesTooltipView.Borrow}
+                borrowAPR={marketSummary.borrowAPR}
+                borrowRewardsAPR={marketSummary.borrowRewardsAPR}
+                rewardsAssetSymbol={marketSummary.rewardsAssetSymbol}
+              />
+            }
+          </div>
+        )}
       </td>
       <td>
         <div className="body text-color--1 L3">
@@ -448,7 +463,7 @@ const TableHead = () => {
       <tr className="assets-table__row assets-table__row--header market-overview-panels__table-header L2">
         <th className="label">Market</th>
         <th className="label">Utilization</th>
-        <th className="label">Net Earn APR</th>
+        <th className="label">Net Supply APR</th>
         <th className="label">Net Borrow APR</th>
         <th className="label">Total Earning</th>
         <th className="label">Total Borrowing</th>

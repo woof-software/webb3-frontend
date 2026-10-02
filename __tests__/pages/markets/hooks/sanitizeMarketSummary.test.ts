@@ -1,6 +1,8 @@
 import { sanitizeMarketSummary } from '@pages/markets/hooks/useMarketsOverviewState';
 
-// Ethereum Mainnet USDC comet (from deployments/mainnet/usdc/roots.json)
+import { MOCK_MARKETS } from '../../../mocks/mockMarkets';
+
+// Ethereum Mainnet USDC comet
 const MAINNET_USDC_COMET = '0xc3d688B66703497DAA19211EEdff47f25384cdc3';
 
 const makeResponse = (chainId: number, cometAddress: string, collateralAssetSymbols: string[] | null) => ({
@@ -21,20 +23,22 @@ const makeResponse = (chainId: number, cometAddress: string, collateralAssetSymb
 describe('sanitizeMarketSummary', () => {
   test('strips legacy collateral for mainnet USDC comet', () => {
     const result = sanitizeMarketSummary(
-      makeResponse(1, MAINNET_USDC_COMET, ['WBTC', 'USDe', 'COMP', 'deUSD', 'LINK']) as any
+      MOCK_MARKETS,
+      makeResponse(1, MAINNET_USDC_COMET, ['WBTC', 'USDe', 'COMP', 'deUSD', 'LINK']) as any,
     );
     expect(result.collateralAssetSymbols).toEqual(['WBTC', 'COMP', 'LINK']);
   });
 
   test('leaves collateral untouched for non-configured comet', () => {
     const result = sanitizeMarketSummary(
-      makeResponse(8453, '0x0000000000000000000000000000000000000001', ['WBTC', 'USDe', 'COMP']) as any
+      MOCK_MARKETS,
+      makeResponse(8453, '0x0000000000000000000000000000000000000001', ['WBTC', 'USDe', 'COMP']) as any,
     );
     expect(result.collateralAssetSymbols).toEqual(['WBTC', 'USDe', 'COMP']);
   });
 
   test('returns empty array when collateralAssetSymbols is null', () => {
-    const result = sanitizeMarketSummary(makeResponse(1, MAINNET_USDC_COMET, null) as any);
+    const result = sanitizeMarketSummary(MOCK_MARKETS, makeResponse(1, MAINNET_USDC_COMET, null) as any);
     expect(result.collateralAssetSymbols).toEqual([]);
   });
 });

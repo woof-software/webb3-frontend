@@ -2,6 +2,7 @@ import { ReactNode, useContext, useEffect, useState } from 'react';
 
 import { isUnwrappedCollateralAsset } from '@constants/chains';
 import { getActionQueueContext } from '@contexts/ActionQueueContext';
+import { useMarketsContext } from '@contexts/MarketsContext';
 import RewardsStateContext from '@contexts/RewardsStateContext';
 import { getSelectedMarketContext } from '@contexts/SelectedMarketContext';
 import type { Web3 } from '@contexts/Web3Context';
@@ -14,7 +15,6 @@ import {
 import { arrayPartition } from '@helpers/functions';
 import { getKeyForActions, PreEstimatedAction } from '@helpers/gasEstimator';
 import { institutionalWhitelistStatus } from '@helpers/institutionalWhitelist';
-import { DEFAULT_MARKET } from '@helpers/markets';
 import { MAX_UINT256 } from '@helpers/numbers';
 import { isStETH, isWrappedStETH } from '@helpers/steth';
 import { Theme } from '@hooks/useThemeManager';
@@ -69,13 +69,15 @@ const Home = ({
 }: HomeProps) => {
   // when V2 market was selected from market page and open up a new window default dashboard with default market
   const { selectedMarket, selectMarket } = useContext(getSelectedMarketContext());
+  const { isLoading: marketsLoading, defaultMarket } = useMarketsContext();
 
   // We use a useEffect here to prevent infinite renders by the state update in selectMarket
   useEffect(() => {
-    if (selectedMarket[0] === 'hydrated' && selectedMarket[1].baseAsset.symbol == 'Compound V2') {
-      selectMarket(DEFAULT_MARKET);
+    const isV2Selected = selectedMarket[0] === 'hydrated' && selectedMarket[1].baseAsset.symbol == 'Compound V2';
+    if (isV2Selected && !marketsLoading) {
+      selectMarket(defaultMarket);
     }
-  }, [selectedMarket[0], selectedMarket[1]?.baseAsset?.symbol]);
+  }, [selectedMarket[0], selectedMarket[1]?.baseAsset?.symbol, defaultMarket]);
 
   const rewards = useContext(RewardsStateContext);
   const writeState = useWriteCometState(web3, addTransaction);
@@ -108,7 +110,8 @@ const Home = ({
       borrowRewardsAPR,
       supplyRewardsAPR,
       rewardsAssetSymbol,
-      isInstitutional
+      isInstitutional,
+      isRewardsLoading,
     } = state[1];
 
     mastheadState = [StateType.NoWallet, { baseAsset, earnAPR }];
@@ -126,6 +129,7 @@ const Home = ({
         earnRewardsAPR: supplyRewardsAPR,
         institutionalWhitelistStatus: whitelistStatus,
         isInstitutional: isInstitutional,
+        isRewardsLoading,
         theme,
       },
     ];
@@ -142,6 +146,7 @@ const Home = ({
       supplyRewardsAPR,
       isInstitutional,
       rewardsAssetSymbol,
+      isRewardsLoading
     } = state[1];
     isBulkerAllowed = state[1].isBulkerAllowed;
 
@@ -314,6 +319,7 @@ const Home = ({
         liquidationCapacityPost: updatedDataPostActions.liquidationCapacity,
         pendingAction,
         theme,
+        isRewardsLoading,
         transaction: blockingTransaction,
         onClearClicked: () => {
           clearActions();

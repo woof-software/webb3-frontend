@@ -156,6 +156,7 @@ export type ProtocolState = {
   supplyRewardsAPR: bigint;
   rewardsAssetSymbol?: string;
   isInstitutional?: boolean;
+  isRewardsLoading?: boolean;
 };
 
 export type ProtocolAndAccountState = Omit<ProtocolState, 'baseAsset' | 'collateralAssets'> & {
@@ -168,6 +169,7 @@ export type ProtocolAndAccountState = Omit<ProtocolState, 'baseAsset' | 'collate
   supplyRewardsAPR: bigint;
   rewardsAssetSymbol?: string;
   isInstitutional?: boolean;
+  isRewardsLoading?: boolean;
 };
 
 export type ProtocolAndMarketsState = Omit<ProtocolState, 'collateralAssets'> & {
@@ -339,6 +341,8 @@ export interface ChainInformation {
   walletRpcUrls: string[];
 }
 
+export type MarketStatus = 'success' | 'partially' | 'error';
+
 export type MarketData = {
   baseAsset: BaseAssetConfig;
   chainInformation: ChainInformation;
@@ -354,6 +358,7 @@ export type MarketData = {
   institutional?: boolean;
   // Recently launched markets get a 'New' badge in the market selector
   isNew?: boolean;
+  status?: MarketStatus;
   type: 'MarketData';
   rewardsOverwrite?: {
     rewardsAssetSymbol: string;
@@ -404,6 +409,8 @@ export type MarketSummary = {
   collateralAssetSymbols: string[];
   date: string;
   isInstitutional?: boolean;
+  isRewardsLoading?: boolean;
+  status?: MarketStatus;
 };
 
 export type AggregatedHistoricalSummary = {

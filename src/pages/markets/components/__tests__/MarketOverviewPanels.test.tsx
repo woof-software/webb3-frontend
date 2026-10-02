@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router';
 import '@testing-library/jest-dom';
 import { LatestMarketSummaries, MarketSummary } from '@types';
 
+import { MockMarketsProvider } from '../../../../../__tests__/mocks/mockMarkets';
 import MarketOverviewPanels from '../MarketOverviewPanels';
 
 const makeSummary = (chainId: number, address: string): MarketSummary => ({
@@ -26,7 +27,9 @@ const makeSummary = (chainId: number, address: string): MarketSummary => ({
 const renderPanels = (summaries: LatestMarketSummaries) =>
   render(
     <MemoryRouter>
-      <MarketOverviewPanels latestMarketSummaries={summaries} />
+      <MockMarketsProvider>
+        <MarketOverviewPanels latestMarketSummaries={summaries} />
+      </MockMarketsProvider>
     </MemoryRouter>
   );
 

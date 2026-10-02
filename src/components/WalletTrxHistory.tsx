@@ -1,5 +1,5 @@
+import { useMarketsContext } from '@contexts/MarketsContext';
 import { assetIconForAssetSymbol } from '@helpers/assets';
-import { getMarketDescriptors } from '@helpers/markets';
 import { formatUnitsWithTruncation } from '@helpers/numbers';
 import { getBlockExplorerUrlForTransactionHistory } from '@helpers/urls';
 import { convertTransactionTypeToPassiveVerb, shortenAddress } from '@hooks/useTransactionHistory';
@@ -84,6 +84,7 @@ export type WalletTrxHistoryRowProps = {
   trxHistoryItem: TransactionHistoryItem;
 };
 export const WalletTrxHistoryRow = ({ connectedAccount, trxHistoryItem }: WalletTrxHistoryRowProps) => {
+  const { getMarketDescriptors } = useMarketsContext();
   const { transactionHash, itemType, actions, initiatedBy, network } = trxHistoryItem;
   const { chainId } = network;
   const initiatedBySuffix =
@@ -179,7 +180,10 @@ const RecentTransactions = ({ connectedAccount, trxHistoryItems }: RecentTransac
 };
 
 const WalletTrxHistory = ({ connectedAccount, trxHistoryLoading, trxHistoryItems }: WalletTrxHistoryProps) => {
-  const hideWalletTrxHistory = !trxHistoryLoading && trxHistoryItems.length === 0;
+  const { isLoading: marketsLoading } = useMarketsContext();
+  const loading = trxHistoryLoading || marketsLoading;
+  const items = marketsLoading ? [] : trxHistoryItems;
+  const hideWalletTrxHistory = !loading && items.length === 0;
 
   return (
     <>
@@ -188,7 +192,7 @@ const WalletTrxHistory = ({ connectedAccount, trxHistoryLoading, trxHistoryItems
           <div className="dropdown__content__row">
             <div className="divider" />
           </div>
-          {(trxHistoryItems.length > 0 || trxHistoryLoading) && (
+          {(items.length > 0 || loading) && (
             <>
               <div className="dropdown__content__header-row">
                 <label className="label text-color--2">Recent Transactions</label>
@@ -196,10 +200,10 @@ const WalletTrxHistory = ({ connectedAccount, trxHistoryLoading, trxHistoryItems
                   <span className="label text-color--supply">See All</span>
                 </SimpleLink>
               </div>
-              <RecentTransactions connectedAccount={connectedAccount} trxHistoryItems={trxHistoryItems} />
+              <RecentTransactions connectedAccount={connectedAccount} trxHistoryItems={items} />
             </>
           )}
-          {trxHistoryItems.length === 0 && trxHistoryLoading && <TransactionsLoader />}
+          {items.length === 0 && loading && <TransactionsLoader />}
           <div className="dropdown__content__row">
             <div className="divider" />
           </div>

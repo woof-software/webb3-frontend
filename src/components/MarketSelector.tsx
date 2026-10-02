@@ -1,9 +1,10 @@
 import { useState, useRef, useContext, Fragment } from 'react';
 import { useSearchParams } from 'react-router';
 
+import { useMarketsContext } from '@contexts/MarketsContext';
 import { getSelectedMarketContext } from '@contexts/SelectedMarketContext';
 import { iconNameForChainId } from '@helpers/assets';
-import { areSameMarket, getMarketsByNetwork, isV2Market, V2_MARKET_KEY } from '@helpers/markets';
+import { areSameMarket, isV2Market, V2_MARKET_KEY } from '@helpers/markets';
 import { V2_URL } from '@helpers/urls';
 import useOnClickOutside from '@hooks/useOnClickOutside';
 import { MarketData, MarketDataLoaded, MarketsByNetwork } from '@types';
@@ -17,6 +18,7 @@ const LEGACY = 'Legacy';
 const INSTITUTIONAL = 'Institutional';
 const MARKETS_SECTION = 'Markets';
 const NEW = 'New';
+const MARKETS_UNAVAILABLE = 'Markets unavailable';
 
 const MarketSelector = () => {
   const [marketDropdownActive, setMarketDropdownActive] = useState<boolean>(false);
@@ -24,11 +26,22 @@ const MarketSelector = () => {
   const [selectedChainId, setSelectedChainId] = useState<number>(selectedMarket[1]?.chainInformation.chainId ?? 1);
   const [, currentMarket] = selectedMarket;
   const [searchParams] = useSearchParams();
+  const { getMarketsByNetwork, loadFailed } = useMarketsContext();
   const marketsByNetwork = getMarketsByNetwork(searchParams.has('testnet'));
 
   const ref = useRef(null);
 
   useOnClickOutside(ref, () => setMarketDropdownActive(false));
+
+  if (loadFailed) {
+    return (
+      <div className="header__pill-dropdown market-selector">
+        <label className="text-color--2">
+          {MARKETS_UNAVAILABLE}
+        </label>
+      </div>
+    );
+  }
 
   return (
     <div ref={ref} className="header__pill-dropdown market-selector L2">

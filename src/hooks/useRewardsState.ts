@@ -1,7 +1,8 @@
 import { getAddress } from 'ethers/lib/utils';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 
+import { useMarketsContext } from '@contexts/MarketsContext';
 import type { Web3 } from '@contexts/Web3Context';
 import { convertApiResponse } from '@helpers/functions';
 import { getMarketsByNetwork } from '@helpers/markets';
@@ -28,16 +29,12 @@ type RewardsStateResponse = {
     priceFeed: string;
     symbol: string;
   };
-  /** @deprecated should npt be used anymore */
-  borrowRewardsApr: string;
   comet: {
     address: string;
   };
   cometRewards: {
     address: string;
   };
-  /** @deprecated should npt be used anymore */
-  earnRewardsApr: string;
   rewardAsset: { address: string; decimals: number; description: string; price: string; symbol: string };
 };
 
@@ -63,10 +60,12 @@ function areRewardsSupported(chainInformation: ChainInformation) {
 export function useRewardsState(web3: Web3, transactions: Transaction[]): RewardsState {
   const [searchParams] = useSearchParams();
   const [state, setState] = useState<RewardsState>([StateType.Loading]);
-  const marketsByNetwork = getMarketsByNetwork(searchParams.has('testnet'));
   const maybeAccount = web3.write.account;
   const accountRef = useRef(maybeAccount);
   const includeTestnets = searchParams.has('testnet');
+  const { markets, isLoading: marketsLoading } = useMarketsContext();
+
+  const marketsByNetwork = useMemo(() => getMarketsByNetwork(markets, includeTestnets), [markets, includeTestnets]);
 
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -82,9 +81,15 @@ export function useRewardsState(web3: Web3, transactions: Transaction[]): Reward
 
     return () => clearTimeout(timeoutId);
     // re-trigger when maybeAccount changes -- so during wallet disconnect/connect we refresh the rewards
-  }, [maybeAccount]);
+    // and once the market registry has loaded
+  }, [maybeAccount, marketsLoading]);
 
   const refreshData = useCallback(async () => {
+    // Rewards are grouped by the networks of the markets, so wait for the market registry
+    if (marketsLoading) {
+      return;
+    }
+
     const currentAccount = accountRef.current;
     if (currentAccount === undefined && stateRef.current[0] === StateType.NoWallet) {
       // If the user has no wallet connect and we already loaded the market state then
@@ -92,12 +97,23 @@ export function useRewardsState(web3: Web3, transactions: Transaction[]): Reward
       return;
     }
 
-    // pass latest value of accountRef.current to `getState`
-    const updatedState: RewardsState = await getState(marketsByNetwork, currentAccount, includeTestnets);
-    if (currentAccount === accountRef.current) {
-      setState(updatedState);
+    try {
+      const updatedState: RewardsState = await getState(marketsByNetwork, currentAccount, includeTestnets);
+      if (currentAccount === accountRef.current) {
+        setState(updatedState);
+      }
+    } catch (error) {
+      console.error('[useRewardsState] Failed to refresh rewards state:', error);
+
+      if (currentAccount === accountRef.current) {
+        setState((prevState) =>
+          prevState[0] === StateType.Loading
+            ? [currentAccount === undefined ? StateType.NoWallet : StateType.Hydrated, []]
+            : prevState
+        );
+      }
     }
-  }, [marketsByNetwork, includeTestnets]);
+  }, [marketsByNetwork, includeTestnets, marketsLoading]);
 
   useEffect(() => {
     const intervalId = setInterval(refreshData, REWARDS_API_REFRESH_INTERVAL);

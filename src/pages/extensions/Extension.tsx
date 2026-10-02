@@ -7,13 +7,14 @@ import IconPair from '@components/IconPair';
 import { ArrowLeft, CircleCheckmark, ExternalLink, Github, PromptWallet } from '@components/Icons';
 import LoadSpinner from '@components/LoadSpinner';
 import { SimpleLink } from '@components/SimpleLink';
+import { useMarketsContext } from '@contexts/MarketsContext';
 import { getSelectedMarketContext } from '@contexts/SelectedMarketContext';
 import type { Web3 } from '@contexts/Web3Context';
 import Comet from '@helpers/abis/Comet';
 import { getShortAddress } from '@helpers/address';
 import { filterMap } from '@helpers/functions';
 import { PreEstimatedAction } from '@helpers/gasEstimator';
-import { DEFAULT_MARKET, getMarkets, marketKey } from '@helpers/markets';
+import { marketKey } from '@helpers/markets';
 import { getBlockExplorerUrlForAddress } from '@helpers/urls';
 import { parseMarketKey } from '@hooks/useSelectedMarket';
 import { Theme } from '@hooks/useThemeManager';
@@ -63,7 +64,8 @@ const Extension = ({
   const [extensionLoaded, setExtensionLoaded] = useState<boolean>(false);
   const iFrameHeight = 1000;
   const [extensionState, setExtensionState] = useState<ExtensionState>(undefined);
-  const markets = useMemo(() => getMarkets(showTestnet), [showTestnet]);
+  const { isLoading: marketsLoading, getMarkets, defaultMarket } = useMarketsContext();
+  const markets = useMemo(() => getMarkets(showTestnet), [getMarkets, showTestnet]);
   const timer = usePoll(10000);
   const iFrameRef = useRef<HTMLIFrameElement>(null);
   const sandboxInputRef = useRef<HTMLInputElement>(null);
@@ -347,7 +349,7 @@ const Extension = ({
             <div className="extension-banner L4 body text-color--3">
               <p
                 onClick={() => {
-                  selectMarket(DEFAULT_MARKET);
+                  if (!marketsLoading) selectMarket(defaultMarket);
                 }}
                 className="call-to-action"
               >

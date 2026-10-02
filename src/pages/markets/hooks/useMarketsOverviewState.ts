@@ -1,38 +1,43 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { getAddress } from 'ethers/lib/utils';
 import { useContext } from 'react';
 
+import { useMarketsContext } from '@contexts/MarketsContext';
 import RewardsStateContext from '@contexts/RewardsStateContext';
 import { isNonStablecoinMarket } from '@helpers/baseAssetPrice';
 import { convertApiResponse } from '@helpers/functions';
-import { institutionalSupplyRewardRate } from '@helpers/institutionalRates';
 import { filterLegacyCollateralSymbols } from '@helpers/legacyCollateral';
 import { getMarket, getMarketDescriptors } from '@helpers/markets';
-import { BASE_FACTOR, FACTOR_PRECISION, getRewardsAPR, PRICE_PRECISION } from '@helpers/numbers';
+import { BASE_FACTOR, FACTOR_PRECISION, PRICE_PRECISION } from '@helpers/numbers';
+import { getMarketRewardsAPRs } from '@helpers/rewards';
 import { getHistoricalMarketSummaryEndpoint, getLatestMarketSummaryEndpoint } from '@helpers/urls';
 import {
   AggregatedHistoricalSummary,
+  MarketData,
   MarketOverviewState,
+  MarketStatus,
   MarketSummary,
   RewardsState,
-  RewardsTokenState,
-  StateType
+  StateType,
 } from '@types';
-
 
 const LATEST_SUMMARY_REFRESH_INTERVAL = 1000 * 60 * 10; // 10 minutes
 
 export function useMarketsOverviewState(): MarketOverviewState {
+  const { isLoading: marketsLoading, markets, registryVersionId } = useMarketsContext();
   const rewardsState = useContext(RewardsStateContext);
 
   const query = useQuery({
-    queryKey: ['marketOverviewState', rewardsState[0]],
-    queryFn: () => getState(rewardsState),
-    initialData: [StateType.Loading],
+    // A new registry version re-derives the summaries from the new market list
+    queryKey: ['marketOverviewState', registryVersionId, rewardsState[0]],
+    queryFn: () => getState(markets, rewardsState),
+    // Keep showing the summaries fetched before rewards loaded while the query refetches with them
+    placeholderData: keepPreviousData,
     refetchInterval: LATEST_SUMMARY_REFRESH_INTERVAL,
+    enabled: !marketsLoading,
   });
 
-  return query.data;
+  return query.data ?? [StateType.Loading];
 }
 
 type MarketSummaryResponse = {
@@ -40,6 +45,7 @@ type MarketSummaryResponse = {
   comet: {
     address: string;
   };
+  status?: MarketStatus;
   borrowApr: string;
   supplyApr: string;
   totalBorrowValue: string;
@@ -52,36 +58,23 @@ type MarketSummaryResponse = {
   collateralAssetSymbols: string[];
 };
 
-const getState = async (rewardsState: RewardsState, includeTestnets = false,): Promise<MarketOverviewState> => {
-  const [rewardsStateType, rewards] = rewardsState;
-
-  if (rewardsStateType === StateType.Loading) {
-    return [StateType.Loading];
-  }
-  
+const getState = async (
+  markets: MarketData[],
+  rewardsState: RewardsState,
+  includeTestnets = false
+): Promise<MarketOverviewState> => {
   const latestMarketSummariesResponse = await fetch(getLatestMarketSummaryEndpoint(includeTestnets));
   const latestMarketSummaries = await latestMarketSummariesResponse.json();
 
   const sanitizedLatestMarketSummaries: MarketSummary[] = latestMarketSummaries
     .map(convertApiResponse)
-    .map((marketSummary: MarketSummaryResponse) => {
-      const marketRewards = rewards
-        ?.find(([chainId]) => +chainId === +marketSummary.chainId)?.[1]
-        ?.rewardsStates.find((state) =>
-            state.comet.toLowerCase() === marketSummary.comet.address.toLowerCase()
-        );
-
-      return { marketSummary, marketRewards };
-    })
-    .map(({ marketSummary, marketRewards }: {marketSummary: MarketSummaryResponse, marketRewards: RewardsTokenState}) => {
-      return sanitizeMarketSummary(marketSummary, marketRewards);
-    });
+    .map((marketSummary: MarketSummaryResponse) => sanitizeMarketSummary(markets, marketSummary, rewardsState));
 
   const historicalMarketSummariesResponse = await fetch(getHistoricalMarketSummaryEndpoint(includeTestnets));
   const historicalMarketSummaries = await historicalMarketSummariesResponse.json();
   const sanitizedHistoricalMarketSummaries: MarketSummary[] = historicalMarketSummaries
     .map(convertApiResponse)
-    .map(sanitizeMarketSummary);
+    .map((marketSummary: MarketSummaryResponse) => sanitizeMarketSummary(markets, marketSummary));
 
   // Aggregate historical summaries by date
   const aggregatedHistoricalSummaries = sanitizedHistoricalMarketSummaries.reduce<AggregatedHistoricalSummary[]>(
@@ -118,10 +111,16 @@ const getState = async (rewardsState: RewardsState, includeTestnets = false,): P
  * 1. Convert all numbers to BigInts (except timestamp)
  * 2. Use USD values of each asset amount field with a base of PRICE_SCALE
  *
+ * @param markets
  * @param marketSummary
+ * @param marketRewards
  * @returns
  */
-export const sanitizeMarketSummary = (marketSummary: MarketSummaryResponse, marketRewards?: RewardsTokenState): MarketSummary => {
+export const sanitizeMarketSummary = (
+  markets: MarketData[],
+  marketSummary: MarketSummaryResponse,
+  marketRewards?: RewardsState
+): MarketSummary => {
   const baseUsdPrice = BigInt(Math.floor(Number(marketSummary.baseUsdPrice) * 10 ** PRICE_PRECISION));
   const borrowAPR = BigInt(Math.floor(Number(marketSummary.borrowApr) * 10 ** FACTOR_PRECISION));
   const supplyAPR = BigInt(Math.floor(Number(marketSummary.supplyApr) * 10 ** FACTOR_PRECISION));
@@ -129,7 +128,7 @@ export const sanitizeMarketSummary = (marketSummary: MarketSummaryResponse, mark
   // Comet prices non-native markets in USD terms already. Thus, the API returns
   // USD values already for non-native markets. For the native token markets,
   // we need to convert the values to USD.
-  const [baseAsset] = getMarketDescriptors(marketSummary.comet.address, marketSummary.chainId);
+  const [baseAsset] = getMarketDescriptors(markets, marketSummary.comet.address, marketSummary.chainId);
   const isNativeAssetMarket = isNonStablecoinMarket(baseAsset);
   const usdPrice = isNativeAssetMarket ? baseUsdPrice : BigInt(10 ** PRICE_PRECISION);
 
@@ -143,6 +142,8 @@ export const sanitizeMarketSummary = (marketSummary: MarketSummaryResponse, mark
   const totalCollateralValueInDollars = (totalCollateralValue * usdPrice) / BASE_FACTOR;
 
   const utilization = BigInt(marketSummary.utilization);
+
+  const market = getMarket(markets, marketSummary.chainId, marketSummary.comet.address);
 
   return {
     chainId: marketSummary.chainId,
@@ -162,45 +163,22 @@ export const sanitizeMarketSummary = (marketSummary: MarketSummaryResponse, mark
     ),
     borrowAPR: borrowAPR,
     supplyAPR: supplyAPR,
+    status: marketSummary.status,
     ...((() => {
-      const market = getMarket(marketSummary.chainId, marketSummary.comet.address);
-
-      if (market?.rewardsOverwrite) {
-        const rewardsAssetPrice = marketRewards?.rewardAsset?.price ?? 0n;
-
-        return {
-          borrowRewardsAPR:
-            market.rewardsOverwrite.borrowRewardsAPR ??
-            (() =>
-              getRewardsAPR(
-                market.rewardsOverwrite.borrowCompPerDay,
-                rewardsAssetPrice,
-                totalBorrowValueInDollars,
-              ))(),
-          supplyRewardsAPR:
-            market.rewardsOverwrite.supplyRewardsAPR ??
-            (() =>
-              getRewardsAPR(
-                market.rewardsOverwrite.supplyCompPerDay,
-                rewardsAssetPrice,
-                totalSupplyValueInDollars
-              ))(),
-          rewardsAssetSymbol: market.rewardsOverwrite.rewardsAssetSymbol
-        };
-      }
-
-      if (market?.institutional) {
+      if (!market || !marketRewards) {
         return {
           borrowRewardsAPR: 0n,
-          supplyRewardsAPR: institutionalSupplyRewardRate(totalSupplyValueInDollars),
-          isInstitutional: true
+          supplyRewardsAPR: 0n,
         };
       }
 
-      return {
-        borrowRewardsAPR: 0n,
-        supplyRewardsAPR: 0n,
-      };
-    })())
+      return getMarketRewardsAPRs(
+        market,
+        marketRewards,
+        totalSupplyValueInDollars,
+        totalBorrowValueInDollars
+      );
+    })()),
+    isRewardsLoading: !!market?.rewardsOverwrite && marketRewards?.[0] === StateType.Loading,
   };
 };

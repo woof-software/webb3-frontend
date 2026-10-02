@@ -3,10 +3,11 @@ import { Link } from 'react-router';
 
 import IconPair from '@components/IconPair';
 import { ArrowLeft, ExternalLink } from '@components/Icons';
+import { useMarketsContext } from '@contexts/MarketsContext';
 import { getSelectedMarketContext } from '@contexts/SelectedMarketContext';
 import type { Web3 } from '@contexts/Web3Context';
 import { institutionalWhitelistStatus } from '@helpers/institutionalWhitelist';
-import { getMarket, isV2Market } from '@helpers/markets';
+import { isV2Market } from '@helpers/markets';
 import { formatTokenBalance, getTokenValue, PRICE_PRECISION } from '@helpers/numbers';
 import { getBlockExplorerUrlForAddress, INSTITUTIONAL_MARKET_URL } from '@helpers/urls';
 import { CTokenWithMarketState, Currency, StateType, TokenWithMarketState } from '@types';
@@ -29,6 +30,7 @@ type MarketsProps = {
 
 const Market = ({ web3 }: MarketsProps) => {
   const { selectedMarket } = useContext(getSelectedMarketContext());
+  const { getMarket } = useMarketsContext();
 
   const marketCurrencyToShow = Currency.USD;
 
@@ -149,6 +151,7 @@ const Market = ({ web3 }: MarketsProps) => {
       isInstitutional,
       supplyRewardsAPR,
       rewardsAssetSymbol,
+      isRewardsLoading,
     } = marketStateData;
 
     // While the boost is paying, a banner describes the connected account's
@@ -187,6 +190,7 @@ const Market = ({ web3 }: MarketsProps) => {
             earnRewardsAPR: supplyRewardsAPR,
             rewardsAssetSymbol,
             isInstitutional: isInstitutional,
+            isRewardsLoading,
           },
         ]}
       />

@@ -4,20 +4,13 @@ import { setMulticallAddress } from 'ethers-multicall';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
 
+import { useMarketsContext } from '@contexts/MarketsContext';
 import type { Web3 } from '@contexts/Web3Context';
 import { getAssetDisplayName, getAssetDisplaySymbol } from '@helpers/assets';
 import { MARKET_KEY_DELIMITER, MARKET_LOCAL_STORAGE_KEY } from '@helpers/constants';
 import { getIsDeprecatedwUSDMMarket } from '@helpers/deprecatedMarkets';
 import { isLegacyCollateral } from '@helpers/legacyCollateral';
-import {
-  DEFAULT_MARKET,
-  V2_MARKET,
-  areSameMarket,
-  getMarket,
-  getMarkets,
-  isV2Market,
-  marketKey,
-} from '@helpers/markets';
+import { V2_MARKET, areSameMarket, isV2Market, marketKey } from '@helpers/markets';
 import CometQuery from '@helpers/sleuth/out/CometQuery.sol/CometQuery.json';
 import { Sleuth } from '@helpers/sleuth/sleuth';
 import { CometStateQuery, CometStateResponse } from '@helpers/sleuth/types';
@@ -57,6 +50,7 @@ setMulticallAddress(2020, '0xcA11bde05977b3631167028862bE2a173976CA11');
  */
 export function useSelectedMarketState(web3: Web3): SelectedMarketData {
   const location = useLocation();
+  const { isLoading: marketsLoading, markets, defaultMarket, getMarket } = useMarketsContext();
 
   // Most routes use <route>/?market=<marketId> to select a market
   const [searchParams, setSearchParams] = useSearchParams();
@@ -112,19 +106,19 @@ export function useSelectedMarketState(web3: Web3): SelectedMarketData {
         selectMarket(market);
       }
     },
-    [selectMarket],
+    [selectMarket, getMarket],
   );
 
   useEffect(() => {
-    // When choosing a market based on the query params, filter from all the set of available markets.
-    const markets = getMarkets(true);
+    // Markets come from the registry; until it loads the selected market stays in the loading state
+    if (marketsLoading) return;
 
     const maybePreferredMarket =
       marketId ?? searchParams.get('market') ?? window.localStorage.getItem(MARKET_LOCAL_STORAGE_KEY) ?? undefined;
-    const market = parseMarketKeyOrDefault(markets, DEFAULT_MARKET, maybePreferredMarket);
+    const market = parseMarketKeyOrDefault(markets, defaultMarket, maybePreferredMarket);
 
     selectMarket(market);
-  }, [location.pathname]);
+  }, [location.pathname, markets]);
 
   const getData = useCallback(async () => {
     const [stateType, market] = state;

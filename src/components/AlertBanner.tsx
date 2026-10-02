@@ -1,12 +1,15 @@
+import { useMarketsContext } from '@contexts/MarketsContext';
 import type { Web3 } from '@contexts/Web3Context';
-import { MARKETS } from '@helpers/markets';
+import { MarketData } from '@types';
 
 export type AlertBannerProps = {
   web3: Web3;
 };
 
 const AlertBanner = ({ web3 }: AlertBannerProps) => {
-  const hideBanner = web3.write.chainId ? isSupportedNetwork(web3.write.chainId) : true;
+  const { markets, isLoading } = useMarketsContext();
+  // Until the registry loads every network would look unsupported
+  const hideBanner = isLoading || (web3.write.chainId ? isSupportedNetwork(markets, web3.write.chainId) : true);
   const hideBannerClass = hideBanner ? '--hide' : '';
 
   return (
@@ -18,8 +21,8 @@ const AlertBanner = ({ web3 }: AlertBannerProps) => {
   );
 };
 
-function isSupportedNetwork(chainId: number): boolean {
-  const marketForChainId = MARKETS.find((market) => market.chainInformation.chainId === chainId);
+function isSupportedNetwork(markets: MarketData[], chainId: number): boolean {
+  const marketForChainId = markets.find((market) => market.chainInformation.chainId === chainId);
   return marketForChainId !== undefined;
 }
 
