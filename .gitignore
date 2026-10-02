@@ -25,6 +25,9 @@
 .DS_Store
 *.pem
 
+# claude code local (per-developer) settings
+.claude/settings.local.json
+
 # debug
 npm-debug.log*
 yarn-debug.log*
@@ -36,6 +39,7 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+.env.stage.local
 
 # typescript
 *.tsbuildinfo
