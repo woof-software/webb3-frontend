@@ -84,6 +84,18 @@ export const MARKETS: MarketData[] = [
         mainnetInstitutionalUSDCRoots,
         { slug: 'usdc-institutional', institutional: true, isNew: true },
       ],
+      // TODO: Demo-only test market with ~1% utilization, remove before merging into main
+      [
+        1,
+        'USDC',
+        'USD Coin (Test)',
+        {
+          comet: '0x20f48143FDF6c0B01FF05399f85E5Cad55aAd5F4',
+          bulker: mainnetUSDCRoots['bulker'],
+          rewards: mainnetUSDCRoots['rewards'],
+        },
+        { slug: 'usdc-test' },
+      ],
       [137, 'USDC.e', 'USD Coin (Bridged)', polygonUSDCRoots],
       [137, 'USDT0', 'Tether', polygonUSDTRoots],
       [42161, 'USDC', 'USD Coin', arbitrumNativeUSDCRoots],
