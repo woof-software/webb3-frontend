@@ -91,10 +91,12 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
 
   const cometContract = new Contract(market.marketAddress, Comet);
 
-  const [utilization, factorScaleBN]: [BigNumber, BigNumber] = await ethcallProvider.all([
+  const [rawUtilization, factorScaleBN]: [BigNumber, BigNumber] = await ethcallProvider.all([
     cometContract.getUtilization(),
     cometContract.factorScale(),
   ]);
+
+  const utilization = rawUtilization.isZero() ? factorScaleBN.div(100) : rawUtilization;
 
   const factorScale = Number(factorScaleBN);
   const utilizationDescale = factorScale / 1e2;

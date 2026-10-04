@@ -1,19 +1,29 @@
 import { StaticJsonRpcProvider } from '@ethersproject/providers';
+import { skipToken, useQuery } from '@tanstack/react-query';
 import { ConnectionInfo } from 'ethers/lib/utils';
 import { Provider } from 'ethers-multicall';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { Web3 } from '@contexts/Web3Context';
 import { getAssetDisplayName, getAssetDisplaySymbol } from '@helpers/assets';
 import { getBaseAssetPriceFeed, getBaseAssetDollarPrice, adjustCollateralPrice } from '@helpers/baseAssetPrice';
 import { getIsDeprecatedwUSDMMarket } from '@helpers/deprecatedMarkets';
+import { convertApiResponse } from '@helpers/functions';
 import { institutionalSupplyRewardRate } from '@helpers/institutionalRates';
 import { shouldKeepCollateralAsset } from '@helpers/legacyCollateral';
-import { REFRESH_INTERVAL, getCapacity, getCollateralValue, MAX_UINT256, getRewardsAPR } from '@helpers/numbers';
+import {
+  REFRESH_INTERVAL,
+  FACTOR_PRECISION,
+  getCapacity,
+  getCollateralValue,
+  MAX_UINT256,
+  getRewardsAPR,
+} from '@helpers/numbers';
 import CometQuery from '@helpers/sleuth/out/CometQuery.sol/CometQuery.json';
 import { Sleuth } from '@helpers/sleuth/sleuth';
 import { CometStateResponse, CometWithAccountStateQuery, CometWithAccountStateResponse } from '@helpers/sleuth/types';
 import { getStETHAccountState, isStETH, isWrappedStETH } from '@helpers/steth';
+import { getMarketDataUrlForMarket } from '@helpers/urls';
 import { useWaiter } from '@hooks/useWaiter';
 import {
   CometState,
@@ -31,6 +41,8 @@ import {
 
 import { getSleuthOptions, queryCometData, sanitizeCollateralAssetName } from './useSelectedMarket';
 
+const MARKET_SUMMARY_STALE_TIME = 1000 * 60 * 10; // 10 minutes, same as the markets page refresh
+
 export function useCometState(
   web3: Web3,
   marketState: MarketDataState,
@@ -40,6 +52,27 @@ export function useCometState(
   const [state, setState] = useState<CometState>([StateType.Loading, undefined]);
   const { waitFor } = useWaiter<Transaction[]>(transactions);
   const marketRef = useRef(marketState);
+
+  // With zero utilization the on-chain APRs are zero; the v3 API already reports them at 1% utilization.
+  // Fetched for every selected market so it is usually ready by the time the Sleuth query returns.
+  const market = marketState[1];
+  const { data: apiAPRs, isPending: isApiAPRsPending } = useQuery({
+    queryKey: ['marketSummary', market?.chainInformation.chainId, market?.marketAddress],
+    queryFn: market
+      ? async () => {
+          const response = await fetch(`${getMarketDataUrlForMarket(market)}/summary`);
+          if (!response.ok) throw new Error(`Market summary request failed: ${response.status}`);
+          const summary = convertApiResponse(await response.json()) as { borrowApr: string; supplyApr: string };
+
+          return {
+            borrowAPR: BigInt(Math.floor(Number(summary.borrowApr) * 10 ** FACTOR_PRECISION)),
+            earnAPR: BigInt(Math.floor(Number(summary.supplyApr) * 10 ** FACTOR_PRECISION)),
+          };
+        }
+      : skipToken,
+    staleTime: MARKET_SUMMARY_STALE_TIME,
+    retry: 1,
+  });
 
   // When network is changed, immediately set state to loading and update the chainIdRef
   useEffect(() => {
@@ -128,7 +161,6 @@ export function useCometState(
    * so existing positions remain visible and withdrawable.
    */
   {
-    const market = marketState[1];
     const [, marketStateWithCollaterals] = state;
 
     if (market && marketStateWithCollaterals) {
@@ -141,7 +173,15 @@ export function useCometState(
     }
   }
 
-  return state;
+  return useMemo((): CometState => {
+    if (state[1]?.earnAPR === 0n) {
+      // Keep the existing skeletons until the API answers instead of flashing zero APRs.
+      // If the API fails, isPending turns false and the on-chain APRs are kept.
+      if (isApiAPRsPending) return [StateType.Loading, undefined];
+      if (apiAPRs) return [state[0], { ...state[1], ...apiAPRs }] as CometState;
+    }
+    return state;
+  }, [state, isApiAPRsPending, apiAPRs]);
 }
 
 const QUERY_WITH_ACCOUNT = Sleuth.querySol(CometQuery, { queryFunctionName: 'queryWithAccount' });
