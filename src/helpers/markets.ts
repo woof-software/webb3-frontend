@@ -84,6 +84,29 @@ export const MARKETS: MarketData[] = [
         mainnetInstitutionalUSDCRoots,
         { slug: 'usdc-institutional', institutional: true, isNew: true },
       ],
+      // TODO: Temporary test comets for checking the interest rate chart at zero utilization, remove before merge
+      [
+        1,
+        'USDC',
+        'ctest1uUSDCv3 (no service patch)',
+        {
+          comet: '0xAfaCa8573a21231CdD38BF7FF2CeD8Cd47C26599',
+          bulker: mainnetUSDCRoots['bulker'],
+          rewards: mainnetUSDCRoots['rewards'],
+        },
+        { slug: 'usdc-test-1u' },
+      ],
+      [
+        1,
+        'USDC',
+        'cinUSDC (service patch)',
+        {
+          comet: '0xf5a628D53c47fBA2C062cd6F5B6D255cb05645Eb',
+          bulker: mainnetUSDCRoots['bulker'],
+          rewards: mainnetUSDCRoots['rewards'],
+        },
+        { slug: 'usdc-test-svc-patch' },
+      ],
       [137, 'USDC.e', 'USD Coin (Bridged)', polygonUSDCRoots],
       [137, 'USDT0', 'Tether', polygonUSDTRoots],
       [42161, 'USDC', 'USD Coin', arbitrumNativeUSDCRoots],
