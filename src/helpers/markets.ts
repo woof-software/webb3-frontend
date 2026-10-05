@@ -101,7 +101,7 @@ export const MARKETS: MarketData[] = [
         'USDC',
         'cinUSDC (service patch)',
         {
-          comet: '0xf5a628D53c47fBA2C062cd6F5B6D255cb05645Eb',
+          comet: '0x20f48143FDF6c0B01FF05399f85E5Cad55aAd5F4',
           bulker: mainnetUSDCRoots['bulker'],
           rewards: mainnetUSDCRoots['rewards'],
         },
