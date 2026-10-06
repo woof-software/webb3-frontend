@@ -34,8 +34,8 @@ type InterestRateModelHydrated = [
 
 export type HoveredRate = {
   utilizationPercentage: number;
-  borrowRate: number;
-  supplyRate: number;
+  borrowRate: bigint;
+  supplyRate: bigint;
 };
 
 export type InterestRateModelState = InterestRateModelLoading | InterestRateModelHydrated;
@@ -43,6 +43,10 @@ export type InterestRateModelState = InterestRateModelLoading | InterestRateMode
 type InterestRateModelProps = {
   state: InterestRateModelState;
 };
+
+function percentToRateFactor(percent: number, baseFactor: number): bigint {
+  return BigInt(Math.round((percent / 100) * baseFactor));
+}
 
 const InterestRateModel = ({ state }: InterestRateModelProps) => {
   const defaultUtilizationPercentage = 0.9;
@@ -92,22 +96,25 @@ const InterestRateModel = ({ state }: InterestRateModelProps) => {
     const actualUtilizationPercentage = getUtilizationPercentage(state[1].utilization);
     // loaded state
     const mouseMove: MouseEventHandler<SVGRectElement> = (e: MouseEvent<SVGRectElement>) => {
-      const targetElement = e.target as HTMLElement;
-      setUtilizationPercentage(e.nativeEvent.offsetX / targetElement.getBoundingClientRect().width);
+      const svg = e.currentTarget.ownerSVGElement;
+      const screenCTM = svg?.getScreenCTM();
+      if (!screenCTM) {
+        return;
+      }
+      const cursorX = new DOMPoint(e.clientX, e.clientY).matrixTransform(screenCTM.inverse()).x;
+      const hoveredUtilizationPercentage = Math.min(Math.max((cursorX - minX) / (maxX - minX), 0), 1);
+      setUtilizationPercentage(hoveredUtilizationPercentage);
       setIsMouseOnChart(true);
       if (state[1].onRateHover !== undefined) {
-        const [borrowUtilization, hypotheticalBorrowAPR, ,] =
-          currentUtilizationBorrowPoints[currentUtilizationBorrowPoints.length - 1];
-
-        const currentUtilizationSupplyPoints = supplyPoints.filter((sp) => {
-          return Number(sp[0]) / factorScale <= utilizationPercentage;
-        });
-        const [, hypotheticalSupplyAPR, ,] = currentUtilizationSupplyPoints[currentUtilizationSupplyPoints.length - 1];
+        const hoveredBorrowPoints = borrowPoints.filter((bp) => Number(bp[0]) / factorScale <= hoveredUtilizationPercentage);
+        const hoveredSupplyPoints = supplyPoints.filter((sp) => Number(sp[0]) / factorScale <= hoveredUtilizationPercentage);
+        const [borrowUtilization, hypotheticalBorrowAPR] = hoveredBorrowPoints[hoveredBorrowPoints.length - 1];
+        const [, hypotheticalSupplyAPR] = hoveredSupplyPoints[hoveredSupplyPoints.length - 1];
 
         state[1].onRateHover({
           utilizationPercentage: Number(borrowUtilization) / utilizationDescale,
-          borrowRate: hypotheticalBorrowAPR,
-          supplyRate: hypotheticalSupplyAPR,
+          borrowRate: percentToRateFactor(hypotheticalBorrowAPR, factorScale),
+          supplyRate: percentToRateFactor(hypotheticalSupplyAPR, factorScale),
         });
       }
     };

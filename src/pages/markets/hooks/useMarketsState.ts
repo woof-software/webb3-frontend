@@ -33,6 +33,24 @@ const MARKETS_REFRESH_INTERVAL = 300_000; // 5 mins
 
 const SECONDS_PER_YEAR = BigInt(60 * 60 * 24 * 365);
 
+type RateCurveParams = {
+  kink: bigint;
+  base: bigint;
+  slopeLow: bigint;
+  slopeHigh: bigint;
+};
+
+function perSecondRateAt(
+  utilization: bigint,
+  { kink, base, slopeLow, slopeHigh }: RateCurveParams,
+  factorScale: bigint
+): bigint {
+  if (utilization <= kink) {
+    return base + (slopeLow * utilization) / factorScale;
+  }
+  return base + (slopeLow * kink) / factorScale + (slopeHigh * (utilization - kink)) / factorScale;
+}
+
 export function useMarketsState(web3: Web3, marketState: MarketDataState): MarketState {
   const location = useLocation();
   const [state, setState] = useState<MarketState>([StateType.Loading]);
@@ -97,8 +115,6 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
   const utilizationDescale = factorScale / 1e2;
 
   const utilizationIntervals = [...Array(101).keys()].map((n) => BigInt(n * utilizationDescale));
-  const borrowRateCalls = utilizationIntervals.map((interval) => cometContract.getBorrowRate(interval));
-  const supplyRateCalls = utilizationIntervals.map((interval) => cometContract.getSupplyRate(interval));
 
   const baseAssetDollarPriceFeed = getBaseAssetPriceFeed(market);
 
@@ -110,8 +126,15 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
     totalBorrowBN,
     targetReserves,
     baseTokenPriceInDollars,
-    ...borrowAndSupplyRates
-  ] = await ethcallProvider.all([
+    borrowKink,
+    borrowBase,
+    borrowSlopeLow,
+    borrowSlopeHigh,
+    supplyKink,
+    supplyBase,
+    supplySlopeLow,
+    supplySlopeHigh,
+  ]: BigNumber[] = await ethcallProvider.all([
     cometContract.getBorrowRate(utilization),
     cometContract.getSupplyRate(utilization),
     cometContract.getReserves(),
@@ -119,20 +142,40 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
     cometContract.totalBorrow(),
     cometContract.targetReserves(),
     cometContract.getPrice(baseAssetDollarPriceFeed),
-    ...borrowRateCalls,
-    ...supplyRateCalls,
+    cometContract.borrowKink(),
+    cometContract.borrowPerSecondInterestRateBase(),
+    cometContract.borrowPerSecondInterestRateSlopeLow(),
+    cometContract.borrowPerSecondInterestRateSlopeHigh(),
+    cometContract.supplyKink(),
+    cometContract.supplyPerSecondInterestRateBase(),
+    cometContract.supplyPerSecondInterestRateSlopeLow(),
+    cometContract.supplyPerSecondInterestRateSlopeHigh(),
   ]);
 
-  const borrowRates: [bigint, number][] = borrowAndSupplyRates
-    .slice(0, utilizationIntervals.length)
-    .map((borrowRate, idx) => {
-      return [utilizationIntervals[idx], Number(borrowRate.toBigInt() * SECONDS_PER_YEAR) / utilizationDescale];
-    });
-  const supplyRates: [bigint, number][] = borrowAndSupplyRates
-    .slice(utilizationIntervals.length)
-    .map((supplyRate, idx) => {
-      return [utilizationIntervals[idx], Number(supplyRate.toBigInt() * SECONDS_PER_YEAR) / utilizationDescale];
-    });
+  const borrowCurve: RateCurveParams = {
+    kink: borrowKink.toBigInt(),
+    base: borrowBase.toBigInt(),
+    slopeLow: borrowSlopeLow.toBigInt(),
+    slopeHigh: borrowSlopeHigh.toBigInt(),
+  };
+
+  const supplyCurve: RateCurveParams = {
+    kink: supplyKink.toBigInt(),
+    base: supplyBase.toBigInt(),
+    slopeLow: supplySlopeLow.toBigInt(),
+    slopeHigh: supplySlopeHigh.toBigInt(),
+  };
+
+  const borrowRates: [bigint, number][] = utilizationIntervals.map((interval) => [
+    interval,
+    Number(perSecondRateAt(interval, borrowCurve, factorScaleBN.toBigInt()) * SECONDS_PER_YEAR) / utilizationDescale,
+  ]);
+
+  const supplyRates: [bigint, number][] = utilizationIntervals.map((interval) => [
+    interval,
+    Number(perSecondRateAt(interval, supplyCurve, factorScaleBN.toBigInt()) * SECONDS_PER_YEAR) / utilizationDescale,
+  ]);
+
   const baseTokenContract = new Contract(market.baseAsset.address, ERC20);
 
   let ignoredCollateralPriceIndex = -1;

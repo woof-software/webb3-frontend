@@ -4,8 +4,6 @@ import PanelWithHeader from '@components/PanelWithHeader';
 import { formatRateFactor } from '@helpers/numbers';
 import { StateType } from '@types';
 
-import { formatPercentage } from '../helpers/rateModelLines';
-
 import InterestRateModel, { HoveredRate } from './InterestRateModel';
 
 type RateModelPanelLoading = [StateType.Loading];
@@ -37,7 +35,7 @@ const LoadingView = () => {
         StateType.Loading,
         {
           graphConfig: {
-            height: 132,
+            height: 136,
             width: 400,
             graphMinX: 6,
             graphMaxX: 394,
@@ -61,7 +59,7 @@ const LoadingView = () => {
               </h4>
             </div>
             <div className="market-rate-model__rates-section__labels-holder market-rate-model__rates-section__labels-holder--loading">
-              <label className="label text-color--2">Supply APR</label>
+              <label className="label text-color--2">Earn APR</label>
               <h4>
                 <span className="placeholder-content" style={{ width: '4rem' }}></span>
               </h4>
@@ -88,7 +86,7 @@ const RateModelPanelView = ({ borrowRates, supplyRates, borrowAPR, supplyAPR, ut
           supplyAPR,
           utilization,
           graphConfig: {
-            height: 132,
+            height: 136,
             width: 400,
             graphMinX: 6,
             graphMaxX: 394,
@@ -104,8 +102,8 @@ const RateModelPanelView = ({ borrowRates, supplyRates, borrowAPR, supplyAPR, ut
     />
   );
 
-  const shownBorrowAPR = hoveredRate ? formatPercentage(hoveredRate.borrowRate) : formatRateFactor(borrowAPR);
-  const shownSupplyAPR = hoveredRate ? formatPercentage(hoveredRate.supplyRate) : formatRateFactor(supplyAPR);
+  const shownBorrowAPR = formatRateFactor(hoveredRate ? hoveredRate.borrowRate : borrowAPR);
+  const shownSupplyAPR = formatRateFactor(hoveredRate ? hoveredRate.supplyRate : supplyAPR);
 
   return (
     <PanelWithHeader header="Interest Rate Model" className="grid-column--6">
