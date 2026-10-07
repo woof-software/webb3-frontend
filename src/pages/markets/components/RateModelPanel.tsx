@@ -106,8 +106,8 @@ const RateModelPanelView = ({ borrowRates, supplyRates, borrowAPR, supplyAPR, ut
     />
   );
 
-  const shownBorrowAPR = formatRateFactor(hoveredRate ? borrowRates[hoveredRate.pointIndex][1] : borrowAPR);
-  const shownSupplyAPR = formatRateFactor(hoveredRate ? supplyRates[hoveredRate.pointIndex][1] : supplyAPR);
+  const shownBorrowAPR = formatRateFactor(hoveredRate ? borrowRates[hoveredRate.utilization][1] : borrowAPR);
+  const shownSupplyAPR = formatRateFactor(hoveredRate ? supplyRates[hoveredRate.utilization][1] : supplyAPR);
 
   return (
     <PanelWithHeader header="Interest Rate Model" className="grid-column--6">

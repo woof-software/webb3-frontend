@@ -1,6 +1,6 @@
 import { MouseEventHandler, MouseEvent, useState, useEffect } from 'react';
 
-import { BASE_FACTOR, formatRateFactor } from '@helpers/numbers';
+import { BASE_FACTOR, FACTOR_PRECISION, formatRateFactor } from '@helpers/numbers';
 import { StateType } from '@types';
 
 import {
@@ -33,8 +33,7 @@ type InterestRateModelHydrated = [
 ];
 
 export type HoveredRate = {
-  utilizationPercentage: number;
-  pointIndex: number;
+  utilization: number;
 };
 
 export type InterestRateModelState = InterestRateModelLoading | InterestRateModelHydrated;
@@ -42,10 +41,6 @@ export type InterestRateModelState = InterestRateModelLoading | InterestRateMode
 type InterestRateModelProps = {
   state: InterestRateModelState;
 };
-
-const toUtilizationPercent = (utilization: bigint) => {
-  return Number(utilization / (BASE_FACTOR / 10n ** 4n)) / 100;
-}
 
 const InterestRateModel = ({ state }: InterestRateModelProps) => {
   const defaultUtilizationPercentage = 0.9;
@@ -92,32 +87,21 @@ const InterestRateModel = ({ state }: InterestRateModelProps) => {
     );
   } else {
     const actualUtilizationPercentage = getUtilizationPercentage(state[1].utilization);
-    // Borrow and supply rates are computed on the same utilization grid (0%…100%),
-    // so an index into it addresses the same point on both curves
-    const utilizationGrid = state[1].borrowRates.map(([utilization]) => utilization);
     // loaded state
     const mouseMove: MouseEventHandler<HTMLDivElement> = (e: MouseEvent<HTMLDivElement>) => {
-      const targetElement = e.currentTarget;
-      const { left, width: elementWidth } = targetElement.getBoundingClientRect();
+      const targetElement = e.currentTarget as HTMLElement;
 
-      const cursorX = ((e.clientX - left) / elementWidth) * width;
+      const targetWidth = targetElement.getBoundingClientRect().width;
+      const widthThreshold = targetWidth - targetWidth * 0.03 ;
+      const utilizationPercent = Math.min(e.nativeEvent.offsetX / widthThreshold, 1)
 
-      const hoveredUtilizationPercentage = Math.min(Math.max((cursorX - minX) / (maxX - minX), 0), 1);
-
-      setUtilizationPercentage(hoveredUtilizationPercentage);
+      setUtilizationPercentage(utilizationPercent);
 
       setIsMouseOnChart(true);
 
-      if (state[1].onRateHover !== undefined) {
-        const pointIndex = utilizationGrid.findLastIndex(
-          (utilization) => Number(utilization) / factorScale <= hoveredUtilizationPercentage
-        );
-
-        state[1].onRateHover({
-          utilizationPercentage: toUtilizationPercent(utilizationGrid[pointIndex]),
-          pointIndex,
-        });
-      }
+      state[1].onRateHover?.({
+        utilization: Math.trunc(utilizationPercent * 100)
+      });
     };
 
     const mouseLeave = () => {
@@ -191,9 +175,9 @@ const InterestRateModel = ({ state }: InterestRateModelProps) => {
     // If the user isn't currently hovering on chart then show the util as a percentage.
     let utilizationToDisplay;
     if (!isMouseOnChart) {
-      utilizationToDisplay = toUtilizationPercent(state[1].utilization);
+      utilizationToDisplay = actualUtilizationPercentage * 100;
     } else {
-      utilizationToDisplay = toUtilizationPercent(borrowUtilization);
+      utilizationToDisplay = Number(borrowUtilization / 10n ** BigInt(FACTOR_PRECISION - 2));
     }
     return (
       <div className="interest-rate-model">

@@ -42,8 +42,6 @@ type PerSecondRateAtArgs = {
   factorScale: bigint;
 };
 
-type RateCurveParams = Omit<PerSecondRateAtArgs, 'utilization' | 'factorScale'>;
-
 function perSecondRateAt({
   utilization,
   kink,
@@ -159,28 +157,28 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
     cometContract.supplyPerSecondInterestRateSlopeHigh(),
   ]);
 
-  const borrowCurve: RateCurveParams = {
-    kink: borrowKink.toBigInt(),
-    base: borrowBase.toBigInt(),
-    slopeLow: borrowSlopeLow.toBigInt(),
-    slopeHigh: borrowSlopeHigh.toBigInt(),
-  };
-
-  const supplyCurve: RateCurveParams = {
-    kink: supplyKink.toBigInt(),
-    base: supplyBase.toBigInt(),
-    slopeLow: supplySlopeLow.toBigInt(),
-    slopeHigh: supplySlopeHigh.toBigInt(),
-  };
-
   const borrowRates: [bigint, bigint][] = utilizationIntervals.map((interval) => [
     interval,
-    perSecondRateAt({ utilization: interval, ...borrowCurve, factorScale: factorScaleBN.toBigInt() }) * SECONDS_PER_YEAR,
+    perSecondRateAt({
+      utilization: interval,
+      kink: borrowKink.toBigInt(),
+      base: borrowBase.toBigInt(),
+      slopeLow: borrowSlopeLow.toBigInt(),
+      slopeHigh: borrowSlopeHigh.toBigInt(),
+      factorScale: factorScaleBN.toBigInt()
+    }) * SECONDS_PER_YEAR,
   ]);
 
   const supplyRates: [bigint, bigint][] = utilizationIntervals.map((interval) => [
     interval,
-    perSecondRateAt({ utilization: interval, ...supplyCurve, factorScale: factorScaleBN.toBigInt() }) * SECONDS_PER_YEAR,
+    perSecondRateAt({
+      utilization: interval,
+      kink: supplyKink.toBigInt(),
+      base: supplyBase.toBigInt(),
+      slopeLow: supplySlopeLow.toBigInt(),
+      slopeHigh: supplySlopeHigh.toBigInt(),
+      factorScale: factorScaleBN.toBigInt()
+    }) * SECONDS_PER_YEAR,
   ]);
 
   const baseTokenContract = new Contract(market.baseAsset.address, ERC20);
