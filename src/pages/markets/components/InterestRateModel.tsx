@@ -96,16 +96,11 @@ const InterestRateModel = ({ state }: InterestRateModelProps) => {
     // so an index into it addresses the same point on both curves
     const utilizationGrid = state[1].borrowRates.map(([utilization]) => utilization);
     // loaded state
-    const mouseMove: MouseEventHandler<SVGRectElement> = (e: MouseEvent<SVGRectElement>) => {
-      const svg = e.currentTarget.ownerSVGElement;
+    const mouseMove: MouseEventHandler<HTMLDivElement> = (e: MouseEvent<HTMLDivElement>) => {
+      const targetElement = e.currentTarget;
+      const { left, width: elementWidth } = targetElement.getBoundingClientRect();
 
-      const screenCTM = svg?.getScreenCTM();
-
-      if (!screenCTM) {
-        return;
-      }
-
-      const cursorX = new DOMPoint(e.clientX, e.clientY).matrixTransform(screenCTM.inverse()).x;
+      const cursorX = ((e.clientX - left) / elementWidth) * width;
 
       const hoveredUtilizationPercentage = Math.min(Math.max((cursorX - minX) / (maxX - minX), 0), 1);
 
@@ -231,7 +226,11 @@ const InterestRateModel = ({ state }: InterestRateModelProps) => {
         ) : (
           <></>
         )}
-        <div className="interest-rate-model__chart">
+        <div
+          className="interest-rate-model__chart"
+          onMouseMove={mouseMove}
+          onMouseLeave={mouseLeave}
+        >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox={`0 0 ${width} ${height}`}>
             {state[1].graphConfig.isV2Graph ? (
               <>
@@ -289,16 +288,6 @@ const InterestRateModel = ({ state }: InterestRateModelProps) => {
             ) : (
               <></>
             )}
-
-            <rect
-              x={minX - 1}
-              y={0}
-              width={maxX}
-              height={height}
-              fill="transparent"
-              onMouseMove={mouseMove}
-              onMouseLeave={mouseLeave}
-            />
           </svg>
         </div>
       </div>
