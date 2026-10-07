@@ -34,8 +34,7 @@ type InterestRateModelHydrated = [
 
 export type HoveredRate = {
   utilizationPercentage: number;
-  borrowRate: bigint;
-  supplyRate: bigint;
+  pointIndex: number;
 };
 
 export type InterestRateModelState = InterestRateModelLoading | InterestRateModelHydrated;
@@ -43,10 +42,6 @@ export type InterestRateModelState = InterestRateModelLoading | InterestRateMode
 type InterestRateModelProps = {
   state: InterestRateModelState;
 };
-
-function percentToRateFactor(percent: number, baseFactor: number): bigint {
-  return BigInt(Math.round((percent / 100) * baseFactor));
-}
 
 const InterestRateModel = ({ state }: InterestRateModelProps) => {
   const defaultUtilizationPercentage = 0.9;
@@ -107,14 +102,11 @@ const InterestRateModel = ({ state }: InterestRateModelProps) => {
       setIsMouseOnChart(true);
       if (state[1].onRateHover !== undefined) {
         const hoveredBorrowPoints = borrowPoints.filter((bp) => Number(bp[0]) / factorScale <= hoveredUtilizationPercentage);
-        const hoveredSupplyPoints = supplyPoints.filter((sp) => Number(sp[0]) / factorScale <= hoveredUtilizationPercentage);
-        const [borrowUtilization, hypotheticalBorrowAPR] = hoveredBorrowPoints[hoveredBorrowPoints.length - 1];
-        const [, hypotheticalSupplyAPR] = hoveredSupplyPoints[hoveredSupplyPoints.length - 1];
+        const pointIndex = hoveredBorrowPoints.length - 1;
 
         state[1].onRateHover({
-          utilizationPercentage: Number(borrowUtilization) / utilizationDescale,
-          borrowRate: percentToRateFactor(hypotheticalBorrowAPR, factorScale),
-          supplyRate: percentToRateFactor(hypotheticalSupplyAPR, factorScale),
+          utilizationPercentage: Number(hoveredBorrowPoints[pointIndex][0]) / utilizationDescale,
+          pointIndex,
         });
       }
     };

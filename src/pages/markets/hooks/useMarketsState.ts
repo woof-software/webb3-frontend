@@ -33,18 +33,25 @@ const MARKETS_REFRESH_INTERVAL = 300_000; // 5 mins
 
 const SECONDS_PER_YEAR = BigInt(60 * 60 * 24 * 365);
 
-type RateCurveParams = {
+type PerSecondRateAtArgs = {
+  utilization: bigint;
   kink: bigint;
   base: bigint;
   slopeLow: bigint;
   slopeHigh: bigint;
+  factorScale: bigint;
 };
 
-function perSecondRateAt(
-  utilization: bigint,
-  { kink, base, slopeLow, slopeHigh }: RateCurveParams,
-  factorScale: bigint
-): bigint {
+type RateCurveParams = Omit<PerSecondRateAtArgs, 'utilization' | 'factorScale'>;
+
+function perSecondRateAt({
+  utilization,
+  kink,
+  base,
+  slopeLow,
+  slopeHigh,
+  factorScale
+}: PerSecondRateAtArgs): bigint {
   if (utilization <= kink) {
     return base + (slopeLow * utilization) / factorScale;
   }
@@ -166,14 +173,14 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
     slopeHigh: supplySlopeHigh.toBigInt(),
   };
 
-  const borrowRates: [bigint, number][] = utilizationIntervals.map((interval) => [
+  const borrowRates: [bigint, bigint][] = utilizationIntervals.map((interval) => [
     interval,
-    Number(perSecondRateAt(interval, borrowCurve, factorScaleBN.toBigInt()) * SECONDS_PER_YEAR) / utilizationDescale,
+    perSecondRateAt({ utilization: interval, ...borrowCurve, factorScale: factorScaleBN.toBigInt() }) * SECONDS_PER_YEAR,
   ]);
 
-  const supplyRates: [bigint, number][] = utilizationIntervals.map((interval) => [
+  const supplyRates: [bigint, bigint][] = utilizationIntervals.map((interval) => [
     interval,
-    Number(perSecondRateAt(interval, supplyCurve, factorScaleBN.toBigInt()) * SECONDS_PER_YEAR) / utilizationDescale,
+    perSecondRateAt({ utilization: interval, ...supplyCurve, factorScale: factorScaleBN.toBigInt() }) * SECONDS_PER_YEAR,
   ]);
 
   const baseTokenContract = new Contract(market.baseAsset.address, ERC20);

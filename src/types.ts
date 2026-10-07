@@ -173,13 +173,13 @@ export type ProtocolAndAccountState = Omit<ProtocolState, 'baseAsset' | 'collate
 };
 
 export type ProtocolAndMarketsState = Omit<ProtocolState, 'collateralAssets'> & {
-  borrowRates: [bigint, number][];
   collateralAssets: TokenWithMarketState[];
   cometAddress: string;
   factorScale: number;
   marketHistory: MarketHistoricalBucket[];
   reserves: bigint;
-  supplyRates: [bigint, number][];
+  borrowRates: [bigint, bigint][];
+  supplyRates: [bigint, bigint][];
   targetReserves: bigint;
   totalBorrow: bigint;
   totalSupply: bigint;
