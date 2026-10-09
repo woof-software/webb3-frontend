@@ -10,6 +10,7 @@ import Comet from '@helpers/abis/Comet';
 import ERC20 from '@helpers/abis/ERC20';
 import { adjustCollateralPrice, getBaseAssetPriceFeed } from '@helpers/baseAssetPrice';
 import { getHardcodedFeedPrice, getRemappedPriceFeed } from '@helpers/deprecatedMarkets';
+import { perSecondRateAt, SECONDS_PER_YEAR } from '@helpers/interestRates';
 import { isV2Market } from '@helpers/markets';
 import { getMockMarketState } from '@helpers/mocks';
 import { getMarketRewardsAPRs } from '@helpers/rewards';
@@ -30,31 +31,6 @@ import {
 
 
 const MARKETS_REFRESH_INTERVAL = 300_000; // 5 mins
-
-const SECONDS_PER_YEAR = BigInt(60 * 60 * 24 * 365);
-
-type PerSecondRateAtArgs = {
-  utilization: bigint;
-  kink: bigint;
-  base: bigint;
-  slopeLow: bigint;
-  slopeHigh: bigint;
-  factorScale: bigint;
-};
-
-function perSecondRateAt({
-  utilization,
-  kink,
-  base,
-  slopeLow,
-  slopeHigh,
-  factorScale
-}: PerSecondRateAtArgs): bigint {
-  if (utilization <= kink) {
-    return base + (slopeLow * utilization) / factorScale;
-  }
-  return base + (slopeLow * kink) / factorScale + (slopeHigh * (utilization - kink)) / factorScale;
-}
 
 export function useMarketsState(web3: Web3, marketState: MarketDataState): MarketState {
   const location = useLocation();

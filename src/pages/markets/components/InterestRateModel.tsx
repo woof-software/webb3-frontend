@@ -128,7 +128,7 @@ const InterestRateModel = ({ state }: InterestRateModelProps) => {
     });
 
     const currentUtilizationBorrowPoints = borrowPoints.filter((bp) => {
-      return Number(bp[0]) / factorScale <= utilizationPercentage;
+      return Number(bp[0]) / factorScale <= Math.abs(utilizationPercentage);
     });
     const [borrowUtilization, hypotheticalBorrowAPR, borrowCircleX, borrowCircleY] =
       currentUtilizationBorrowPoints[currentUtilizationBorrowPoints.length - 1];
@@ -154,7 +154,7 @@ const InterestRateModel = ({ state }: InterestRateModelProps) => {
 
     //TODO: Should try binary search on this for better speed
     const currentUtilizationSupplyPoints = supplyPoints.filter((sp) => {
-      return Number(sp[0]) / factorScale <= utilizationPercentage;
+      return Number(sp[0]) / factorScale <= Math.abs(utilizationPercentage);
     });
     const [, hypotheticalSupplyAPR, supplyCircleX, supplyCircleY] =
       currentUtilizationSupplyPoints[currentUtilizationSupplyPoints.length - 1];
