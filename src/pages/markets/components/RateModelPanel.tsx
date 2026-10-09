@@ -1,18 +1,16 @@
 import { useState } from 'react';
 
 import PanelWithHeader from '@components/PanelWithHeader';
-import { formatRateFactor } from '@helpers/numbers';
+import { BASE_FACTOR, formatRateFactor } from '@helpers/numbers';
 import { StateType } from '@types';
-
-import { formatPercentage } from '../helpers/rateModelLines';
 
 import InterestRateModel, { HoveredRate } from './InterestRateModel';
 
 type RateModelPanelLoading = [StateType.Loading];
 
 type RateModelHydratedData = {
-  borrowRates: [bigint, number][];
-  supplyRates: [bigint, number][];
+  borrowRates: [bigint, bigint][];
+  supplyRates: [bigint, bigint][];
   borrowAPR: bigint;
   supplyAPR: bigint;
   utilization: bigint;
@@ -37,7 +35,7 @@ const LoadingView = () => {
         StateType.Loading,
         {
           graphConfig: {
-            height: 132,
+            height: 136,
             width: 400,
             graphMinX: 6,
             graphMaxX: 394,
@@ -61,7 +59,7 @@ const LoadingView = () => {
               </h4>
             </div>
             <div className="market-rate-model__rates-section__labels-holder market-rate-model__rates-section__labels-holder--loading">
-              <label className="label text-color--2">Supply APR</label>
+              <label className="label text-color--2">Earn APR</label>
               <h4>
                 <span className="placeholder-content" style={{ width: '4rem' }}></span>
               </h4>
@@ -77,18 +75,22 @@ const LoadingView = () => {
 const RateModelPanelView = ({ borrowRates, supplyRates, borrowAPR, supplyAPR, utilization }: RateModelHydratedData) => {
   const [hoveredRate, sethoveredRate] = useState<HoveredRate | undefined>(undefined);
 
+  const toChartRates = (rates: [bigint, bigint][]): [bigint, number][] => {
+    return rates.map(([utilization, apr]) => [utilization, (Number(apr) / Number(BASE_FACTOR)) * 100]);
+  }
+
   const rateModelGraph = (
     <InterestRateModel
       state={[
         StateType.Hydrated,
         {
-          borrowRates,
-          supplyRates,
+          borrowRates: toChartRates(borrowRates),
+          supplyRates: toChartRates(supplyRates),
           borrowAPR,
           supplyAPR,
           utilization,
           graphConfig: {
-            height: 132,
+            height: 136,
             width: 400,
             graphMinX: 6,
             graphMaxX: 394,
@@ -104,8 +106,8 @@ const RateModelPanelView = ({ borrowRates, supplyRates, borrowAPR, supplyAPR, ut
     />
   );
 
-  const shownBorrowAPR = hoveredRate ? formatPercentage(hoveredRate.borrowRate) : formatRateFactor(borrowAPR);
-  const shownSupplyAPR = hoveredRate ? formatPercentage(hoveredRate.supplyRate) : formatRateFactor(supplyAPR);
+  const shownBorrowAPR = formatRateFactor(hoveredRate ? borrowRates[hoveredRate.utilization][1] : borrowAPR);
+  const shownSupplyAPR = formatRateFactor(hoveredRate ? supplyRates[hoveredRate.utilization][1] : supplyAPR);
 
   return (
     <PanelWithHeader header="Interest Rate Model" className="grid-column--6">

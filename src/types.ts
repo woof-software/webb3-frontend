@@ -173,13 +173,13 @@ export type ProtocolAndAccountState = Omit<ProtocolState, 'baseAsset' | 'collate
 };
 
 export type ProtocolAndMarketsState = Omit<ProtocolState, 'collateralAssets'> & {
-  borrowRates: [bigint, number][];
   collateralAssets: TokenWithMarketState[];
   cometAddress: string;
   factorScale: number;
   marketHistory: MarketHistoricalBucket[];
   reserves: bigint;
-  supplyRates: [bigint, number][];
+  borrowRates: [bigint, bigint][];
+  supplyRates: [bigint, bigint][];
   targetReserves: bigint;
   totalBorrow: bigint;
   totalSupply: bigint;
@@ -356,6 +356,8 @@ export type MarketData = {
   institutional?: boolean;
   // Recently launched markets get a 'New' badge in the market selector
   isNew?: boolean;
+  // Temporary markets get a 'Temp' badge in the market selector
+  isTemp?: boolean;
   type: 'MarketData';
   rewardsOverwrite?: {
     rewardsAssetSymbol: string;

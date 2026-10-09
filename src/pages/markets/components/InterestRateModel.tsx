@@ -1,6 +1,6 @@
 import { MouseEventHandler, MouseEvent, useState, useEffect } from 'react';
 
-import { formatRateFactor } from '@helpers/numbers';
+import { BASE_FACTOR, FACTOR_PRECISION, formatRateFactor } from '@helpers/numbers';
 import { StateType } from '@types';
 
 import {
@@ -33,9 +33,7 @@ type InterestRateModelHydrated = [
 ];
 
 export type HoveredRate = {
-  utilizationPercentage: number;
-  borrowRate: number;
-  supplyRate: number;
+  utilization: number;
 };
 
 export type InterestRateModelState = InterestRateModelLoading | InterestRateModelHydrated;
@@ -61,7 +59,6 @@ const InterestRateModel = ({ state }: InterestRateModelProps) => {
 
   const factorScale = 1e18;
   const utilization = state[0] === StateType.Hydrated ? state[1].utilization : undefined;
-  const utilizationDescale = factorScale / 1e2;
 
   function getUtilizationPercentage(utilizationFactor: bigint | undefined) {
     if (utilizationFactor === undefined) {
@@ -91,25 +88,20 @@ const InterestRateModel = ({ state }: InterestRateModelProps) => {
   } else {
     const actualUtilizationPercentage = getUtilizationPercentage(state[1].utilization);
     // loaded state
-    const mouseMove: MouseEventHandler<SVGRectElement> = (e: MouseEvent<SVGRectElement>) => {
-      const targetElement = e.target as HTMLElement;
-      setUtilizationPercentage(e.nativeEvent.offsetX / targetElement.getBoundingClientRect().width);
+    const mouseMove: MouseEventHandler<HTMLDivElement> = (e: MouseEvent<HTMLDivElement>) => {
+      const targetElement = e.currentTarget as HTMLElement;
+
+      const targetWidth = targetElement.getBoundingClientRect().width;
+      const widthThreshold = targetWidth - targetWidth * 0.03 ;
+      const utilizationPercent = Math.min(e.nativeEvent.offsetX / widthThreshold, 1)
+
+      setUtilizationPercentage(utilizationPercent);
+
       setIsMouseOnChart(true);
-      if (state[1].onRateHover !== undefined) {
-        const [borrowUtilization, hypotheticalBorrowAPR, ,] =
-          currentUtilizationBorrowPoints[currentUtilizationBorrowPoints.length - 1];
 
-        const currentUtilizationSupplyPoints = supplyPoints.filter((sp) => {
-          return Number(sp[0]) / factorScale <= utilizationPercentage;
-        });
-        const [, hypotheticalSupplyAPR, ,] = currentUtilizationSupplyPoints[currentUtilizationSupplyPoints.length - 1];
-
-        state[1].onRateHover({
-          utilizationPercentage: Number(borrowUtilization) / utilizationDescale,
-          borrowRate: hypotheticalBorrowAPR,
-          supplyRate: hypotheticalSupplyAPR,
-        });
-      }
+      state[1].onRateHover?.({
+        utilization: Math.trunc(utilizationPercent * 100)
+      });
     };
 
     const mouseLeave = () => {
@@ -136,7 +128,7 @@ const InterestRateModel = ({ state }: InterestRateModelProps) => {
     });
 
     const currentUtilizationBorrowPoints = borrowPoints.filter((bp) => {
-      return Number(bp[0]) / factorScale <= utilizationPercentage;
+      return Number(bp[0]) / factorScale <= Math.abs(utilizationPercentage);
     });
     const [borrowUtilization, hypotheticalBorrowAPR, borrowCircleX, borrowCircleY] =
       currentUtilizationBorrowPoints[currentUtilizationBorrowPoints.length - 1];
@@ -162,7 +154,7 @@ const InterestRateModel = ({ state }: InterestRateModelProps) => {
 
     //TODO: Should try binary search on this for better speed
     const currentUtilizationSupplyPoints = supplyPoints.filter((sp) => {
-      return Number(sp[0]) / factorScale <= utilizationPercentage;
+      return Number(sp[0]) / factorScale <= Math.abs(utilizationPercentage);
     });
     const [, hypotheticalSupplyAPR, supplyCircleX, supplyCircleY] =
       currentUtilizationSupplyPoints[currentUtilizationSupplyPoints.length - 1];
@@ -185,7 +177,7 @@ const InterestRateModel = ({ state }: InterestRateModelProps) => {
     if (!isMouseOnChart) {
       utilizationToDisplay = actualUtilizationPercentage * 100;
     } else {
-      utilizationToDisplay = Number(borrowUtilization) / utilizationDescale;
+      utilizationToDisplay = Number(borrowUtilization / 10n ** BigInt(FACTOR_PRECISION - 2));
     }
     return (
       <div className="interest-rate-model">
@@ -218,7 +210,11 @@ const InterestRateModel = ({ state }: InterestRateModelProps) => {
         ) : (
           <></>
         )}
-        <div className="interest-rate-model__chart">
+        <div
+          className="interest-rate-model__chart"
+          onMouseMove={mouseMove}
+          onMouseLeave={mouseLeave}
+        >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox={`0 0 ${width} ${height}`}>
             {state[1].graphConfig.isV2Graph ? (
               <>
@@ -276,16 +272,6 @@ const InterestRateModel = ({ state }: InterestRateModelProps) => {
             ) : (
               <></>
             )}
-
-            <rect
-              x={minX - 1}
-              y={0}
-              width={maxX}
-              height={height}
-              fill="transparent"
-              onMouseMove={mouseMove}
-              onMouseLeave={mouseLeave}
-            />
           </svg>
         </div>
       </div>
