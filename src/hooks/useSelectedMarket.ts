@@ -18,7 +18,6 @@ import {
   isV2Market,
   marketKey,
 } from '@helpers/markets';
-import { REFRESH_INTERVAL } from '@helpers/numbers';
 import CometQuery from '@helpers/sleuth/out/CometQuery.sol/CometQuery.json';
 import { Sleuth } from '@helpers/sleuth/sleuth';
 import { CometStateQuery, CometStateResponse } from '@helpers/sleuth/types';
@@ -67,7 +66,6 @@ export function useSelectedMarketState(web3: Web3): SelectedMarketData {
   const navigate = useNavigate();
 
   const [state, setState] = useState<MarketDataState>([StateType.Loading, undefined]);
-  const [isError, setIsError] = useState(false);
   const marketRef = useRef('');
 
   const selectMarket = useCallback(
@@ -98,7 +96,6 @@ export function useSelectedMarketState(web3: Web3): SelectedMarketData {
 
       if (switched) {
         setState([StateType.Loading, desiredMarket]);
-        setIsError(false);
         const key = marketKey(desiredMarket);
         window.localStorage.setItem(MARKET_LOCAL_STORAGE_KEY, key);
 
@@ -137,19 +134,11 @@ export function useSelectedMarketState(web3: Web3): SelectedMarketData {
       web3.read.provider !== undefined &&
       stateType === StateType.Loading
     ) {
-      try {
-        const state = await getState(web3.read.provider.connection, market);
-        // Only update state if market key has not changed since the start of this callback
-        // We compare to a ref because the `market` in the callback can be stale
-        if (marketKey(market) === marketRef.current) {
-          setState(state);
-          setIsError(false);
-        }
-      } catch (e) {
-        console.error('Error fetching selected market data: ', e);
-        if (marketKey(market) === marketRef.current) {
-          setIsError(true);
-        }
+      const state = await getState(web3.read.provider.connection, market);
+      // Only update state if market key has not changed since the start of this callback
+      // We compare to a ref because the `market` in the callback can be stale
+      if (marketKey(market) === marketRef.current) {
+        setState(state);
       }
     }
   }, [web3.read.chainId, web3.read.provider, state[1]?.marketAddress, state[1]?.chainInformation.chainId]);
@@ -158,18 +147,10 @@ export function useSelectedMarketState(web3: Web3): SelectedMarketData {
     getData();
   }, [web3.read.chainId, getData]);
 
-  // Keep retrying while the market data request fails, so the error clears once it recovers
-  useEffect(() => {
-    if (!isError) return;
-    const intervalId = setInterval(getData, REFRESH_INTERVAL);
-    return () => clearInterval(intervalId);
-  }, [isError, getData]);
-
   return {
     selectMarket,
     selectMarketByAddress,
     selectedMarket: state,
-    isSelectedMarketError: isError,
   };
 }
 

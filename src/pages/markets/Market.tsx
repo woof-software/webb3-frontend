@@ -1,4 +1,4 @@
-import { ReactNode, useContext, useEffect } from 'react';
+import { ReactNode, useContext } from 'react';
 import { Link } from 'react-router';
 
 import IconPair from '@components/IconPair';
@@ -25,21 +25,14 @@ import { useMarketsState } from './hooks/useMarketsState';
 
 type MarketsProps = {
   web3: Web3;
-  setIsMarketsStateError: (isError: boolean) => void;
 };
 
-const Market = ({ web3, setIsMarketsStateError }: MarketsProps) => {
+const Market = ({ web3 }: MarketsProps) => {
   const { selectedMarket } = useContext(getSelectedMarketContext());
 
   const marketCurrencyToShow = Currency.USD;
 
-  const [state, isMarketsStateError] = useMarketsState(web3, selectedMarket);
-
-  // The alert banner lives in App, so report the error up and clear it when leaving the page
-  useEffect(() => {
-    setIsMarketsStateError(isMarketsStateError);
-    return () => setIsMarketsStateError(false);
-  }, [isMarketsStateError]);
+  const state = useMarketsState(web3, selectedMarket);
   const [marketStateType, marketStateData] = state;
   const [, market] = selectedMarket;
   const [currentChainName, currentChainId, currentBaseToken] =

@@ -32,10 +32,9 @@ import {
 
 const MARKETS_REFRESH_INTERVAL = 300_000; // 5 mins
 
-export function useMarketsState(web3: Web3, marketState: MarketDataState): [MarketState, boolean] {
+export function useMarketsState(web3: Web3, marketState: MarketDataState): MarketState {
   const location = useLocation();
   const [state, setState] = useState<MarketState>([StateType.Loading]);
-  const [isError, setIsError] = useState(false);
   const marketRef = useRef(marketState);
   const rewardsState = useContext(RewardsStateContext);
 
@@ -43,7 +42,6 @@ export function useMarketsState(web3: Web3, marketState: MarketDataState): [Mark
   useEffect(() => {
     const state: MarketState = [StateType.Loading];
     setState(state);
-    setIsError(false);
     marketRef.current = marketState;
   }, [marketState]);
 
@@ -52,26 +50,16 @@ export function useMarketsState(web3: Web3, marketState: MarketDataState): [Mark
 
     if (web3.read.provider !== undefined && marketStateType !== StateType.Loading) {
       let state: MarketState;
-
       if (new URLSearchParams(location.search).has('mock')) {
         state = getMockMarketState();
       } else {
-        try {
-          state = await getState(web3.read.provider, marketState[1], rewardsState);
-        } catch (e) {
-          console.error('Error fetching market state: ', e);
-          if (marketState === marketRef.current) {
-            setIsError(true);
-          }
-          return;
-        }
+        state = await getState(web3.read.provider, marketState[1], rewardsState);
       }
 
       // Only update state if chainId has not changed since the start of this callback
       // We compare to a ref because the `web3.read.chainId` in the callback can be stale
       if (marketState === marketRef.current) {
         setState(state);
-        setIsError(false);
       }
     }
   }, [marketState, rewardsState]);
@@ -84,7 +72,7 @@ export function useMarketsState(web3: Web3, marketState: MarketDataState): [Mark
     return () => clearInterval(intervalId);
   }, [refreshData]);
 
-  return [state, isError && state[0] === StateType.Loading];
+  return state;
 }
 
 const getState = async (rawProvider: JsonRpcProvider, market: MarketData | MarketDataLoaded, rewardsState: RewardsState): Promise<MarketState> => {
