@@ -1,9 +1,10 @@
 import { useContext } from 'react';
 import { useLocation } from 'react-router';
 
+import { useMarketsContext } from '@contexts/MarketsContext';
 import { getSelectedMarketContext } from '@contexts/SelectedMarketContext';
 import type { Web3 } from '@contexts/Web3Context';
-import { MARKETS } from '@helpers/markets';
+import { MarketData } from '@types';
 
 export type AlertBannerProps = {
   web3: Web3;
@@ -13,6 +14,8 @@ export type AlertBannerProps = {
 
 const AlertBanner = ({ web3, isCometStateError, isMarketsStateError }: AlertBannerProps) => {
   const location = useLocation();
+
+  const { markets, isLoading } = useMarketsContext();
 
   const { isSelectedMarketError } = useContext(getSelectedMarketContext());
 
@@ -25,7 +28,8 @@ const AlertBanner = ({ web3, isCometStateError, isMarketsStateError }: AlertBann
     (isMarketPage && (isSelectedMarketError || isMarketsStateError));
 
   const messages: string[] = [];
-  if (web3.write.chainId && !isSupportedNetwork(web3.write.chainId)) {
+  // Until the registry loads every network would look unsupported
+  if (!isLoading && web3.write.chainId && !isSupportedNetwork(markets, web3.write.chainId)) {
     messages.push('Compound III is not supported on this network. Please switch to a supported network.');
   }
 
@@ -46,8 +50,8 @@ const AlertBanner = ({ web3, isCometStateError, isMarketsStateError }: AlertBann
   );
 };
 
-function isSupportedNetwork(chainId: number): boolean {
-  const marketForChainId = MARKETS.find((market) => market.chainInformation.chainId === chainId);
+function isSupportedNetwork(markets: MarketData[], chainId: number): boolean {
+  const marketForChainId = markets.find((market) => market.chainInformation.chainId === chainId);
   return marketForChainId !== undefined;
 }
 
