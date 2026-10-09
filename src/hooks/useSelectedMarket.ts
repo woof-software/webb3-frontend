@@ -4,13 +4,21 @@ import { setMulticallAddress } from 'ethers-multicall';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
 
-import { useMarketsContext } from '@contexts/MarketsContext';
 import type { Web3 } from '@contexts/Web3Context';
 import { getAssetDisplayName, getAssetDisplaySymbol } from '@helpers/assets';
 import { MARKET_KEY_DELIMITER, MARKET_LOCAL_STORAGE_KEY } from '@helpers/constants';
 import { getIsDeprecatedwUSDMMarket } from '@helpers/deprecatedMarkets';
 import { isLegacyCollateral } from '@helpers/legacyCollateral';
-import { V2_MARKET, areSameMarket, isV2Market, marketKey } from '@helpers/markets';
+import {
+  DEFAULT_MARKET,
+  V2_MARKET,
+  areSameMarket,
+  getMarket,
+  getMarkets,
+  isV2Market,
+  marketKey,
+} from '@helpers/markets';
+import { REFRESH_INTERVAL } from '@helpers/numbers';
 import CometQuery from '@helpers/sleuth/out/CometQuery.sol/CometQuery.json';
 import { Sleuth } from '@helpers/sleuth/sleuth';
 import { CometStateQuery, CometStateResponse } from '@helpers/sleuth/types';
@@ -50,7 +58,6 @@ setMulticallAddress(2020, '0xcA11bde05977b3631167028862bE2a173976CA11');
  */
 export function useSelectedMarketState(web3: Web3): SelectedMarketData {
   const location = useLocation();
-  const { isLoading: marketsLoading, markets, defaultMarket, getMarket } = useMarketsContext();
 
   // Most routes use <route>/?market=<marketId> to select a market
   const [searchParams, setSearchParams] = useSearchParams();
@@ -60,6 +67,7 @@ export function useSelectedMarketState(web3: Web3): SelectedMarketData {
   const navigate = useNavigate();
 
   const [state, setState] = useState<MarketDataState>([StateType.Loading, undefined]);
+  const [isError, setIsError] = useState(false);
   const marketRef = useRef('');
 
   const selectMarket = useCallback(
@@ -90,6 +98,7 @@ export function useSelectedMarketState(web3: Web3): SelectedMarketData {
 
       if (switched) {
         setState([StateType.Loading, desiredMarket]);
+        setIsError(false);
         const key = marketKey(desiredMarket);
         window.localStorage.setItem(MARKET_LOCAL_STORAGE_KEY, key);
 
@@ -106,19 +115,19 @@ export function useSelectedMarketState(web3: Web3): SelectedMarketData {
         selectMarket(market);
       }
     },
-    [selectMarket, getMarket],
+    [selectMarket],
   );
 
   useEffect(() => {
-    // Markets come from the registry; until it loads the selected market stays in the loading state
-    if (marketsLoading) return;
+    // When choosing a market based on the query params, filter from all the set of available markets.
+    const markets = getMarkets(true);
 
     const maybePreferredMarket =
       marketId ?? searchParams.get('market') ?? window.localStorage.getItem(MARKET_LOCAL_STORAGE_KEY) ?? undefined;
-    const market = parseMarketKeyOrDefault(markets, defaultMarket, maybePreferredMarket);
+    const market = parseMarketKeyOrDefault(markets, DEFAULT_MARKET, maybePreferredMarket);
 
     selectMarket(market);
-  }, [location.pathname, markets]);
+  }, [location.pathname]);
 
   const getData = useCallback(async () => {
     const [stateType, market] = state;
@@ -128,11 +137,19 @@ export function useSelectedMarketState(web3: Web3): SelectedMarketData {
       web3.read.provider !== undefined &&
       stateType === StateType.Loading
     ) {
-      const state = await getState(web3.read.provider.connection, market);
-      // Only update state if market key has not changed since the start of this callback
-      // We compare to a ref because the `market` in the callback can be stale
-      if (marketKey(market) === marketRef.current) {
-        setState(state);
+      try {
+        const state = await getState(web3.read.provider.connection, market);
+        // Only update state if market key has not changed since the start of this callback
+        // We compare to a ref because the `market` in the callback can be stale
+        if (marketKey(market) === marketRef.current) {
+          setState(state);
+          setIsError(false);
+        }
+      } catch (e) {
+        console.error('Error fetching selected market data: ', e);
+        if (marketKey(market) === marketRef.current) {
+          setIsError(true);
+        }
       }
     }
   }, [web3.read.chainId, web3.read.provider, state[1]?.marketAddress, state[1]?.chainInformation.chainId]);
@@ -141,10 +158,18 @@ export function useSelectedMarketState(web3: Web3): SelectedMarketData {
     getData();
   }, [web3.read.chainId, getData]);
 
+  // Keep retrying while the market data request fails, so the error clears once it recovers
+  useEffect(() => {
+    if (!isError) return;
+    const intervalId = setInterval(getData, REFRESH_INTERVAL);
+    return () => clearInterval(intervalId);
+  }, [isError, getData]);
+
   return {
     selectMarket,
     selectMarketByAddress,
     selectedMarket: state,
+    isSelectedMarketError: isError,
   };
 }
 

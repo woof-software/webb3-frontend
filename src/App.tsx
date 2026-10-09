@@ -76,8 +76,15 @@ function App({ Component, pageProps }: any) {
     }
   }, [location.pathname]);
 
-  const cometState = useCometState(web3, selectedMarketState.selectedMarket, transactions, rewardsState);
+  const [cometState, isCometStateError] = useCometState(
+    web3,
+    selectedMarketState.selectedMarket,
+    transactions,
+    rewardsState
+  );
   initializeContext(selectedMarketState);
+
+  const [isMarketsStateError, setIsMarketsStateError] = useState(false);
 
   const handleRequestNetworkSwitch = (fromChainId: number, toChainId: number, description?: string) => {
     setNetworkSwitchState({
@@ -167,7 +174,11 @@ function App({ Component, pageProps }: any) {
         <ActionQueueContext.Provider value={actionQueue}>
           <CurrencyContextProvider>
             <MerklRedirectModalProvider>
-              <AlertBanner web3={web3} />
+              <AlertBanner
+                web3={web3}
+                isCometStateError={isCometStateError}
+                isMarketsStateError={isMarketsStateError}
+              />
               <MerklRedirectModal web3={web3}/>
               <Header
                 web3={web3}
@@ -202,6 +213,7 @@ function App({ Component, pageProps }: any) {
                   addTransaction={addTransaction}
                   theme={theme}
                   cometState={cometState}
+                  setIsMarketsStateError={setIsMarketsStateError}
                   setShowConnectWalletModal={setShowConnectWalletModal}
                   switchWriteNetwork={(chainId: number, description?: string) => {
                     if (web3.write.chainId) {

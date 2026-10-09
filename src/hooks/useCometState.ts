@@ -1,9 +1,12 @@
+import { BigNumber } from '@ethersproject/bignumber';
 import { StaticJsonRpcProvider } from '@ethersproject/providers';
+import { perSecondRateAt, SECONDS_PER_YEAR } from '@helpers/interestRates';
 import { ConnectionInfo } from 'ethers/lib/utils';
-import { Provider } from 'ethers-multicall';
+import { Contract, Provider } from 'ethers-multicall';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { Web3 } from '@contexts/Web3Context';
+import Comet from '@helpers/abis/Comet';
 import { getAssetDisplayName, getAssetDisplaySymbol } from '@helpers/assets';
 import { adjustCollateralPrice, getBaseAssetDollarPrice, getBaseAssetPriceFeed } from '@helpers/baseAssetPrice';
 import { getIsDeprecatedwUSDMMarket } from '@helpers/deprecatedMarkets';
@@ -37,8 +40,9 @@ export function useCometState(
   marketState: MarketDataState,
   transactions: Transaction[],
   rewards: RewardsState
-): CometState {
+): [CometState, boolean] {
   const [state, setState] = useState<CometState>([StateType.Loading, undefined]);
+  const [isError, setIsError] = useState(false);
   const { waitFor } = useWaiter<Transaction[]>(transactions);
   const marketRef = useRef(marketState);
 
@@ -46,6 +50,7 @@ export function useCometState(
   useEffect(() => {
     const state: CometState = [StateType.Loading, undefined];
     setState(state);
+    setIsError(false);
     marketRef.current = marketState;
   }, [marketState[1]?.marketAddress, marketState[1]?.chainInformation.chainId]);
 
@@ -59,23 +64,34 @@ export function useCometState(
         web3.read.chainId === marketStateData?.chainInformation.chainId
       ) {
         let newState: CometState;
-        if (account) {
-          const cometResponse = await queryCometDataWithAccount(
-            web3.read.provider.connection,
-            marketStateData,
-            account
-          );
-          newState = formatCometStateHydrated(cometResponse, marketStateData, rewards);
-          const ethcallProvider = new Provider(web3.read.provider, marketStateData.chainInformation.chainId);
-          await maybeHydrateStEthCollateral(newState, marketStateData, account, ethcallProvider);
-        } else {
-          const cometResponse = await queryCometData(web3.read.provider.connection, marketStateData);
-          newState = formatCometStateNoWallet(cometResponse, marketStateData, rewards);
+        const ethcallProvider = new Provider(web3.read.provider, marketStateData.chainInformation.chainId);
+        try {
+          if (account) {
+            const [cometResponse, aprs] = await Promise.all([
+              queryCometDataWithAccount(web3.read.provider.connection, marketStateData, account),
+              queryCometAPRs(ethcallProvider, marketStateData.marketAddress),
+            ]);
+            newState = formatCometStateHydrated(cometResponse, aprs, marketStateData, rewards);
+            await maybeHydrateStEthCollateral(newState, marketStateData, account, ethcallProvider);
+          } else {
+            const [cometResponse, aprs] = await Promise.all([
+              queryCometData(web3.read.provider.connection, marketStateData),
+              queryCometAPRs(ethcallProvider, marketStateData.marketAddress),
+            ]);
+            newState = formatCometStateNoWallet(cometResponse, aprs, marketStateData, rewards);
+          }
+        } catch (e) {
+          console.error('Error fetching comet state: ', e);
+          if (marketState[1]?.marketAddress === marketRef.current[1]?.marketAddress) {
+            setIsError(true);
+          }
+          return;
         }
 
         // Only update state if chainId has not changed since the start of this callback
         // We compare to a ref because the `marketState` in the callback can be stale
         if (marketState[1]?.marketAddress === marketRef.current[1]?.marketAddress) {
+          setIsError(false);
           waitFor(
             (transactions) => transactions.length === 0,
             async () => {
@@ -141,7 +157,7 @@ export function useCometState(
     }
   }
 
-  return state;
+  return [state, isError && state[0] === StateType.Loading];
 }
 
 const QUERY_WITH_ACCOUNT = Sleuth.querySol(CometQuery, { queryFunctionName: 'queryWithAccount' });
@@ -167,8 +183,64 @@ export const queryCometDataWithAccount = (
   ]);
 };
 
+type CometAPRs = {
+  borrowAPR: bigint;
+  earnAPR: bigint;
+};
+
+const queryCometAPRs = async (ethcallProvider: Provider, cometAddress: string): Promise<CometAPRs> => {
+  const cometContract = new Contract(cometAddress, Comet);
+
+  const [
+    utilization,
+    factorScale,
+    borrowKink,
+    borrowBase,
+    borrowSlopeLow,
+    borrowSlopeHigh,
+    supplyKink,
+    supplyBase,
+    supplySlopeLow,
+    supplySlopeHigh,
+  ]: BigNumber[] = await ethcallProvider.all([
+    cometContract.getUtilization(),
+    cometContract.factorScale(),
+    cometContract.borrowKink(),
+    cometContract.borrowPerSecondInterestRateBase(),
+    cometContract.borrowPerSecondInterestRateSlopeLow(),
+    cometContract.borrowPerSecondInterestRateSlopeHigh(),
+    cometContract.supplyKink(),
+    cometContract.supplyPerSecondInterestRateBase(),
+    cometContract.supplyPerSecondInterestRateSlopeLow(),
+    cometContract.supplyPerSecondInterestRateSlopeHigh(),
+  ]);
+
+  const borrowAPR =
+    perSecondRateAt({
+      utilization: utilization.toBigInt(),
+      kink: borrowKink.toBigInt(),
+      base: borrowBase.toBigInt(),
+      slopeLow: borrowSlopeLow.toBigInt(),
+      slopeHigh: borrowSlopeHigh.toBigInt(),
+      factorScale: factorScale.toBigInt(),
+    }) * SECONDS_PER_YEAR;
+
+  const earnAPR =
+    perSecondRateAt({
+      utilization: utilization.toBigInt(),
+      kink: supplyKink.toBigInt(),
+      base: supplyBase.toBigInt(),
+      slopeLow: supplySlopeLow.toBigInt(),
+      slopeHigh: supplySlopeHigh.toBigInt(),
+      factorScale: factorScale.toBigInt(),
+    }) * SECONDS_PER_YEAR;
+
+  return { borrowAPR, earnAPR };
+};
+
 const formatCometStateHydrated = (
   cometResponse: CometWithAccountStateResponse,
+  { borrowAPR, earnAPR }: CometAPRs,
   market: MarketData | MarketDataLoaded,
   rewards: RewardsState,
 ): CometStateHydrated => {
@@ -259,8 +331,8 @@ const formatCometStateHydrated = (
       collateralAssets
     ),
     isBulkerAllowed: cometResponse.bulkerAllowance.gt(0),
-    borrowAPR: cometResponse.borrowAPR.toBigInt(),
-    earnAPR: cometResponse.earnAPR.toBigInt(),
+    borrowAPR,
+    earnAPR,
     ...getMarketRewardsAPRs(market, rewards, totalBaseSupplyInDollars, totalBaseBorrowInDollars),
     isRewardsLoading: rewards[0] === StateType.Loading
   };
@@ -314,6 +386,7 @@ const maybeHydrateStEthCollateral = async (
 
 const formatCometStateNoWallet = (
   cometResponse: CometStateResponse,
+  { borrowAPR, earnAPR }: CometAPRs,
   market: MarketData | MarketDataLoaded,
   rewards: RewardsState
 ): CometStateNoWallet => {
@@ -367,8 +440,8 @@ const formatCometStateNoWallet = (
       price: cometResponse.baseAsset.price.toBigInt(),
       baseAssetPriceInDollars: baseAssetDollarPrice.toBigInt(),
     },
-    borrowAPR: cometResponse.borrowAPR.toBigInt(),
-    earnAPR: cometResponse.earnAPR.toBigInt(),
+    borrowAPR,
+    earnAPR,
     ...getMarketRewardsAPRs(market, rewards, totalBaseSupplyInDollars, totalBaseBorrowInDollars),
     isRewardsLoading: rewards[0] === StateType.Loading
   };

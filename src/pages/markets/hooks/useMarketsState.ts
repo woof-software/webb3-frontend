@@ -1,5 +1,6 @@
 import { BigNumber } from '@ethersproject/bignumber';
 import { JsonRpcProvider, StaticJsonRpcProvider } from '@ethersproject/providers';
+import { perSecondRateAt, SECONDS_PER_YEAR } from '@helpers/interestRates';
 import { Contract, Provider } from 'ethers-multicall';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router';
@@ -31,11 +32,10 @@ import {
 
 const MARKETS_REFRESH_INTERVAL = 300_000; // 5 mins
 
-const SECONDS_PER_YEAR = BigInt(60 * 60 * 24 * 365);
-
-export function useMarketsState(web3: Web3, marketState: MarketDataState): MarketState {
+export function useMarketsState(web3: Web3, marketState: MarketDataState): [MarketState, boolean] {
   const location = useLocation();
   const [state, setState] = useState<MarketState>([StateType.Loading]);
+  const [isError, setIsError] = useState(false);
   const marketRef = useRef(marketState);
   const rewardsState = useContext(RewardsStateContext);
 
@@ -43,6 +43,7 @@ export function useMarketsState(web3: Web3, marketState: MarketDataState): Marke
   useEffect(() => {
     const state: MarketState = [StateType.Loading];
     setState(state);
+    setIsError(false);
     marketRef.current = marketState;
   }, [marketState]);
 
@@ -51,16 +52,26 @@ export function useMarketsState(web3: Web3, marketState: MarketDataState): Marke
 
     if (web3.read.provider !== undefined && marketStateType !== StateType.Loading) {
       let state: MarketState;
+
       if (new URLSearchParams(location.search).has('mock')) {
         state = getMockMarketState();
       } else {
-        state = await getState(web3.read.provider, marketState[1], rewardsState);
+        try {
+          state = await getState(web3.read.provider, marketState[1], rewardsState);
+        } catch (e) {
+          console.error('Error fetching market state: ', e);
+          if (marketState === marketRef.current) {
+            setIsError(true);
+          }
+          return;
+        }
       }
 
       // Only update state if chainId has not changed since the start of this callback
       // We compare to a ref because the `web3.read.chainId` in the callback can be stale
       if (marketState === marketRef.current) {
         setState(state);
+        setIsError(false);
       }
     }
   }, [marketState, rewardsState]);
@@ -73,7 +84,7 @@ export function useMarketsState(web3: Web3, marketState: MarketDataState): Marke
     return () => clearInterval(intervalId);
   }, [refreshData]);
 
-  return state;
+  return [state, isError && state[0] === StateType.Loading];
 }
 
 const getState = async (rawProvider: JsonRpcProvider, market: MarketData | MarketDataLoaded, rewardsState: RewardsState): Promise<MarketState> => {
@@ -97,8 +108,6 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
   const utilizationDescale = factorScale / 1e2;
 
   const utilizationIntervals = [...Array(101).keys()].map((n) => BigInt(n * utilizationDescale));
-  const borrowRateCalls = utilizationIntervals.map((interval) => cometContract.getBorrowRate(interval));
-  const supplyRateCalls = utilizationIntervals.map((interval) => cometContract.getSupplyRate(interval));
 
   const baseAssetDollarPriceFeed = getBaseAssetPriceFeed(market);
 
@@ -110,8 +119,15 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
     totalBorrowBN,
     targetReserves,
     baseTokenPriceInDollars,
-    ...borrowAndSupplyRates
-  ] = await ethcallProvider.all([
+    borrowKink,
+    borrowBase,
+    borrowSlopeLow,
+    borrowSlopeHigh,
+    supplyKink,
+    supplyBase,
+    supplySlopeLow,
+    supplySlopeHigh,
+  ]: BigNumber[] = await ethcallProvider.all([
     cometContract.getBorrowRate(utilization),
     cometContract.getSupplyRate(utilization),
     cometContract.getReserves(),
@@ -119,20 +135,40 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
     cometContract.totalBorrow(),
     cometContract.targetReserves(),
     cometContract.getPrice(baseAssetDollarPriceFeed),
-    ...borrowRateCalls,
-    ...supplyRateCalls,
+    cometContract.borrowKink(),
+    cometContract.borrowPerSecondInterestRateBase(),
+    cometContract.borrowPerSecondInterestRateSlopeLow(),
+    cometContract.borrowPerSecondInterestRateSlopeHigh(),
+    cometContract.supplyKink(),
+    cometContract.supplyPerSecondInterestRateBase(),
+    cometContract.supplyPerSecondInterestRateSlopeLow(),
+    cometContract.supplyPerSecondInterestRateSlopeHigh(),
   ]);
 
-  const borrowRates: [bigint, number][] = borrowAndSupplyRates
-    .slice(0, utilizationIntervals.length)
-    .map((borrowRate, idx) => {
-      return [utilizationIntervals[idx], Number(borrowRate.toBigInt() * SECONDS_PER_YEAR) / utilizationDescale];
-    });
-  const supplyRates: [bigint, number][] = borrowAndSupplyRates
-    .slice(utilizationIntervals.length)
-    .map((supplyRate, idx) => {
-      return [utilizationIntervals[idx], Number(supplyRate.toBigInt() * SECONDS_PER_YEAR) / utilizationDescale];
-    });
+  const borrowRates: [bigint, bigint][] = utilizationIntervals.map((interval) => [
+    interval,
+    perSecondRateAt({
+      utilization: interval,
+      kink: borrowKink.toBigInt(),
+      base: borrowBase.toBigInt(),
+      slopeLow: borrowSlopeLow.toBigInt(),
+      slopeHigh: borrowSlopeHigh.toBigInt(),
+      factorScale: factorScaleBN.toBigInt()
+    }) * SECONDS_PER_YEAR,
+  ]);
+
+  const supplyRates: [bigint, bigint][] = utilizationIntervals.map((interval) => [
+    interval,
+    perSecondRateAt({
+      utilization: interval,
+      kink: supplyKink.toBigInt(),
+      base: supplyBase.toBigInt(),
+      slopeLow: supplySlopeLow.toBigInt(),
+      slopeHigh: supplySlopeHigh.toBigInt(),
+      factorScale: factorScaleBN.toBigInt()
+    }) * SECONDS_PER_YEAR,
+  ]);
+
   const baseTokenContract = new Contract(market.baseAsset.address, ERC20);
 
   let ignoredCollateralPriceIndex = -1;

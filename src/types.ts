@@ -440,6 +440,7 @@ export type SelectedMarketData = {
   selectedMarket: MarketDataState;
   selectMarket: (market: MarketData, switchWriteNetwork?: boolean) => void;
   selectMarketByAddress: (chainId: number, comet: string, switchWriteNetwork?: boolean) => void;
+  isSelectedMarketError: boolean;
 };
 
 export type CometStateLoading = [StateType.Loading, undefined | ProtocolState];
