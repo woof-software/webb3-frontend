@@ -124,8 +124,8 @@ export type V3MarketApiBucket = {
   timestamp: number;
   total_collateral_value: number;
   total_borrow_value: number;
-  supply_apr: number;
-  borrow_apr: number;
+  supply_apr: string;
+  borrow_apr: string;
 };
 
 export type V3GovernanceApiProposal = {
@@ -141,8 +141,8 @@ export type MarketHistoricalBucket = {
   blockTimestamp: number;
   supplyTotal: number;
   borrowTotal: number;
-  supplyRate: number;
-  borrowRate: number;
+  supplyRate: bigint;
+  borrowRate: bigint;
 };
 
 export type ProtocolState = {
@@ -173,13 +173,13 @@ export type ProtocolAndAccountState = Omit<ProtocolState, 'baseAsset' | 'collate
 };
 
 export type ProtocolAndMarketsState = Omit<ProtocolState, 'collateralAssets'> & {
-  borrowRates: [bigint, number][];
   collateralAssets: TokenWithMarketState[];
   cometAddress: string;
   factorScale: number;
   marketHistory: MarketHistoricalBucket[];
   reserves: bigint;
-  supplyRates: [bigint, number][];
+  borrowRates: [bigint, bigint][];
+  supplyRates: [bigint, bigint][];
   targetReserves: bigint;
   totalBorrow: bigint;
   totalSupply: bigint;
@@ -356,6 +356,8 @@ export type MarketData = {
   institutional?: boolean;
   // Recently launched markets get a 'New' badge in the market selector
   isNew?: boolean;
+  // Temporary markets get a 'Temp' badge in the market selector
+  isTemp?: boolean;
   type: 'MarketData';
   rewardsOverwrite?: {
     rewardsAssetSymbol: string;

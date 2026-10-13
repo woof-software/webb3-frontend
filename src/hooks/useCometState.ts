@@ -7,6 +7,7 @@ import type { Web3 } from '@contexts/Web3Context';
 import { getAssetDisplayName, getAssetDisplaySymbol } from '@helpers/assets';
 import { adjustCollateralPrice, getBaseAssetDollarPrice, getBaseAssetPriceFeed } from '@helpers/baseAssetPrice';
 import { getIsDeprecatedwUSDMMarket } from '@helpers/deprecatedMarkets';
+import { perSecondRateAt, SECONDS_PER_YEAR } from '@helpers/interestRates';
 import { shouldKeepCollateralAsset } from '@helpers/legacyCollateral';
 import { getCapacity, getCollateralValue, MAX_UINT256, REFRESH_INTERVAL } from '@helpers/numbers';
 import { getMarketRewardsAPRs } from '@helpers/rewards';
@@ -167,11 +168,47 @@ export const queryCometDataWithAccount = (
   ]);
 };
 
+type CometAPRs = {
+  borrowAPR: bigint;
+  earnAPR: bigint;
+};
+
+// The APRs at the market's current utilization, from the rate model the Sleuth query returns
+const getCometAPRs = ({
+  utilization,
+  factorScale,
+  borrowRateModel,
+  supplyRateModel,
+}: CometStateResponse | CometWithAccountStateResponse): CometAPRs => {
+  const borrowAPR =
+    perSecondRateAt({
+      utilization: utilization.toBigInt(),
+      kink: borrowRateModel.kink.toBigInt(),
+      base: borrowRateModel.perSecondInterestRateBase.toBigInt(),
+      slopeLow: borrowRateModel.perSecondInterestRateSlopeLow.toBigInt(),
+      slopeHigh: borrowRateModel.perSecondInterestRateSlopeHigh.toBigInt(),
+      factorScale: factorScale.toBigInt(),
+    }) * SECONDS_PER_YEAR;
+
+  const earnAPR =
+    perSecondRateAt({
+      utilization: utilization.toBigInt(),
+      kink: supplyRateModel.kink.toBigInt(),
+      base: supplyRateModel.perSecondInterestRateBase.toBigInt(),
+      slopeLow: supplyRateModel.perSecondInterestRateSlopeLow.toBigInt(),
+      slopeHigh: supplyRateModel.perSecondInterestRateSlopeHigh.toBigInt(),
+      factorScale: factorScale.toBigInt(),
+    }) * SECONDS_PER_YEAR;
+
+  return { borrowAPR, earnAPR };
+};
+
 const formatCometStateHydrated = (
   cometResponse: CometWithAccountStateResponse,
   market: MarketData | MarketDataLoaded,
   rewards: RewardsState,
 ): CometStateHydrated => {
+  const { borrowAPR, earnAPR } = getCometAPRs(cometResponse);
   const wrappedNativeTokenSymbol = `W${market.chainInformation.nativeToken.symbol}`;
 
   const collateralAssets: TokenWithAccountState[] = cometResponse.collateralAssets.map((assetInfo) => {
@@ -259,8 +296,8 @@ const formatCometStateHydrated = (
       collateralAssets
     ),
     isBulkerAllowed: cometResponse.bulkerAllowance.gt(0),
-    borrowAPR: cometResponse.borrowAPR.toBigInt(),
-    earnAPR: cometResponse.earnAPR.toBigInt(),
+    borrowAPR,
+    earnAPR,
     ...getMarketRewardsAPRs(market, rewards, totalBaseSupplyInDollars, totalBaseBorrowInDollars),
     isRewardsLoading: rewards[0] === StateType.Loading
   };
@@ -317,6 +354,7 @@ const formatCometStateNoWallet = (
   market: MarketData | MarketDataLoaded,
   rewards: RewardsState
 ): CometStateNoWallet => {
+  const { borrowAPR, earnAPR } = getCometAPRs(cometResponse);
   const baseAssetDollarPrice = getBaseAssetDollarPrice(cometResponse, market);
 
   const totalBaseSupplyInDollars = (cometResponse.totalSupply.toBigInt() * baseAssetDollarPrice.toBigInt()) /
@@ -367,8 +405,8 @@ const formatCometStateNoWallet = (
       price: cometResponse.baseAsset.price.toBigInt(),
       baseAssetPriceInDollars: baseAssetDollarPrice.toBigInt(),
     },
-    borrowAPR: cometResponse.borrowAPR.toBigInt(),
-    earnAPR: cometResponse.earnAPR.toBigInt(),
+    borrowAPR,
+    earnAPR,
     ...getMarketRewardsAPRs(market, rewards, totalBaseSupplyInDollars, totalBaseBorrowInDollars),
     isRewardsLoading: rewards[0] === StateType.Loading
   };
