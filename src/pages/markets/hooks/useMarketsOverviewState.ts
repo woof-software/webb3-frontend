@@ -5,7 +5,6 @@ import { useContext, useMemo } from 'react';
 import RewardsStateContext from '@contexts/RewardsStateContext';
 import { isNonStablecoinMarket } from '@helpers/baseAssetPrice';
 import { convertApiResponse } from '@helpers/functions';
-import { filterLegacyCollateralSymbols } from '@helpers/legacyCollateral';
 import { getMarket, getMarketDescriptors } from '@helpers/markets';
 import { BASE_FACTOR, FACTOR_PRECISION, PRICE_PRECISION } from '@helpers/numbers';
 import { getMarketRewardsAPRs } from '@helpers/rewards';
@@ -135,11 +134,7 @@ export const sanitizeMarketSummary = (
     utilization: utilization,
     timestamp: marketSummary.timestamp,
     date: marketSummary.date,
-    collateralAssetSymbols: filterLegacyCollateralSymbols(
-      marketSummary.chainId,
-      baseAsset,
-      marketSummary.collateralAssetSymbols ?? []
-    ),
+    collateralAssetSymbols: marketSummary.collateralAssetSymbols ?? [],
     borrowAPR: borrowAPR,
     supplyAPR: supplyAPR,
     status: marketSummary.status,

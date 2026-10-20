@@ -8,7 +8,6 @@ import type { Web3 } from '@contexts/Web3Context';
 import { getAssetDisplayName, getAssetDisplaySymbol } from '@helpers/assets';
 import { MARKET_KEY_DELIMITER, MARKET_LOCAL_STORAGE_KEY } from '@helpers/constants';
 import { getIsDeprecatedwUSDMMarket } from '@helpers/deprecatedMarkets';
-import { isLegacyCollateral } from '@helpers/legacyCollateral';
 import { V2_MARKET, areSameMarket, getMarket, isV2Market, marketKey } from '@helpers/markets';
 import { REFRESH_INTERVAL } from '@helpers/numbers';
 import CometQuery from '@helpers/sleuth/out/CometQuery.sol/CometQuery.json';
@@ -225,18 +224,6 @@ const getState = async (
 
   const cometResponse = await queryCometData(providerConnection, market);
 
-  // Hide legacy collateral assets per Comet (Linear COM-18). This is the market-level
-  // list shown in the collateral table and supply options; the keep-if-held case for
-  // withdrawals is handled in useCometState.
-  const visibleCollateralAssets = cometResponse.collateralAssets.filter(
-    (assetInfo) =>
-      !isLegacyCollateral(
-        market.chainInformation.chainId,
-        market.baseAsset.symbol,
-        getAssetDisplaySymbol(assetInfo.collateralAsset, assetInfo.symbol, market.chainInformation),
-      ),
-  );
-
   const marketDataLoaded: MarketDataLoaded = {
     ...market,
     baseAsset: {
@@ -258,7 +245,7 @@ const getState = async (
     baseMinForRewards: cometResponse.baseMinForRewards.toBigInt(),
     baseTrackingBorrowSpeed: cometResponse.baseTrackingBorrowSpeed.toBigInt(),
     baseTrackingSupplySpeed: cometResponse.baseTrackingSupplySpeed.toBigInt(),
-    collateralAssets: visibleCollateralAssets.map((assetInfo) => ({
+    collateralAssets: cometResponse.collateralAssets.map((assetInfo) => ({
       address: assetInfo.collateralAsset,
       priceFeed: assetInfo.priceFeed,
       symbol: getAssetDisplaySymbol(assetInfo.collateralAsset, assetInfo.symbol, market.chainInformation),

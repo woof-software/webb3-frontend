@@ -22,22 +22,6 @@ const makeResponse = (chainId: number, cometAddress: string, collateralAssetSymb
 });
 
 describe('sanitizeMarketSummary', () => {
-  test('strips legacy collateral for mainnet USDC comet', () => {
-    const result = sanitizeMarketSummary(
-      MOCK_MARKETS,
-      makeResponse(1, MAINNET_USDC_COMET, ['WBTC', 'USDe', 'COMP', 'deUSD', 'LINK']) as any,
-    );
-    expect(result.collateralAssetSymbols).toEqual(['WBTC', 'COMP', 'LINK']);
-  });
-
-  test('leaves collateral untouched for non-configured comet', () => {
-    const result = sanitizeMarketSummary(
-      MOCK_MARKETS,
-      makeResponse(8453, '0x0000000000000000000000000000000000000001', ['WBTC', 'USDe', 'COMP']) as any,
-    );
-    expect(result.collateralAssetSymbols).toEqual(['WBTC', 'USDe', 'COMP']);
-  });
-
   test('returns empty array when collateralAssetSymbols is null', () => {
     const result = sanitizeMarketSummary(MOCK_MARKETS, makeResponse(1, MAINNET_USDC_COMET, null) as any);
     expect(result.collateralAssetSymbols).toEqual([]);
