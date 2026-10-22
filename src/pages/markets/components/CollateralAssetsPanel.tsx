@@ -1,10 +1,24 @@
 import { ReactNode } from 'react';
 
 import PanelWithHeader from '@components/PanelWithHeader';
+import TokenVisibilityToggle, { TokenVisibilityToggleProps } from '@components/TokenVisibilityToggle';
 
-const CollateralAssetsPanel = ({ children }: { children: ReactNode[] | ReactNode }) => {
+type CollateralAssetsPanelProps = {
+  children: ReactNode[] | ReactNode;
+  tokenVisibilityToggle?: TokenVisibilityToggleProps;
+};
+
+const CollateralAssetsPanel = ({ children, tokenVisibilityToggle }: CollateralAssetsPanelProps) => {
   return (
-    <PanelWithHeader header={'Collateral Assets'} className="assets-table-panel grid-column--12">
+    <PanelWithHeader
+      header={
+        <>
+          <label className="label L1 text-color--2">Collateral Assets</label>
+          {tokenVisibilityToggle && <TokenVisibilityToggle {...tokenVisibilityToggle} />}
+        </>
+      }
+      className="assets-table-panel grid-column--12"
+    >
       <div className="panel panel--markets-assets L3">
         <div className="panel--markets-assets__content">
           <table className="assets-table">

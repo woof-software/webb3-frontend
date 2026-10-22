@@ -123,6 +123,8 @@ export const sanitizeMarketSummary = (
 
   const market = getMarket(markets, marketSummary.chainId, marketSummary.comet.address);
 
+  const collaterals = (marketSummary.collaterals ?? []).filter((collateral) => !collateral.isDeprecated);
+
   return {
     chainId: marketSummary.chainId,
     comet: {
@@ -134,7 +136,10 @@ export const sanitizeMarketSummary = (
     utilization: utilization,
     timestamp: marketSummary.timestamp,
     date: marketSummary.date,
-    collateralAssetSymbols: marketSummary.collateralAssetSymbols ?? [],
+    collateralAssetSymbols: collaterals.map((collateral) => collateral.symbol),
+    topCollateralAssetSymbols: collaterals
+      .filter((collateral) => collateral.isVisible !== false)
+      .map((collateral) => collateral.symbol),
     borrowAPR: borrowAPR,
     supplyAPR: supplyAPR,
     status: marketSummary.status,

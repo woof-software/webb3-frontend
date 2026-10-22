@@ -5,12 +5,14 @@ import IconPair from '@components/IconPair';
 import { ArrowLeft, ExternalLink } from '@components/Icons';
 import { getSelectedMarketContext } from '@contexts/SelectedMarketContext';
 import type { Web3 } from '@contexts/Web3Context';
+import { MARKET_DETAILS_TOP_COLLATERAL_KEY } from '@helpers/constants';
 import { institutionalWhitelistStatus } from '@helpers/institutionalWhitelist';
 import { getMarket, isV2Market } from '@helpers/markets';
 import { formatTokenBalance, getTokenValue, PRICE_PRECISION } from '@helpers/numbers';
 import { getBlockExplorerUrlForAddress, INSTITUTIONAL_MARKET_URL } from '@helpers/urls';
 import { useMarkets } from '@hooks/useMarkets';
-import { CTokenWithMarketState, Currency, StateType, TokenWithMarketState } from '@types';
+import { useShowTopCollateralOnly } from '@hooks/useShowTopCollateralOnly';
+import { CTokenWithMarketState, Currency, StateType } from '@types';
 
 import AdditionalMarketDataPanel from './components/AdditionalMarketDataPanel';
 import AssetsTableRow from './components/AssetsTableRow';
@@ -31,6 +33,7 @@ type MarketsProps = {
 const Market = ({ web3 }: MarketsProps) => {
   const { selectedMarket } = useContext(getSelectedMarketContext());
   const [marketsStateType, marketsState] = useMarkets();
+  const [showTopCollateralOnly, toggleShowTopCollateralOnly] = useShowTopCollateralOnly(MARKET_DETAILS_TOP_COLLATERAL_KEY);
 
   const marketCurrencyToShow = Currency.USD;
 
@@ -169,25 +172,26 @@ const Market = ({ web3 }: MarketsProps) => {
       );
     }
 
+    const rows = collateralAssets.flatMap((token) => {
+      const collateral = market.collaterals?.find((c) => c.address.toLowerCase() === token.address.toLowerCase());
+
+      if (collateral?.isDeprecated || (showTopCollateralOnly && collateral?.isVisible === false)) return [];
+
+      const isError = collateral?.status === 'error';
+
+      const totalSupplyValue = isError ? 0 : (Number(token.totalSupply) / 10 ** token.decimals) * Number(token.price);
+
+      return [{ token, isError, totalSupplyValue }];
+    });
+
     assetRows = (
-      <CollateralAssetsPanel>
-        {collateralAssets
-          .sort((a: TokenWithMarketState, b: TokenWithMarketState): number =>
-            Number(a.totalSupply / BigInt(10 ** a.decimals)) * Number(a.price) >
-            Number(b.totalSupply / BigInt(10 ** b.decimals)) * Number(b.price)
-              ? -1
-              : 1
-          )
-          .map((token, index) => (
-            <AssetsTableRow
-              key={index}
-              state={[StateType.Hydrated, token, baseAsset]}
-              isCollateralError={
-                market.collaterals?.find(
-                  (collateral) => collateral.address.toLowerCase() === token.address.toLowerCase()
-                )?.status === 'error'
-              }
-            />
+      <CollateralAssetsPanel
+        tokenVisibilityToggle={{ checked: showTopCollateralOnly, onChange: toggleShowTopCollateralOnly }}
+      >
+        {rows
+          .sort((a, b) => b.totalSupplyValue - a.totalSupplyValue)
+          .map(({ token, isError }, index) => (
+            <AssetsTableRow key={index} state={[StateType.Hydrated, token, baseAsset]} isCollateralError={isError} />
           ))}
       </CollateralAssetsPanel>
     );

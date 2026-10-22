@@ -1,5 +1,6 @@
 import { ReactNode, useContext, useEffect, useState } from 'react';
 
+import TokenVisibilityToggle from '@components/TokenVisibilityToggle';
 import { isUnwrappedCollateralAsset } from '@constants/chains';
 import { getActionQueueContext } from '@contexts/ActionQueueContext';
 import RewardsStateContext from '@contexts/RewardsStateContext';
@@ -11,13 +12,14 @@ import {
   getActionFromPendingAction,
   sanitizedAmountForAction,
 } from '@helpers/actions';
+import { HOME_TOP_COLLATERAL_KEY } from '@helpers/constants';
 import { arrayPartition } from '@helpers/functions';
 import { getKeyForActions, PreEstimatedAction } from '@helpers/gasEstimator';
 import { institutionalWhitelistStatus } from '@helpers/institutionalWhitelist';
-import { getStatusCollateralAddress } from '@helpers/marketStatus';
 import { MAX_UINT256 } from '@helpers/numbers';
 import { isStETH, isWrappedStETH } from '@helpers/steth';
 import { useMarkets } from '@hooks/useMarkets';
+import { useShowTopCollateralOnly } from '@hooks/useShowTopCollateralOnly';
 import { Theme } from '@hooks/useThemeManager';
 import { AddTransaction } from '@hooks/useTransactionManager';
 import { useWriteCometState, WriteCometState } from '@hooks/useWriteCometState';
@@ -89,14 +91,33 @@ const Home = ({
 
   const [actionModalState, setActionModalState] = useState<ActionModalState>(undefined);
   const [compare, setCompare] = useState(false);
+  const [showTopCollateralOnly, toggleShowTopCollateralOnly] = useShowTopCollateralOnly(HOME_TOP_COLLATERAL_KEY);
   // A market the summary reports in the error status is shown like one whose on-chain data failed to load
   const selected = selectedMarket[1];
   const isMarketStatusError = selected?.status === 'error';
-  const getCollateralStatusFor = (assetAddress: string) => {
+
+  const getCollateralFor = (assetAddress: string) => {
     if (selected === undefined) return undefined;
-    const statusAddress = getStatusCollateralAddress(selected.chainInformation, assetAddress).toLowerCase();
-    return selected.collaterals?.find((collateral) => collateral.address.toLowerCase() === statusAddress)?.status;
+
+    const wrapped = Object.entries(selected.chainInformation.unwrappedCollateralAssets).find(
+      ([, unwrapped]) => unwrapped.address.toLowerCase() === assetAddress.toLowerCase()
+    );
+
+    const summaryAddress = (wrapped ? wrapped[0] : assetAddress).toLowerCase();
+
+    return selected.collaterals?.find((collateral) => collateral.address.toLowerCase() === summaryAddress);
   };
+
+  const isCollateralShown = (assetAddress: string, balance = 0n) => {
+    if (balance > 0n) return true;
+
+    const collateral = getCollateralFor(assetAddress);
+
+    if (collateral?.isDeprecated) return false;
+
+    return !showTopCollateralOnly || collateral?.isVisible !== false;
+  };
+
   const state: CometState = isMarketStatusError ? [StateType.Loading, undefined] : cometStateProp;
   const [cometState] = state;
 
@@ -127,11 +148,12 @@ const Home = ({
 
     mastheadState = [StateType.NoWallet, { baseAsset, earnAPR }];
     assetRows = collateralAssets
+      .filter((token) => isCollateralShown(token.address))
       .sort(sortTokensAlphabetically)
       .map((token, index) => (
         <AssetRow
           key={index}
-          state={[StateType.NoWallet, { asset: token, isCollateralError: getCollateralStatusFor(token.address) === 'error' }]}
+          state={[StateType.NoWallet, { asset: token, isCollateralError: getCollateralFor(token.address)?.status === 'error' }]}
         />
       ));
     positionCardState = [
@@ -428,7 +450,7 @@ const Home = ({
     ];
 
     const [unwrappedAdditionalCollateralAssets, onlyActualCollateralAssets] = arrayPartition(
-      collateralAssets,
+      collateralAssets.filter((asset) => isCollateralShown(asset.address, asset.balance)),
       (asset) => isUnwrappedCollateralAsset(market.chainInformation, asset.address)
     );
 
@@ -459,6 +481,7 @@ const Home = ({
         (action) =>
           action[0] === ActionType.SupplyCollateral && isStETH(action[1].symbol) && isWrappedStETH(token.symbol)
       );
+      const collateral = getCollateralFor(token.address);
       return (
         <AssetRow
           key={index}
@@ -470,7 +493,8 @@ const Home = ({
               baseAsset,
               pendingAction: pendingActionOrUndefined,
               transaction: blockingTransaction,
-              isCollateralError: getCollateralStatusFor(token.address) === 'error',
+              isCollateralError: collateral?.status === 'error',
+              isDeprecated: collateral?.isDeprecated,
               unwrappedAssetSupplyAction: stEthWrapSupplyAction,
               onDripClicked: () => {
                 writeState.drip(market, token.address);
@@ -527,7 +551,7 @@ const Home = ({
               baseAsset,
               pendingAction: pendingActionOrUndefined,
               transaction: blockingTransaction,
-              isCollateralError: getCollateralStatusFor(token.address) === 'error',
+              isCollateralError: getCollateralFor(token.address)?.status === 'error',
               wrappedAsset: matchingWrappedAsset,
               onCancelClicked: () => {
                 if (pendingActionOrUndefined) {
@@ -561,6 +585,9 @@ const Home = ({
       <div className="home__content grid-container">
         <div className="home__assets grid-column--7">
           <div className="panel panel--assets">
+            <div className="panel-with-header-wrapper">
+              <TokenVisibilityToggle checked={showTopCollateralOnly} onChange={toggleShowTopCollateralOnly} />
+            </div>
             <div className="panel__header-row">
               <label className="L2 label text-color--2">Collateral Asset</label>
               <label className="L2 label text-color--2">Protocol Balance</label>

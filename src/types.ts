@@ -375,6 +375,8 @@ export type LatestMarketSummaryResponse = {
     address: string;
     symbol: string;
     status: CollateralStatus;
+    isVisible?: boolean;
+    isDeprecated?: boolean;
   }[];
 };
 
@@ -444,6 +446,7 @@ export type MarketSummary = {
   utilization: bigint;
   timestamp: number;
   collateralAssetSymbols: string[];
+  topCollateralAssetSymbols: string[];
   date: string;
   isInstitutional?: boolean;
   isRewardsLoading?: boolean;

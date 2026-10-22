@@ -35,6 +35,7 @@ type AssetRowHydrated = [
     unwrappedAssetSupplyAction?: Action;
     wrappedAsset?: TokenWithAccountState;
     isCollateralError: boolean;
+    isDeprecated?: boolean;
     onCancelClicked: () => void;
     onEditClicked: () => void;
     onSupplyClicked: () => void;
@@ -130,6 +131,7 @@ function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, currency:
     pendingAction,
     transaction,
     unwrappedAssetSupplyAction,
+    isDeprecated,
     onCancelClicked,
     onEditClicked,
     onSupplyClicked,
@@ -138,7 +140,8 @@ function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, currency:
   } = state[1];
   const { decimals, price, balance, walletBalance } = asset as TokenWithAccountState;
   const assetRowModifier =
-    (pendingAction !== undefined ? ` asset-row--active` : '') + (isCollateralError ? ' asset-row--error' : '');
+    (pendingAction !== undefined ? ` asset-row--active` : '') +
+    (isCollateralError || isDeprecated ? ' asset-row--error' : '');
   const formattedWalletBalance = (
     <p className="L2 meta">&nbsp;•&nbsp;{formatValue(decimals, walletBalance)} in wallet</p>
   );
@@ -208,7 +211,7 @@ function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, currency:
             onSupplyClicked();
           }}
           className={`button${supplyButtonModifier}`}
-          disabled={walletBalance === 0n || transaction !== undefined || isCollateralError}
+          disabled={walletBalance === 0n || transaction !== undefined || isCollateralError || isDeprecated}
         >
           <Plus />
           <span className={supplyButtonTextClass}>Supply</span>
@@ -344,11 +347,13 @@ const AssetRow = ({ state }: AssetRowProps) => {
 
   const abbrSymbol = asset.symbol === 'wsuperOETHb' ? '...OETHb' : asset.symbol;
   const isCollateralError = state[1].isCollateralError === true;
+  const isDeprecated = state[0] === StateType.Hydrated && state[1].isDeprecated === true;
+  const isDimmed = isCollateralError || isDeprecated;
 
   const assetIcon = (
     <span
       className={`asset asset--${assetIconForAssetSymbol(asset.symbol)}${
-        isCollateralError ? ' asset-row__icon--disabled' : ''
+        isDimmed ? ' asset-row__icon--disabled' : ''
       }`}
       onClick={onIconClick}
     ></span>
@@ -363,7 +368,7 @@ const AssetRow = ({ state }: AssetRowProps) => {
     >
       <div className={`asset-row__hover${hoverModifier}`}></div>
       {/* A collateral in the error status shows its status over the error badge instead of the asset details */}
-      <Tooltip content={tooltipContent} width={340} hideArrow={true} yOffset={30} disabled={isCollateralError}>
+      <Tooltip content={tooltipContent} width={340} hideArrow={true} yOffset={30} disabled={isDimmed}>
         <div
           className="asset-row__detail-content"
           onMouseEnter={() => {
@@ -389,11 +394,21 @@ const AssetRow = ({ state }: AssetRowProps) => {
                 </span>
               </Tooltip>
             </span>
+          ) : isDeprecated ? (
+            <Tooltip
+              open={hoverModifier !== ''}
+              content={<span className="asset-row__tooltip-text">{'Collateral deprecated. Withdrawals only.'}</span>}
+              width={154}
+              interactive={true}
+              yOffset={16}
+            >
+              <span className="asset-row__icon-container asset-row__icon-container--deprecated">{assetIcon}</span>
+            </Tooltip>
           ) : (
             assetIcon
           )}
           <div className="asset-row__info">
-            <p className={`body${isCollateralError ? ' text-color--3' : ''}`}>{asset.name}</p>
+            <p className={`body${isDimmed ? ' text-color--3' : ''}`}>{asset.name}</p>
             <div className="asset-row__info__details meta L2">
               {abbrSymbol}
               {displayWalletBalance}

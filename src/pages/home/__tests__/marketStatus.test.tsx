@@ -16,6 +16,7 @@ import {
   PendingAction,
   SelectedMarketData,
   StateType,
+  TokenWithAccountState,
 } from '@types';
 
 import { mockBaseAsset } from '../../../../__tests__/mocks/mockBaseAsset';
@@ -27,7 +28,10 @@ import Home from '../index';
 const writeState = { approve: jest.fn(), supply: jest.fn(), withdraw: jest.fn() };
 jest.mock('@hooks/useWriteCometState', () => ({ useWriteCometState: () => writeState }));
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  window.localStorage.clear();
+});
 
 const selected: SelectedMarketData = {
   selectedMarket: [StateType.Hydrated, MOCK_DEFAULT_MARKET],
@@ -50,12 +54,12 @@ const makeActionQueue = (actions: Action[] = [], pendingAction?: PendingAction):
 });
 initializeActionQueue(makeActionQueue());
 
-const cometState: CometState = [
+const makeCometState = (collateral: TokenWithAccountState): CometState => [
   StateType.Hydrated,
   {
     baseAsset: mockBaseAsset(),
     borrowAPR: 0n,
-    collateralAssets: [wbtc],
+    collateralAssets: [collateral],
     earnAPR: 0n,
     totalBaseSupplyUsd: 0n,
     borrowRewardsAPR: 0n,
@@ -69,6 +73,8 @@ const cometState: CometState = [
 type RenderOptions = {
   status?: MarketStatus;
   isWbtcError?: boolean;
+  wbtcAsset?: TokenWithAccountState;
+  wbtcFlags?: { isVisible?: boolean; isDeprecated?: boolean };
   actions?: Action[];
   pendingAction?: PendingAction;
 };
@@ -76,6 +82,8 @@ type RenderOptions = {
 const renderHome = ({
   status = 'success',
   isWbtcError = false,
+  wbtcAsset = wbtc,
+  wbtcFlags,
   actions,
   pendingAction,
 }: RenderOptions) => {
@@ -85,7 +93,9 @@ const renderHome = ({
   const market: MarketData = {
     ...MOCK_DEFAULT_MARKET,
     status,
-    collaterals: [{ address: wbtc.address.toLowerCase(), symbol: wbtc.symbol, status: isWbtcError ? 'error' : 'success' }],
+    collaterals: [
+      { address: wbtc.address.toLowerCase(), symbol: wbtc.symbol, status: isWbtcError ? 'error' : 'success', ...wbtcFlags },
+    ],
   };
   const selectedMarketData: SelectedMarketData = { ...selected, selectedMarket: [StateType.Hydrated, market] };
 
@@ -99,7 +109,7 @@ const renderHome = ({
               transactions={[]}
               web3={mockWeb3}
               selectedMarketData={selectedMarketData}
-              cometState={cometState}
+              cometState={makeCometState(wbtcAsset)}
               addTransaction={jest.fn()}
               switchWriteNetwork={jest.fn()}
               estimatedGasMap={new Map()}
@@ -167,4 +177,43 @@ describe('Home — collateral status', () => {
       expect(writeState.withdraw).not.toHaveBeenCalled();
     }
   );
+});
+
+describe('Home — collateral visibility', () => {
+  const isWbtcShown = () => screen.queryAllByText('Wrapped Bitcoin').length > 0;
+
+  test('a deprecated collateral the user holds is marked and can only be withdrawn', () => {
+    renderHome({ wbtcFlags: { isDeprecated: true } });
+    const row = document.querySelector('.asset-row--error') as HTMLElement;
+
+    expect(row).not.toBeNull();
+    expect(within(row).getAllByRole('button', { name: /Supply/ })[0]).toBeDisabled();
+    expect(within(row).getAllByRole('button', { name: /Withdraw/ })[0]).toBeEnabled();
+  });
+
+  test('a deprecated collateral the user does not hold is hidden even with the toggle off', async () => {
+    renderHome({ wbtcAsset: { ...wbtc, balance: 0n }, wbtcFlags: { isDeprecated: true } });
+    expect(isWbtcShown()).toBe(false);
+
+    await userEvent.click(screen.getByRole('checkbox', { name: /Show top collateral only/ }));
+
+    expect(isWbtcShown()).toBe(false);
+  });
+
+  test('a collateral that is not visible is hidden until the toggle is turned off', async () => {
+    renderHome({ wbtcAsset: { ...wbtc, balance: 0n }, wbtcFlags: { isVisible: false } });
+    expect(isWbtcShown()).toBe(false);
+
+    await userEvent.click(screen.getByRole('checkbox', { name: /Show top collateral only/ }));
+
+    expect(isWbtcShown()).toBe(true);
+  });
+
+  test('a collateral that is not visible stays shown with every operation while the user holds it', () => {
+    renderHome({ wbtcFlags: { isVisible: false } });
+
+    const row = document.querySelector('.asset-row') as HTMLElement;
+    expect(within(row).getAllByRole('button', { name: /Supply/ })[0]).toBeEnabled();
+    expect(within(row).getAllByRole('button', { name: /Withdraw/ })[0]).toBeEnabled();
+  });
 });

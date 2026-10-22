@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 
 import '@testing-library/jest-dom';
+import { MARKETS_TOP_COLLATERAL_KEY } from '@helpers/constants';
 import { LatestMarketSummaries, MarketSummary } from '@types';
 
 import { MockMarketsProvider } from '../../../../../__tests__/mocks/mockMarkets';
@@ -19,6 +20,7 @@ const makeSummary = (chainId: number, address: string, overrides: Partial<Market
   utilization: 0n,
   timestamp: 0,
   collateralAssetSymbols: [],
+  topCollateralAssetSymbols: [],
   date: '2026-06-22',
   borrowRewardsAPR: 0n,
   supplyRewardsAPR: 0n,
@@ -103,6 +105,7 @@ describe('MarketOverviewPanels — market statuses', () => {
       makeSummary(1, USDC_COMET, {
         status: 'partially',
         collateralAssetSymbols: ['WBTC', 'LINK'],
+        topCollateralAssetSymbols: ['WBTC', 'LINK'],
         errorCollateralSymbols: ['LINK'],
       }),
     ]);
@@ -111,5 +114,26 @@ describe('MarketOverviewPanels — market statuses', () => {
     expect(icons[0]).not.toHaveClass('market-overview-panels__collateral-asset-icon--error');
     expect(icons[1]).toHaveClass('market-overview-panels__collateral-asset-icon--error');
   });
+});
 
+describe('MarketOverviewPanels — top collateral toggle', () => {
+  const USDC_COMET = '0xc3d688b66703497daa19211eedff47f25384cdc3';
+
+  beforeEach(() => window.localStorage.clear());
+
+  test('shows only the top collaterals until the toggle is turned off, and remembers it', async () => {
+    renderPanels([
+      makeSummary(1, USDC_COMET, { collateralAssetSymbols: ['WBTC', 'COMP'], topCollateralAssetSymbols: ['WBTC'] }),
+    ]);
+    const getIcons = () =>
+      (screen.getByText('USD Coin').closest('tr') as HTMLElement).querySelectorAll(
+        '.market-overview-panels__collateral-asset-icon'
+      );
+    expect(getIcons()).toHaveLength(1);
+
+    await userEvent.click(screen.getByRole('checkbox', { name: /Show top collateral only/ }));
+
+    expect(getIcons()).toHaveLength(2);
+    expect(window.localStorage.getItem(MARKETS_TOP_COLLATERAL_KEY)).toBe('false');
+  });
 });

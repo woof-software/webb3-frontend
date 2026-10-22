@@ -64,6 +64,12 @@
     flex-shrink: 0;
   }
 
+  &__icon-container--deprecated {
+    border-radius: 50%;
+    outline: 1px dashed $neutral--00;
+    outline-offset: 2px;
+  }
+
   &__error-icon {
     position: absolute;
     top: -0.3125rem;
@@ -152,5 +158,11 @@
     & {
       padding: 1.125rem 0.25rem;
     }
+  }
+}
+
+.theme--light {
+  .asset-row__icon-container--deprecated {
+    outline-color: $neutral--90;
   }
 }

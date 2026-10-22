@@ -2,6 +2,13 @@
 @use '../base/typography' as *;
 
 .market-overview-panels {
+  &__controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
   &__dropdowns {
     display: flex;
     gap: 1rem;
@@ -376,5 +383,10 @@
     &:hover {
       --institutional-row-base: #e0e4e9;
     }
+  }
+
+  // The "!" is a cutout in the icon, so a circle behind it colors the mark
+  .market-overview-panels__exclamation {
+    background: radial-gradient(circle, $neutral--90 4.5px, transparent 4.5px);
   }
 };
