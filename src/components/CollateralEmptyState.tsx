@@ -4,7 +4,7 @@ type CollateralEmptyStateProps = {
 };
 
 const CollateralEmptyState = (props: CollateralEmptyStateProps) => {
-  const { isFiltered, className } = props;
+  const { isFiltered, className = '' } = props;
 
   return (
     <div className={`collateral-empty-state ${className}`}>
@@ -13,7 +13,7 @@ const CollateralEmptyState = (props: CollateralEmptyStateProps) => {
       </p>
       {isFiltered && <p className="L3 text-color--2">Turn off the filter to view all assets.</p>}
     </div>
-  )
-}
+  );
+};
 
 export default CollateralEmptyState;
