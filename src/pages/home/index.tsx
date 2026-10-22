@@ -1,5 +1,6 @@
 import { ReactNode, useContext, useEffect, useState } from 'react';
 
+import CollateralEmptyState from '@components/CollateralEmptyState';
 import TokenVisibilityToggle from '@components/TokenVisibilityToggle';
 import { isUnwrappedCollateralAsset } from '@constants/chains';
 import { getActionQueueContext } from '@contexts/ActionQueueContext';
@@ -588,11 +589,17 @@ const Home = ({
             <div className="panel-with-header-wrapper">
               <TokenVisibilityToggle checked={showTopCollateralOnly} onChange={toggleShowTopCollateralOnly} />
             </div>
-            <div className="panel__header-row">
-              <label className="L2 label text-color--2">Collateral Asset</label>
-              <label className="L2 label text-color--2">Protocol Balance</label>
-            </div>
-            {assetRows}
+            {assetRows.length === 0 ? (
+              <CollateralEmptyState isFiltered={showTopCollateralOnly} className={'panel__empty-state'}/>
+            ) : (
+              <>
+                <div className="panel__header-row">
+                  <label className="L2 label text-color--2">Collateral Asset</label>
+                  <label className="L2 label text-color--2">Protocol Balance</label>
+                </div>
+                {assetRows}
+              </>
+            )}
           </div>
           {otherAssetRows.length > 0 && (
             <div className="panel panel--assets">
