@@ -4,8 +4,8 @@ import { CircleExclamation } from '@components/Icons';
 import Tooltip from '@components/Tooltip';
 
 export type TokenVisibilityToggleProps = {
-  checked: boolean;
-  onChange: () => void;
+  checked?: boolean;
+  onChange?: () => void;
 };
 
 const TokenVisibilityToggle = (props: TokenVisibilityToggleProps) => {

@@ -1,14 +1,30 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-export function useShowTopCollateralOnly(storageKey: string): [boolean, () => void] {
-  const [showTopCollateralOnly, setShowTopCollateralOnly] = useState(
-    () => window.localStorage.getItem(storageKey) !== 'false'
-  );
-
-  const toggle = () => {
-    window.localStorage.setItem(storageKey, String(!showTopCollateralOnly));
-    setShowTopCollateralOnly(!showTopCollateralOnly);
+export function useLocalStorage<T>(storageKey: string, defaultValue: T): [T, (value: T) => void] {
+  const parse = (stored: string | null): T => {
+    try {
+      return JSON.parse(stored ?? 'null') ?? defaultValue;
+    } catch {
+      return defaultValue;
+    }
   };
 
-  return [showTopCollateralOnly, toggle];
+  const [value, setValue] = useState<T>(() => parse(window.localStorage.getItem(storageKey)));
+
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === storageKey) setValue(parse(event.newValue));
+    };
+
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [storageKey]);
+
+  return [
+    value,
+    (newValue) => {
+      window.localStorage.setItem(storageKey, JSON.stringify(newValue));
+      setValue(newValue);
+    },
+  ];
 }

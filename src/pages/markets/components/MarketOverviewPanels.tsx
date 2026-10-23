@@ -16,9 +16,9 @@ import { MARKETS_TOP_COLLATERAL_KEY } from '@helpers/constants';
 import { InstitutionalWhitelistStatus } from '@helpers/institutionalWhitelist';
 import { getMarket, getMarketDescriptors } from '@helpers/markets';
 import { formatRateFactor, formatValueInDollars, PRICE_PRECISION } from '@helpers/numbers';
+import { useLocalStorage } from '@hooks/useLocalStorage';
 import { useMarkets } from '@hooks/useMarkets';
 import useOnClickOutside from '@hooks/useOnClickOutside';
-import { useShowTopCollateralOnly } from '@hooks/useShowTopCollateralOnly';
 
 import { LatestMarketSummaries, MarketSummary, StateType } from '../../../types';
 import { BoostedRateInfo } from '../BoostedRateInfo';
@@ -45,7 +45,7 @@ const MarketOverviewPanels = ({ latestMarketSummaries, institutionalWhitelistSta
   const [sortByDropdownActive, setSortByDropdownActive] = useState<boolean>(false);
   const [sortOrderDropdownActive, setSortOrderDropdownActive] = useState<boolean>(false);
   const [showInactive, setShowInactive] = useState<boolean>(false);
-  const [showTopCollateralOnly, toggleShowTopCollateralOnly] = useShowTopCollateralOnly(MARKETS_TOP_COLLATERAL_KEY);
+  const [showTopCollateralOnly, setShowTopCollateralOnly] = useLocalStorage(MARKETS_TOP_COLLATERAL_KEY, true);
 
   const sortByDropdownRef = useRef(null);
   useOnClickOutside(sortByDropdownRef, () => setSortByDropdownActive(false));
@@ -153,7 +153,7 @@ const MarketOverviewPanels = ({ latestMarketSummaries, institutionalWhitelistSta
         </div>
         <TokenVisibilityToggle
           checked={showTopCollateralOnly}
-          onChange={toggleShowTopCollateralOnly}
+          onChange={() => setShowTopCollateralOnly(!showTopCollateralOnly)}
         />
       </div>
 

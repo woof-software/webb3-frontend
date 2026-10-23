@@ -6,10 +6,9 @@ import TokenVisibilityToggle, { TokenVisibilityToggleProps } from '@components/T
 
 type CollateralAssetsPanelProps = {
   children: ReactNode[];
-  tokenVisibilityToggle?: TokenVisibilityToggleProps;
-};
+} & TokenVisibilityToggleProps;
 
-const CollateralAssetsPanel = ({ children, tokenVisibilityToggle }: CollateralAssetsPanelProps) => {
+const CollateralAssetsPanel = ({ children, ...tokenVisibilityToggle }: CollateralAssetsPanelProps) => {
   return (
     <PanelWithHeader
       header={

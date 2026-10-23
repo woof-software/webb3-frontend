@@ -10,8 +10,8 @@ import { institutionalWhitelistStatus } from '@helpers/institutionalWhitelist';
 import { getMarket, isV2Market } from '@helpers/markets';
 import { formatTokenBalance, getTokenValue, PRICE_PRECISION } from '@helpers/numbers';
 import { getBlockExplorerUrlForAddress, INSTITUTIONAL_MARKET_URL } from '@helpers/urls';
+import { useLocalStorage } from '@hooks/useLocalStorage';
 import { useMarkets } from '@hooks/useMarkets';
-import { useShowTopCollateralOnly } from '@hooks/useShowTopCollateralOnly';
 import { CTokenWithMarketState, Currency, StateType } from '@types';
 
 import AdditionalMarketDataPanel from './components/AdditionalMarketDataPanel';
@@ -33,7 +33,7 @@ type MarketsProps = {
 const Market = ({ web3 }: MarketsProps) => {
   const { selectedMarket } = useContext(getSelectedMarketContext());
   const [marketsStateType, marketsState] = useMarkets();
-  const [showTopCollateralOnly, toggleShowTopCollateralOnly] = useShowTopCollateralOnly(MARKET_DETAILS_TOP_COLLATERAL_KEY);
+  const [showTopCollateralOnly, setShowTopCollateralOnly] = useLocalStorage(MARKET_DETAILS_TOP_COLLATERAL_KEY, true);
 
   const marketCurrencyToShow = Currency.USD;
 
@@ -186,7 +186,8 @@ const Market = ({ web3 }: MarketsProps) => {
 
     assetRows = (
       <CollateralAssetsPanel
-        tokenVisibilityToggle={{ checked: showTopCollateralOnly, onChange: toggleShowTopCollateralOnly }}
+        checked={showTopCollateralOnly}
+        onChange={() => setShowTopCollateralOnly(!showTopCollateralOnly)}
       >
         {rows
           .sort((a, b) => b.totalSupplyValue - a.totalSupplyValue)

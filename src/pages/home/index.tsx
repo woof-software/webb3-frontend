@@ -19,8 +19,8 @@ import { getKeyForActions, PreEstimatedAction } from '@helpers/gasEstimator';
 import { institutionalWhitelistStatus } from '@helpers/institutionalWhitelist';
 import { MAX_UINT256 } from '@helpers/numbers';
 import { isStETH, isWrappedStETH } from '@helpers/steth';
+import { useLocalStorage } from '@hooks/useLocalStorage';
 import { useMarkets } from '@hooks/useMarkets';
-import { useShowTopCollateralOnly } from '@hooks/useShowTopCollateralOnly';
 import { Theme } from '@hooks/useThemeManager';
 import { AddTransaction } from '@hooks/useTransactionManager';
 import { useWriteCometState, WriteCometState } from '@hooks/useWriteCometState';
@@ -92,7 +92,7 @@ const Home = ({
 
   const [actionModalState, setActionModalState] = useState<ActionModalState>(undefined);
   const [compare, setCompare] = useState(false);
-  const [showTopCollateralOnly, toggleShowTopCollateralOnly] = useShowTopCollateralOnly(HOME_TOP_COLLATERAL_KEY);
+  const [showTopCollateralOnly, setShowTopCollateralOnly] = useLocalStorage(HOME_TOP_COLLATERAL_KEY, true);
   // A market the summary reports in the error status is shown like one whose on-chain data failed to load
   const selected = selectedMarket[1];
   const isMarketStatusError = selected?.status === 'error';
@@ -587,7 +587,7 @@ const Home = ({
         <div className="home__assets grid-column--7">
           <div className="panel panel--assets">
             <div className="panel-with-header-wrapper">
-              <TokenVisibilityToggle checked={showTopCollateralOnly} onChange={toggleShowTopCollateralOnly} />
+              <TokenVisibilityToggle checked={showTopCollateralOnly} onChange={() => setShowTopCollateralOnly(!showTopCollateralOnly)} />
             </div>
             {assetRows.length === 0 ? (
               <CollateralEmptyState isFiltered={showTopCollateralOnly} className={'panel__empty-state'}/>
