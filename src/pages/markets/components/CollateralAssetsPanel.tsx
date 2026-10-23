@@ -6,9 +6,10 @@ import TokenVisibilityToggle, { TokenVisibilityToggleProps } from '@components/T
 
 type CollateralAssetsPanelProps = {
   children: ReactNode[];
+  isFiltered?: boolean;
 } & TokenVisibilityToggleProps;
 
-const CollateralAssetsPanel = ({ children, ...tokenVisibilityToggle }: CollateralAssetsPanelProps) => {
+const CollateralAssetsPanel = ({ children, isFiltered = false, ...tokenVisibilityToggle }: CollateralAssetsPanelProps) => {
   return (
     <PanelWithHeader
       header={
@@ -21,7 +22,7 @@ const CollateralAssetsPanel = ({ children, ...tokenVisibilityToggle }: Collatera
     >
       <div className="panel panel--markets-assets L3">
         {children.length === 0 ? (
-          <CollateralEmptyState isFiltered={!!tokenVisibilityToggle?.checked} />
+          <CollateralEmptyState isFiltered={isFiltered} />
         ) : (
           <div className="panel--markets-assets__content">
             <table className="assets-table">

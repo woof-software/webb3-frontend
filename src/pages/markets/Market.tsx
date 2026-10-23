@@ -188,6 +188,7 @@ const Market = ({ web3 }: MarketsProps) => {
       <CollateralAssetsPanel
         checked={showTopCollateralOnly}
         onChange={() => setShowTopCollateralOnly(!showTopCollateralOnly)}
+        isFiltered={showTopCollateralOnly && !!market.collaterals?.some((c) => !c.isDeprecated && c.isVisible === false)}
       >
         {rows
           .sort((a, b) => b.totalSupplyValue - a.totalSupplyValue)

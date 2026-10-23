@@ -119,6 +119,9 @@ const Home = ({
     return !showTopCollateralOnly || collateral?.isVisible !== false;
   };
 
+  const isFilterHidingCollateral =
+    showTopCollateralOnly && !!selected?.collaterals?.some((c) => !c.isDeprecated && c.isVisible === false);
+
   const state: CometState = isMarketStatusError ? [StateType.Loading, undefined] : cometStateProp;
   const [cometState] = state;
 
@@ -590,7 +593,7 @@ const Home = ({
               <TokenVisibilityToggle checked={showTopCollateralOnly} onChange={() => setShowTopCollateralOnly(!showTopCollateralOnly)} />
             </div>
             {assetRows.length === 0 ? (
-              <CollateralEmptyState isFiltered={showTopCollateralOnly} className={'panel__empty-state'}/>
+              <CollateralEmptyState isFiltered={isFilterHidingCollateral} className={'panel__empty-state'}/>
             ) : (
               <>
                 <div className="panel__header-row">
