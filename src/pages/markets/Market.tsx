@@ -79,7 +79,10 @@ const Market = ({ web3 }: MarketsProps) => {
   } else if (marketStateType === StateType.Loading || market === undefined) {
     marketOverviewPanel = <MarketOverviewPanel state={[StateType.Loading, undefined]} />;
     assetRows = (
-      <CollateralAssetsPanel>
+      <CollateralAssetsPanel
+        checked={showTopCollateralOnly}
+        onChange={() => setShowTopCollateralOnly(!showTopCollateralOnly)}
+      >
         {[...Array(5)].map((_, index) => (
           <AssetsTableRow key={index} state={[StateType.Loading]} />
         ))}
