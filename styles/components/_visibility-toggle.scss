@@ -70,7 +70,6 @@
     left: 0;
     margin: auto 0;
     transform: translateX(0);
-    // Not `all`: the theme class lands after the first paint, and a color transition would flash the light theme
     transition: transform 80ms linear;
   }
 
