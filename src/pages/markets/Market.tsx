@@ -175,9 +175,9 @@ const Market = ({ web3 }: MarketsProps) => {
     const rows = collateralAssets.flatMap((token) => {
       const collateral = market.collaterals?.find((c) => c.address.toLowerCase() === token.address.toLowerCase());
 
-      if (collateral?.isDeprecated || (showTopCollateralOnly && collateral?.isVisible === false)) return [];
-
       const isError = collateral?.status === 'error';
+
+      if (collateral?.isDeprecated || (showTopCollateralOnly && collateral?.isVisible === false && !isError)) return [];
 
       const totalSupplyValue = isError ? 0 : (Number(token.totalSupply) / 10 ** token.decimals) * Number(token.price);
 
