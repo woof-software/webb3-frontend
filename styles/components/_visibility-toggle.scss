@@ -23,6 +23,12 @@
     align-items: center;
   }
 
+  &__hint-suffix {
+    @media (max-width: $device--xs) {
+      display: none;
+    }
+  }
+
   &__icon {
     display: flex;
     margin-left: 0.5rem;

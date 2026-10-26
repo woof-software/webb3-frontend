@@ -21,7 +21,7 @@ const TokenVisibilityToggle = (props: TokenVisibilityToggleProps) => {
     <span className={`visibility-toggle${checked ? ' visibility-toggle--checked' : ''}`}>
       <label className='visibility-toggle__label L2 label text-color--2'>
         <span className='visibility-toggle__hint' onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
-          Show top collateral only
+          Show top<span className='visibility-toggle__hint-suffix'>&nbsp;collateral only</span>
           <Tooltip
             open={hovered}
             width={240}
