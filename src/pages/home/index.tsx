@@ -116,8 +116,11 @@ const Home = ({
 
     if (collateral?.isDeprecated) return false;
 
-    return !showTopCollateralOnly || collateral?.isVisible !== false;
+    return !showTopCollateralOnly || collateral?.isVisible !== false || collateral?.status === 'error';
   };
+
+  const sortErrorsLast = (a: Token, b: Token) =>
+    Number(getCollateralFor(a.address)?.status === 'error') - Number(getCollateralFor(b.address)?.status === 'error');
 
   const isFilterHidingCollateral =
     showTopCollateralOnly && !!selected?.collaterals?.some((c) => !c.isDeprecated && c.isVisible === false);
@@ -154,6 +157,7 @@ const Home = ({
     assetRows = collateralAssets
       .filter((token) => isCollateralShown(token.address))
       .sort(sortTokensAlphabetically)
+      .sort(sortErrorsLast)
       .map((token, index) => (
         <AssetRow
           key={index}
@@ -468,7 +472,11 @@ const Home = ({
       .filter((asset) => asset.balance === 0n && asset.walletBalance === 0n)
       .sort(sortTokensAlphabetically);
 
-    assetRows = [...positiveBalanceAssets, ...zeroProtocolBalanceAssets, ...zeroBalanceAssets].map((token, index) => {
+    const sortedAssets = [...positiveBalanceAssets, ...zeroProtocolBalanceAssets, ...zeroBalanceAssets].sort(
+      sortErrorsLast
+    );
+
+    assetRows = sortedAssets.map((token, index) => {
       const action = actions.find((action) => action[0] !== ActionType.ClaimRewards && isSameToken(action[1], token));
       let displayAction: Action | undefined;
       if (action !== undefined) {
