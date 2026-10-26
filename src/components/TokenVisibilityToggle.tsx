@@ -6,11 +6,16 @@ import Tooltip from '@components/Tooltip';
 export type TokenVisibilityToggleProps = {
   checked?: boolean;
   onChange?: () => void;
+  isLoading?: boolean;
 };
 
 const TokenVisibilityToggle = (props: TokenVisibilityToggleProps) => {
-  const { checked, onChange } = props;
+  const { checked, onChange, isLoading } = props;
   const [hovered, setHovered] = useState(false);
+
+  if (isLoading) {
+    return <span className="placeholder-content" style={{ width: '13.5rem', height: '1.5rem' }}></span>;
+  }
 
   return (
     <span className={`visibility-toggle${checked ? ' visibility-toggle--checked' : ''}`}>

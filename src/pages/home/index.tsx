@@ -590,7 +590,11 @@ const Home = ({
         <div className="home__assets grid-column--7">
           <div className="panel panel--assets">
             <div className="panel-with-header-wrapper">
-              <TokenVisibilityToggle checked={showTopCollateralOnly} onChange={() => setShowTopCollateralOnly(!showTopCollateralOnly)} />
+              <TokenVisibilityToggle
+                checked={showTopCollateralOnly}
+                onChange={() => setShowTopCollateralOnly(!showTopCollateralOnly)}
+                isLoading={cometState === StateType.Loading}
+              />
             </div>
             {assetRows.length === 0 ? (
               <CollateralEmptyState isFiltered={isFilterHidingCollateral} className={'panel__empty-state'}/>

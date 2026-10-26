@@ -661,9 +661,12 @@ export const MarketOverviewPanelsLoading = () => {
 
   return (
     <>
-      <div className="market-overview-panels__dropdowns">
-        <h1 className="placeholder-content" style={{ width: '8rem', height: '2rem' }}></h1>
-        <h1 className="placeholder-content" style={{ width: '8rem', height: '2rem' }}></h1>
+      <div className="market-overview-panels__controls">
+        <div className="market-overview-panels__dropdowns">
+          <h1 className="placeholder-content" style={{ width: '8rem', height: '1.5rem' }}></h1>
+          <h1 className="placeholder-content" style={{ width: '8rem', height: '1.5rem' }}></h1>
+        </div>
+        <TokenVisibilityToggle isLoading={true} />
       </div>
 
       {Array.from(Array(numPanels).keys()).map((i) => (

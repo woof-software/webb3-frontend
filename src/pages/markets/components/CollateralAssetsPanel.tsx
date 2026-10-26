@@ -15,7 +15,7 @@ const CollateralAssetsPanel = ({ children, isFiltered = false, ...tokenVisibilit
       header={
         <>
           <label className="label L1 text-color--2">Collateral Assets</label>
-          {tokenVisibilityToggle && <TokenVisibilityToggle {...tokenVisibilityToggle} />}
+          <TokenVisibilityToggle {...tokenVisibilityToggle} />
         </>
       }
       className="assets-table-panel grid-column--12"
