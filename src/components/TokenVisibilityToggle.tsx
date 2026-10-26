@@ -32,7 +32,7 @@ const TokenVisibilityToggle = (props: TokenVisibilityToggleProps) => {
               </span>
             }
           >
-            <span className='visibility-toggle__icon'>
+            <span className='visibility-toggle__icon' onClick={(e) => e.preventDefault()}>
               <CircleExclamation className='svg--icon--3' />
             </span>
           </Tooltip>
