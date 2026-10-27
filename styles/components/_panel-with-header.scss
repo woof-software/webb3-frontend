@@ -11,6 +11,13 @@
   align-items: center;
   justify-content: end;
   padding: 0 2.5rem;
+
+  @media (max-width: $device--sm) {
+    top: -2rem;
+    left: -0.75rem;
+    width: calc(100% + 1.5rem);
+    padding: 0 2rem;
+  }
 }
 
 .panel-with-header {
