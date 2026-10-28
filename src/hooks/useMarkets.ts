@@ -76,8 +76,19 @@ const MARKET_OVERRIDES: Record<string, Pick<MarketData, 'isNew' | 'rewardsOverwr
 };
 
 function toMarketData(entry: LatestMarketSummaryResponse): MarketData {
-  const { chainId, comet, deploymentKey, displayName, baseAssetName, slug, isInstitutional, status, collaterals } =
-    entry;
+  const {
+    chainId,
+    comet,
+    deploymentKey,
+    displayName,
+    baseAssetName,
+    slug,
+    isInstitutional,
+    status,
+    collaterals,
+    isInactive,
+    utilization,
+  } = entry;
 
   const chainInformation = CHAINS[chainId];
 
@@ -105,6 +116,8 @@ function toMarketData(entry: LatestMarketSummaryResponse): MarketData {
     institutional: isInstitutional || false,
     status,
     collaterals,
+    isInactive,
+    utilization,
     ...MARKET_OVERRIDES[`${chainId}:${deploymentKey}`],
     type: 'MarketData',
   };

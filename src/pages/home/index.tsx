@@ -101,6 +101,7 @@ import {
 
 import ActionModal from './components/ActionModal';
 import AssetRow from './components/AssetRow';
+import InactiveMarketBanner from './components/InactiveMarketBanner';
 import InstitutionalBanner from './components/InstitutionalBanner';
 import Masthead, { MastheadNotice, MastheadState } from './components/Masthead';
 import PositionCard, { PositionCardState } from './components/PositionCard';
@@ -677,6 +678,7 @@ const Home = ({
   const wrapperAddress = lendingRoute.kind === 'wrapped' ? lendingRoute.market?.wrapperAddress : undefined;
   const isWrapperTransaction = (transaction: Transaction) =>
     wrapperAddress !== undefined && transaction.key.toLowerCase() === wrapperAddress.toLowerCase();
+  let hasPositions = false;
 
   const whitelistStatus = institutionalWhitelistStatus(web3.read.account);
 
@@ -843,6 +845,13 @@ const Home = ({
       ) ||
       // A kept callback writes through the session it was made in, whatever the live balances allow.
       !isSameWalletSession(walletSession, liveWalletSession.current);
+
+    // On an inactive market borrowers can still add collateral at high utilization to defend their positions
+    const hasBorrow = baseAsset.balance < 0n;
+    const isUtilizationHigh = BigInt(market.utilization ?? 0) >= 9n * 10n ** 17n;
+    const isCollateralSupplyLocked = market.isInactive === true && !(hasBorrow && isUtilizationHigh);
+    const showUtilizationTooltip = isCollateralSupplyLocked && hasBorrow;
+    hasPositions = baseAsset.balance !== 0n || collateralAssets.some((asset) => asset.balance > 0n);
 
     const actions = getActions(baseAsset, collateralAssets, rewards);
     // The same queue against the Comet base asset, which the direct actions are submitted with.
@@ -1490,6 +1499,7 @@ const Home = ({
         earnAPR,
         earnRewardsAPR: supplyIncentives.earnRewardsAPR,
         isInstitutional: supplyIncentives.isInstitutional ?? false,
+        isInactive: market.isInactive,
         institutionalWhitelistStatus: whitelistStatus,
         liquidationCapacity,
         liquidationCapacityPost: updatedDataPostActions.liquidationCapacity,
@@ -1678,6 +1688,8 @@ const Home = ({
               pendingAction: pendingActionOrUndefined,
               transaction: blockingTransaction,
               isCollateralError: getCollateralStatusFor(token.address) === 'error',
+              isSupplyLocked: isCollateralSupplyLocked,
+              showUtilizationTooltip,
               unwrappedAssetSupplyAction: stEthWrapSupplyAction,
               onDripClicked: () => {
                 if (isFromEarlierVisit()) return;
@@ -1740,6 +1752,8 @@ const Home = ({
               pendingAction: pendingActionOrUndefined,
               transaction: blockingTransaction,
               isCollateralError: getCollateralStatusFor(token.address) === 'error',
+              isSupplyLocked: isCollateralSupplyLocked,
+              showUtilizationTooltip,
               wrappedAsset: matchingWrappedAsset,
               onCancelClicked: () => {
                 if (isFromEarlierVisit() || isQueueLocked()) return;
@@ -1773,6 +1787,7 @@ const Home = ({
       <ActionModal isBulkerAllowed={isBulkerAllowed} state={actionModalState} transactions={transactions} />
       <SupplyPausedBanner />
       <InstitutionalBanner market={selectedMarket[1]} />
+      {selected?.isInactive && cometState !== StateType.Loading && !hasPositions && <InactiveMarketBanner />}
       <Masthead state={mastheadState} />
       <div className="home__content grid-container">
         <div className="home__assets grid-column--7">
