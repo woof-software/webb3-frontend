@@ -67,6 +67,7 @@ type MastheadHydrated = [
     onWithdrawAction: (pendingAction?: PendingAction) => void;
     setCompare: Dispatch<boolean>;
     isInstitutional: boolean;
+    isInactive?: boolean;
   }
 ];
 export type MastheadState = MastheadLoading | MastheadNoWallet | MastheadHydrated;
@@ -234,6 +235,7 @@ function getContent(state: MastheadState): Content {
     theme,
     transaction,
     isInstitutional,
+    isInactive,
     onSupplyAction,
     onWithdrawAction,
     setCompare,
@@ -492,7 +494,7 @@ function getContent(state: MastheadState): Content {
         <>
           <button
             className="button button--large button--borrow"
-            disabled={transaction !== undefined || baseAsset.borrowCapacity === 0n}
+            disabled={transaction !== undefined || baseAsset.borrowCapacity === 0n || isInactive}
             onClick={() => onWithdrawAction([ActionType.Borrow, baseAssetPost, undefined])}
           >
             {iconForActionType(ActionType.Borrow)}
@@ -716,7 +718,7 @@ function getContent(state: MastheadState): Content {
       repayBorrowOrWithdrawButton = (
         <button
           className="button button--large button--borrow"
-          disabled={transaction !== undefined || baseAssetToUse.borrowCapacity === 0n}
+          disabled={transaction !== undefined || baseAssetToUse.borrowCapacity === 0n || isInactive}
           onClick={() => onWithdrawAction([ActionType.Borrow, baseAssetPost, undefined])}
         >
           {iconForActionType(ActionType.Borrow)}
@@ -796,7 +798,7 @@ function getContent(state: MastheadState): Content {
         buttons = (
           <button
             className="button button--large button--supply"
-            disabled={transaction !== undefined || baseAssetToUse.walletBalance === 0n}
+            disabled={transaction !== undefined || baseAssetToUse.walletBalance === 0n || isInactive}
             onClick={() => onSupplyAction([ActionType.Supply, baseAssetPost, undefined])}
           >
             {iconForActionType(ActionType.Supply)}

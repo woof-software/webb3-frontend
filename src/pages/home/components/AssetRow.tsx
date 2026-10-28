@@ -36,6 +36,8 @@ type AssetRowHydrated = [
     wrappedAsset?: TokenWithAccountState;
     isCollateralError: boolean;
     isDeprecated?: boolean;
+    isSupplyLocked?: boolean;
+    showUtilizationTooltip?: boolean;
     onCancelClicked: () => void;
     onEditClicked: () => void;
     onSupplyClicked: () => void;
@@ -132,6 +134,8 @@ function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, currency:
     transaction,
     unwrappedAssetSupplyAction,
     isDeprecated,
+    isSupplyLocked,
+    showUtilizationTooltip,
     onCancelClicked,
     onEditClicked,
     onSupplyClicked,
@@ -204,18 +208,38 @@ function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, currency:
       ? ['mobile-only', ' button--circle']
       : ['', ''];
 
+    const supplyButton = (
+      <button
+        onClick={() => {
+          onSupplyClicked();
+        }}
+        className={`button${supplyButtonModifier}`}
+        disabled={
+          walletBalance === 0n || transaction !== undefined || isCollateralError || isDeprecated || isSupplyLocked
+        }
+      >
+        <Plus />
+        <span className={supplyButtonTextClass}>Supply</span>
+      </button>
+    );
+
     buttons = (
       <>
-        <button
-          onClick={() => {
-            onSupplyClicked();
-          }}
-          className={`button${supplyButtonModifier}`}
-          disabled={walletBalance === 0n || transaction !== undefined || isCollateralError || isDeprecated}
-        >
-          <Plus />
-          <span className={supplyButtonTextClass}>Supply</span>
-        </button>
+        {showUtilizationTooltip ? (
+          <Tooltip
+            content={
+              <span className="asset-row__tooltip-text">
+                {'Adding collateral in this market is only available when market utilization is above 90%'}
+              </span>
+            }
+            width={240}
+          >
+            {/* A disabled button gets no hover events, so the tooltip listens on a wrapper */}
+            <span>{supplyButton}</span>
+          </Tooltip>
+        ) : (
+          supplyButton
+        )}
         {onWithdrawClicked && (
           <button
             onClick={() => onWithdrawClicked()}
