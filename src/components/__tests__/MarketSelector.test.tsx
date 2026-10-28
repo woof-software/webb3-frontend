@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router';
 
 import '@testing-library/jest-dom';
 import { getSelectedMarketContext, initializeContext } from '@contexts/SelectedMarketContext';
+import { Theme } from '@hooks/useThemeManager';
 import { LatestMarketSummaryResponse, MarketData, MarketStatus, SelectedMarketData, StateType } from '@types';
 
 import { MOCK_DEFAULT_MARKET, MOCK_MARKETS, MockMarketsProvider } from '../../../__tests__/mocks/mockMarkets';
@@ -17,7 +18,7 @@ const weth = MOCK_MARKETS.find(
 const summaryWithStatus = (market: MarketData, status: MarketStatus) =>
   ({ chainId: market.chainInformation.chainId, comet: { address: market.marketAddress }, status }) as LatestMarketSummaryResponse;
 
-const renderSelector = (wethStatus: MarketStatus) => {
+const renderSelector = (wethStatus: MarketStatus, isWethInactive?: boolean) => {
   const selected: SelectedMarketData = {
     selectedMarket: [StateType.Hydrated, MOCK_DEFAULT_MARKET],
     selectMarket: jest.fn(),
@@ -28,9 +29,9 @@ const renderSelector = (wethStatus: MarketStatus) => {
 
   render(
     <MemoryRouter>
-      <MockMarketsProvider marketSummaries={[summaryWithStatus(weth, wethStatus)]}>
+      <MockMarketsProvider marketSummaries={[{ ...summaryWithStatus(weth, wethStatus), isInactive: isWethInactive }]}>
         <SelectedMarketContext.Provider value={selected}>
-          <MarketSelector />
+          <MarketSelector theme={Theme.Dark} />
         </SelectedMarketContext.Provider>
       </MockMarketsProvider>
     </MemoryRouter>
@@ -62,5 +63,24 @@ describe('MarketSelector — market statuses', () => {
     const { selectMarket } = renderSelector('partially');
     await openAndClickWeth();
     expect(selectMarket).toHaveBeenCalledWith({ ...weth, status: 'partially' });
+  });
+});
+
+describe('MarketSelector — inactive markets', () => {
+  test('lists a network again under the inactive section, showing only its inactive markets there', async () => {
+    renderSelector('success', true);
+    await userEvent.click(screen.getByText(MOCK_DEFAULT_MARKET.baseAsset.symbol));
+
+    expect(screen.getByText('Inactive Markets')).toBeInTheDocument();
+    const ethereumOptions = screen
+      .getAllByText('Ethereum')
+      .map((node) => node.closest('.market-selector__option'))
+      .filter((node): node is HTMLElement => node !== null);
+    expect(ethereumOptions).toHaveLength(2);
+    expect(screen.queryByText(weth.baseAsset.symbol)).not.toBeInTheDocument();
+
+    await userEvent.hover(ethereumOptions[1]);
+
+    expect(screen.getByText(weth.baseAsset.symbol)).toBeInTheDocument();
   });
 });
