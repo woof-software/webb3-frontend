@@ -234,7 +234,6 @@ function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, currency:
             }
             width={240}
           >
-            {/* A disabled button gets no hover events, so the tooltip listens on a wrapper */}
             <span>{supplyButton}</span>
           </Tooltip>
         ) : (
