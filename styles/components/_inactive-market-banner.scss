@@ -11,7 +11,6 @@
 
   @media (max-width: $device--xs) {
     height: 4.75rem;
-    // Ignores 0.75rem of the page's 1.25rem side padding, so the banner sits 0.5rem from the screen edges
     margin: 2.5rem -0.75rem 0;
     padding: 0 1.25rem;
   }
