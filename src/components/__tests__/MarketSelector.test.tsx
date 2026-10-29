@@ -18,7 +18,7 @@ const weth = MOCK_MARKETS.find(
 const summaryWithStatus = (market: MarketData, status: MarketStatus) =>
   ({ chainId: market.chainInformation.chainId, comet: { address: market.marketAddress }, status }) as LatestMarketSummaryResponse;
 
-const renderSelector = (wethStatus: MarketStatus, isWethInactive?: boolean) => {
+const renderSelector = (wethStatus: MarketStatus, isWethInactive = false) => {
   const selected: SelectedMarketData = {
     selectedMarket: [StateType.Hydrated, MOCK_DEFAULT_MARKET],
     selectMarket: jest.fn(),
