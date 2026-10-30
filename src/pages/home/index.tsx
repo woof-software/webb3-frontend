@@ -846,11 +846,7 @@ const Home = ({
       // A kept callback writes through the session it was made in, whatever the live balances allow.
       !isSameWalletSession(walletSession, liveWalletSession.current);
 
-    // On an inactive market borrowers can still add collateral at high utilization to defend their positions
-    const hasBorrow = baseAsset.balance < 0n;
     const isUtilizationHigh = BigInt(market.utilization ?? 0) >= 9n * 10n ** 17n;
-    const isCollateralSupplyLocked = market.isInactive === true && !(hasBorrow && isUtilizationHigh);
-    const showUtilizationTooltip = isCollateralSupplyLocked && hasBorrow;
     hasPositions = baseAsset.balance !== 0n || collateralAssets.some((asset) => asset.balance > 0n);
 
     const actions = getActions(baseAsset, collateralAssets, rewards);
@@ -1688,8 +1684,8 @@ const Home = ({
               pendingAction: pendingActionOrUndefined,
               transaction: blockingTransaction,
               isCollateralError: getCollateralStatusFor(token.address) === 'error',
-              isSupplyLocked: isCollateralSupplyLocked,
-              showUtilizationTooltip,
+              isMarketInactive: market.isInactive,
+              isUtilizationHigh,
               unwrappedAssetSupplyAction: stEthWrapSupplyAction,
               onDripClicked: () => {
                 if (isFromEarlierVisit()) return;
@@ -1752,8 +1748,8 @@ const Home = ({
               pendingAction: pendingActionOrUndefined,
               transaction: blockingTransaction,
               isCollateralError: getCollateralStatusFor(token.address) === 'error',
-              isSupplyLocked: isCollateralSupplyLocked,
-              showUtilizationTooltip,
+              isMarketInactive: market.isInactive,
+              isUtilizationHigh,
               wrappedAsset: matchingWrappedAsset,
               onCancelClicked: () => {
                 if (isFromEarlierVisit() || isQueueLocked()) return;
