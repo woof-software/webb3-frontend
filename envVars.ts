@@ -2,20 +2,20 @@ const rpcProviderHost = import.meta.env.VITE_V3_RPC_PROVIDER_HOST || 'RPC_PROVID
 const walletConnectProjectId =
   import.meta.env.VITE_V3_WALLET_CONNECT_PROJECT_ID || 'WALLET_CONNECT_PROJECT_ID_NOT_CONFIGURED';
 
-export const SEPOLIA_URL = `https://${rpcProviderHost}/ethereum-sepolia`;
-export const MAINNET_URL = `https://${rpcProviderHost}/ethereum-mainnet`;
-export const POLYGON_URL = `https://${rpcProviderHost}/polygon-mainnet`;
-export const ARBITRUM_URL = `https://${rpcProviderHost}/arbitrum-mainnet`;
-export const SCROLL_URL = 'https://rpc.scroll.io';
-export const OPTIMISM_URL = `https://${rpcProviderHost}/optimism-mainnet`;
-export const AVALANCHE_URL = `https://${rpcProviderHost}/avalanche-mainnet`;
-export const FUJI_URL = `https://${rpcProviderHost}/avalanche-fuji`;
-export const BASE_MAINNET_URL = `https://${rpcProviderHost}/base-mainnet`;
+export const SEPOLIA_URL = import.meta.env.VITE_SEPOLIA_URL || `https://${rpcProviderHost}/ethereum-sepolia`;
+export const MAINNET_URL = import.meta.env.VITE_MAINNET_URL || `https://${rpcProviderHost}/ethereum-mainnet`;
+export const POLYGON_URL = import.meta.env.VITE_POLYGON_URL || `https://${rpcProviderHost}/polygon-mainnet`;
+export const ARBITRUM_URL = import.meta.env.VITE_ARBITRUM_URL || `https://${rpcProviderHost}/arbitrum-mainnet`;
+export const SCROLL_URL = import.meta.env.VITE_SCROLL_URL || 'https://rpc.scroll.io';
+export const OPTIMISM_URL = import.meta.env.VITE_OPTIMISM_URL || `https://${rpcProviderHost}/optimism-mainnet`;
+export const AVALANCHE_URL = import.meta.env.VITE_AVALANCHE_URL || `https://${rpcProviderHost}/avalanche-mainnet`;
+export const FUJI_URL = import.meta.env.VITE_FUJI_URL || `https://${rpcProviderHost}/avalanche-fuji`;
+export const BASE_MAINNET_URL = import.meta.env.VITE_BASE_MAINNET_URL || `https://${rpcProviderHost}/base-mainnet`;
 export const WALLECT_CONNECT_PROJECT_ID = walletConnectProjectId;
-export const MANTLE_URL = `https://${rpcProviderHost}/mantle-mainnet`;
-export const LINEA_URL = `https://${rpcProviderHost}/linea-mainnet`;
-export const UNICHAIN_URL = `https://${rpcProviderHost}/unichain-mainnet`;
-export const RONIN_URL = `https://${rpcProviderHost}/ronin-mainnet`;
+export const MANTLE_URL = import.meta.env.VITE_MANTLE_URL || `https://${rpcProviderHost}/mantle-mainnet`;
+export const LINEA_URL = import.meta.env.VITE_LINEA_URL || `https://${rpcProviderHost}/linea-mainnet`;
+export const UNICHAIN_URL = import.meta.env.VITE_UNICHAIN_URL || `https://${rpcProviderHost}/unichain-mainnet`;
+export const RONIN_URL = import.meta.env.VITE_RONIN_URL || `https://${rpcProviderHost}/ronin-mainnet`;
 
 const screeningEndpoint = import.meta.env.VITE_SCREENING_ENDPOINT || 'SCREENING_ENDPOINT_NOT_CONFIGURED';
 
