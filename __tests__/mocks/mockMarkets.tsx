@@ -37,7 +37,9 @@ export const MockMarketsProvider = ({
         LATEST_MARKET_SUMMARY_QUERY_KEY,
         MOCK_MARKET_LIST.map((entry) => {
           const summary = marketSummaries.find((summary) => isSameSummary(summary, entry));
-          return summary ? { ...entry, status: summary.status, collaterals: summary.collaterals } : entry;
+          return summary
+            ? { ...entry, status: summary.status, collaterals: summary.collaterals, isInactive: summary.isInactive }
+            : entry;
         })
       );
     }

@@ -10,7 +10,7 @@ import PanelWithNoHeader from '@components/PanelWithNoHeader';
 import TokenVisibilityToggle from '@components/TokenVisibilityToggle';
 import Tooltip from '@components/Tooltip';
 import { NetRatesTooltipView } from '@components/Tooltips/NetRatesTooltip';
-import { CHAINS, INACTIVE_CHAIN_IDS } from '@constants/chains';
+import { CHAINS } from '@constants/chains';
 import { assetIconForAssetSymbol, iconNameForChainId } from '@helpers/assets';
 import { MARKETS_TOP_COLLATERAL_KEY } from '@helpers/constants';
 import { InstitutionalWhitelistStatus } from '@helpers/institutionalWhitelist';
@@ -159,8 +159,12 @@ const MarketOverviewPanels = ({ latestMarketSummaries, institutionalWhitelistSta
 
       {(() => {
         const chainIds = Object.keys(marketSummariesByChain).map(Number);
-        const coreChainIds = chainIds.filter((id) => !INACTIVE_CHAIN_IDS.has(id));
-        const inactiveChainIds = chainIds.filter((id) => INACTIVE_CHAIN_IDS.has(id));
+        const activeSummaries = (id: number) =>
+          marketSummariesByChain[id]?.filter((summary) => !summary.isInactive) ?? [];
+        const inactiveSummaries = (id: number) =>
+          marketSummariesByChain[id]?.filter((summary) => summary.isInactive) ?? [];
+        const coreChainIds = chainIds.filter((id) => activeSummaries(id).length > 0);
+        const inactiveChainIds = chainIds.filter((id) => inactiveSummaries(id).length > 0);
 
         return (
           <>
@@ -168,7 +172,7 @@ const MarketOverviewPanels = ({ latestMarketSummaries, institutionalWhitelistSta
               <Panel
                 key={chainId}
                 chainId={chainId}
-                marketSummaries={marketSummariesByChain[chainId]}
+                marketSummaries={activeSummaries(chainId)}
                 institutionalWhitelistStatus={institutionalWhitelistStatus}
               />
             ))}
@@ -191,7 +195,7 @@ const MarketOverviewPanels = ({ latestMarketSummaries, institutionalWhitelistSta
                 <Panel
                 key={chainId}
                 chainId={chainId}
-                marketSummaries={marketSummariesByChain[chainId]}
+                marketSummaries={inactiveSummaries(chainId)}
                 institutionalWhitelistStatus={institutionalWhitelistStatus}
               />
               ))}

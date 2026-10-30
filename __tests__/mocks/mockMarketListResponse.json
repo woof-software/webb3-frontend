@@ -11,6 +11,7 @@
     "base_asset_name": "USD Coin",
     "is_default": true,
     "is_institutional": false,
+    "is_inactive": false,
     "status": "success"
   },
   {
@@ -25,6 +26,7 @@
     "base_asset_name": "Ether",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": false,
     "status": "success"
   },
   {
@@ -39,6 +41,7 @@
     "base_asset_name": "Tether",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": false,
     "status": "success"
   },
   {
@@ -53,6 +56,7 @@
     "base_asset_name": "Lido Wrapped Staked ETH",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": false,
     "status": "success"
   },
   {
@@ -67,6 +71,7 @@
     "base_asset_name": "USDS",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": false,
     "status": "success"
   },
   {
@@ -81,6 +86,7 @@
     "base_asset_name": "Wrapped BTC",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": false,
     "status": "success"
   },
   {
@@ -95,6 +101,7 @@
     "base_asset_name": "USDC Institutional",
     "is_default": false,
     "is_institutional": true,
+    "is_inactive": false,
     "slug": "usdc-institutional",
     "status": "success"
   },
@@ -110,6 +117,7 @@
     "base_asset_name": "USD Coin",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": false,
     "status": "success"
   },
   {
@@ -124,6 +132,7 @@
     "base_asset_name": "Tether",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": false,
     "status": "success"
   },
   {
@@ -138,6 +147,7 @@
     "base_asset_name": "Ether",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": false,
     "status": "success"
   },
   {
@@ -152,6 +162,7 @@
     "base_asset_name": "USD Coin",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": true,
     "status": "success"
   },
   {
@@ -166,6 +177,7 @@
     "base_asset_name": "Ether",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": true,
     "status": "success"
   },
   {
@@ -180,6 +192,7 @@
     "base_asset_name": "USD Coin (Bridged)",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": true,
     "status": "success"
   },
   {
@@ -194,6 +207,7 @@
     "base_asset_name": "Tether",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": true,
     "status": "success"
   },
   {
@@ -208,6 +222,7 @@
     "base_asset_name": "Wrapped Ether",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": true,
     "status": "success"
   },
   {
@@ -222,6 +237,7 @@
     "base_asset_name": "Ronin",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": true,
     "status": "success"
   },
   {
@@ -236,6 +252,7 @@
     "base_asset_name": "Ethena USDe",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": true,
     "status": "success"
   },
   {
@@ -250,6 +267,7 @@
     "base_asset_name": "USD Coin (Bridged)",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": false,
     "status": "success"
   },
   {
@@ -264,6 +282,7 @@
     "base_asset_name": "Ether",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": false,
     "status": "success"
   },
   {
@@ -278,6 +297,7 @@
     "base_asset_name": "USD Coin",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": false,
     "status": "success"
   },
   {
@@ -292,6 +312,7 @@
     "base_asset_name": "Aero",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": false,
     "status": "success"
   },
   {
@@ -306,6 +327,7 @@
     "base_asset_name": "USDS",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": false,
     "status": "success"
   },
   {
@@ -320,6 +342,7 @@
     "base_asset_name": "USD Coin (Bridged)",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": false,
     "status": "success"
   },
   {
@@ -334,6 +357,7 @@
     "base_asset_name": "USD Coin",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": false,
     "status": "success"
   },
   {
@@ -348,6 +372,7 @@
     "base_asset_name": "Ether",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": false,
     "status": "success"
   },
   {
@@ -362,6 +387,7 @@
     "base_asset_name": "Tether",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": false,
     "status": "success"
   },
   {
@@ -376,6 +402,7 @@
     "base_asset_name": "USD Coin",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": true,
     "status": "success"
   },
   {
@@ -390,6 +417,7 @@
     "base_asset_name": "Ether",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": true,
     "status": "success"
   },
   {
@@ -404,6 +432,7 @@
     "base_asset_name": "USD Coin",
     "is_default": false,
     "is_institutional": false,
+    "is_inactive": true,
     "status": "success"
   }
 ]

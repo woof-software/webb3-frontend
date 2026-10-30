@@ -36,6 +36,8 @@ type AssetRowHydrated = [
     wrappedAsset?: TokenWithAccountState;
     isCollateralError: boolean;
     isDeprecated?: boolean;
+    isMarketInactive?: boolean;
+    isUtilizationHigh?: boolean;
     onCancelClicked: () => void;
     onEditClicked: () => void;
     onSupplyClicked: () => void;
@@ -126,12 +128,14 @@ function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, currency:
   }
 
   const {
-    baseAsset: { symbol, baseAssetPriceInDollars },
+    baseAsset: { symbol, baseAssetPriceInDollars, balance: baseAssetBalance },
     action,
     pendingAction,
     transaction,
     unwrappedAssetSupplyAction,
     isDeprecated,
+    isMarketInactive,
+    isUtilizationHigh,
     onCancelClicked,
     onEditClicked,
     onSupplyClicked,
@@ -204,18 +208,45 @@ function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, currency:
       ? ['mobile-only', ' button--circle']
       : ['', ''];
 
+    // On an inactive market only borrowers can add collateral, at high utilization, to defend their positions
+    const isBorrowerPosition = baseAssetBalance < 0n;
+    const canSupplyOnInactiveMarket = isBorrowerPosition && isUtilizationHigh;
+
+    const supplyButton = (
+      <button
+        onClick={() => {
+          onSupplyClicked();
+        }}
+        className={`button${supplyButtonModifier}`}
+        disabled={
+          walletBalance === 0n ||
+          transaction !== undefined ||
+          isCollateralError ||
+          isDeprecated ||
+          (isMarketInactive && !canSupplyOnInactiveMarket)
+        }
+      >
+        <Plus />
+        <span className={supplyButtonTextClass}>Supply</span>
+      </button>
+    );
+
     buttons = (
       <>
-        <button
-          onClick={() => {
-            onSupplyClicked();
-          }}
-          className={`button${supplyButtonModifier}`}
-          disabled={walletBalance === 0n || transaction !== undefined || isCollateralError || isDeprecated}
-        >
-          <Plus />
-          <span className={supplyButtonTextClass}>Supply</span>
-        </button>
+        {isMarketInactive && isBorrowerPosition && !isUtilizationHigh ? (
+          <Tooltip
+            content={
+              <span className="asset-row__tooltip-text">
+                {'Adding collateral in this market is only available when market utilization is above 90%'}
+              </span>
+            }
+            width={240}
+          >
+            <span>{supplyButton}</span>
+          </Tooltip>
+        ) : (
+          supplyButton
+        )}
         {onWithdrawClicked && (
           <button
             onClick={() => onWithdrawClicked()}

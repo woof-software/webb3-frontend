@@ -72,6 +72,22 @@
     }
   }
 
+  &__inactive-label {
+    cursor: pointer;
+    display: inline-flex;
+    flex-direction: column;
+
+    label {
+      cursor: pointer;
+    }
+
+    svg {
+      margin-top: 0.125rem;
+      min-width: 100%;
+      width: 0;
+    }
+  }
+
   &__option {
     cursor: pointer;
     align-items: center;
@@ -142,7 +158,6 @@
     line-height: 1rem;
     font-size: 11px;
     width: 100%;
-    max-width: 10.125rem;
     display: block;
   }
 
