@@ -198,11 +198,7 @@ const Home = ({
     } = state[1];
     isBulkerAllowed = state[1].isBulkerAllowed;
 
-    // On an inactive market borrowers can still add collateral at high utilization to defend their positions
-    const hasBorrow = baseAsset.balance < 0n;
     const isUtilizationHigh = BigInt(market.utilization ?? 0) >= 9n * 10n ** 17n;
-    const isCollateralSupplyLocked = market.isInactive === true && !(hasBorrow && isUtilizationHigh);
-    const showUtilizationTooltip = isCollateralSupplyLocked && hasBorrow;
     hasPositions = baseAsset.balance !== 0n || collateralAssets.some((asset) => asset.balance > 0n);
 
     const actions = getActions(baseAsset, collateralAssets, rewards);
@@ -517,8 +513,8 @@ const Home = ({
               transaction: blockingTransaction,
               isCollateralError: collateral?.status === 'error',
               isDeprecated: collateral?.isDeprecated,
-              isSupplyLocked: isCollateralSupplyLocked,
-              showUtilizationTooltip,
+              isMarketInactive: market.isInactive,
+              isUtilizationHigh,
               unwrappedAssetSupplyAction: stEthWrapSupplyAction,
               onDripClicked: () => {
                 writeState.drip(market, token.address);
@@ -576,8 +572,8 @@ const Home = ({
               pendingAction: pendingActionOrUndefined,
               transaction: blockingTransaction,
               isCollateralError: getCollateralFor(token.address)?.status === 'error',
-              isSupplyLocked: isCollateralSupplyLocked,
-              showUtilizationTooltip,
+              isMarketInactive: market.isInactive,
+              isUtilizationHigh,
               wrappedAsset: matchingWrappedAsset,
               onCancelClicked: () => {
                 if (pendingActionOrUndefined) {

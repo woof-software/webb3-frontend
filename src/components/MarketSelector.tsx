@@ -25,17 +25,19 @@ const INACTIVE_MARKETS = 'Inactive Markets';
 const INACTIVE_MARKETS_TOOLTIP =
   'These markets no longer accept new deposits or loans. Users with existing balances can still withdraw or repay loans.';
 
+type SelectedNetwork = { chainId: number; isInactive: boolean };
+
 const MarketSelector = ({ theme }: { theme: Theme }) => {
   const [marketDropdownActive, setMarketDropdownActive] = useState<boolean>(false);
   const { selectedMarket, selectMarket } = useContext(getSelectedMarketContext());
-  const [selectedChainId, setSelectedChainId] = useState<number>(selectedMarket[1]?.chainInformation.chainId ?? 1);
   // A network with both kinds of markets is listed twice, so the hovered entry is its chain plus the list it's in
-  const [isInactiveSelected, setIsInactiveSelected] = useState(selectedMarket[1]?.isInactive === true);
+  const [selectedNetwork, setSelectedNetwork] = useState({
+    chainId: selectedMarket[1]?.chainInformation.chainId ?? 1,
+    isInactive: !!selectedMarket[1]?.isInactive,
+  });
   const [, currentMarket] = selectedMarket;
   const [marketsStateType, marketsState] = useMarkets();
-  const markets = marketsStateType === StateType.Hydrated ? marketsState.markets : [];
-  const marketsByNetwork = getMarketsByNetwork(markets.filter((market) => !market.isInactive));
-  const inactiveMarketsByNetwork = getMarketsByNetwork(markets.filter((market) => market.isInactive));
+  const marketsByNetwork = getMarketsByNetwork(marketsStateType === StateType.Hydrated ? marketsState.markets : []);
 
   const ref = useRef(null);
 
@@ -70,18 +72,15 @@ const MarketSelector = ({ theme }: { theme: Theme }) => {
           <div className={`dropdown__content`}>
             <SupportedNetworks
               marketsByNetwork={marketsByNetwork}
-              inactiveMarketsByNetwork={inactiveMarketsByNetwork}
-              selectedChainId={selectedChainId}
-              isInactiveSelected={isInactiveSelected}
+              selectedNetwork={selectedNetwork}
               theme={theme}
-              onSelectNetwork={(chainId, isInactive) => {
-                setSelectedChainId(chainId);
-                setIsInactiveSelected(isInactive);
-              }}
+              onSelectNetwork={setSelectedNetwork}
             />
             <SupportedMarkets
               currentMarket={currentMarket}
-              markets={(isInactiveSelected ? inactiveMarketsByNetwork : marketsByNetwork)[selectedChainId].markets}
+              markets={marketsByNetwork[selectedNetwork.chainId].markets.filter(
+                (market) => !!market.isInactive === selectedNetwork.isInactive
+              )}
               pathname={location.pathname}
               onSelectMarket={(market: MarketData) => {
                 setMarketDropdownActive(false);
@@ -138,51 +137,55 @@ const SelectedMarket = ({ active, market, onClick }: SelectedMarketProps) => {
 
 type SupportedNetworksProps = {
   marketsByNetwork: MarketsByNetwork;
-  inactiveMarketsByNetwork: MarketsByNetwork;
-  selectedChainId: number;
-  isInactiveSelected: boolean;
+  selectedNetwork: SelectedNetwork;
   theme: Theme;
-  onSelectNetwork: (chainId: number, isInactive: boolean) => void;
+  onSelectNetwork: (network: SelectedNetwork) => void;
 };
 
-const sortNetworks = (marketsByNetwork: MarketsByNetwork) =>
-  Object.entries(marketsByNetwork)
+const sortNetworks = (networks: MarketsByNetwork[number][]) =>
+  networks
     .sort((a, b) => {
-      if (a[1].markets.length < b[1].markets.length) {
+      if (a.markets.length < b.markets.length) {
         return -1;
       }
-      if (a[1].markets.length > b[1].markets.length) {
+      if (a.markets.length > b.markets.length) {
         return 1;
       }
 
-      return b[1].chainInformation.name.localeCompare(a[1].chainInformation.name);
+      return b.chainInformation.name.localeCompare(a.chainInformation.name);
     })
     .reverse();
 
 const SupportedNetworks = ({
   marketsByNetwork,
-  inactiveMarketsByNetwork,
-  selectedChainId,
-  isInactiveSelected,
+  selectedNetwork,
   theme,
   onSelectNetwork,
 }: SupportedNetworksProps) => {
-  const networks = sortNetworks(marketsByNetwork);
-  const inactiveNetworks = sortNetworks(inactiveMarketsByNetwork);
+  const [networks, inactiveNetworks] = [false, true].map((isInactive) =>
+    sortNetworks(
+      Object.values(marketsByNetwork)
+        .map((network) => ({
+          ...network,
+          markets: network.markets.filter((market) => !!market.isInactive === isInactive),
+        }))
+        .filter((network) => network.markets.length > 0)
+    )
+  );
 
   if (networks.length + inactiveNetworks.length <= 1) {
     return null;
   }
 
   const renderNetworks = (entries: typeof networks, isInactive: boolean) =>
-    entries.map(([_chainId, { chainInformation, markets }]) => {
-      const chainId = Number(_chainId);
-      const isActive = chainId === selectedChainId && isInactive === isInactiveSelected;
+    entries.map(({ chainInformation, markets }) => {
+      const { chainId } = chainInformation;
+      const isActive = chainId === selectedNetwork.chainId && isInactive === selectedNetwork.isInactive;
       return (
         <div
           className={`market-selector__option${isActive ? ' market-selector__option--active' : ''}`}
           onMouseEnter={() => {
-            onSelectNetwork(chainId, isInactive);
+            onSelectNetwork({ chainId, isInactive });
           }}
           key={chainId}
         >

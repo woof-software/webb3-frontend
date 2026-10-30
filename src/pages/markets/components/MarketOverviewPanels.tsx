@@ -159,8 +159,10 @@ const MarketOverviewPanels = ({ latestMarketSummaries, institutionalWhitelistSta
 
       {(() => {
         const chainIds = Object.keys(marketSummariesByChain).map(Number);
-        const activeSummaries = (id: number) => marketSummariesByChain[id].filter((summary) => !summary.isInactive);
-        const inactiveSummaries = (id: number) => marketSummariesByChain[id].filter((summary) => summary.isInactive);
+        const activeSummaries = (id: number) =>
+          marketSummariesByChain[id]?.filter((summary) => !summary.isInactive) ?? [];
+        const inactiveSummaries = (id: number) =>
+          marketSummariesByChain[id]?.filter((summary) => summary.isInactive) ?? [];
         const coreChainIds = chainIds.filter((id) => activeSummaries(id).length > 0);
         const inactiveChainIds = chainIds.filter((id) => inactiveSummaries(id).length > 0);
 

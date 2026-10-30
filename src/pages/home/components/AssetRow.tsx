@@ -36,8 +36,8 @@ type AssetRowHydrated = [
     wrappedAsset?: TokenWithAccountState;
     isCollateralError: boolean;
     isDeprecated?: boolean;
-    isSupplyLocked?: boolean;
-    showUtilizationTooltip?: boolean;
+    isMarketInactive?: boolean;
+    isUtilizationHigh?: boolean;
     onCancelClicked: () => void;
     onEditClicked: () => void;
     onSupplyClicked: () => void;
@@ -128,14 +128,14 @@ function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, currency:
   }
 
   const {
-    baseAsset: { symbol, baseAssetPriceInDollars },
+    baseAsset: { symbol, baseAssetPriceInDollars, balance: baseAssetBalance },
     action,
     pendingAction,
     transaction,
     unwrappedAssetSupplyAction,
     isDeprecated,
-    isSupplyLocked,
-    showUtilizationTooltip,
+    isMarketInactive,
+    isUtilizationHigh,
     onCancelClicked,
     onEditClicked,
     onSupplyClicked,
@@ -208,6 +208,10 @@ function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, currency:
       ? ['mobile-only', ' button--circle']
       : ['', ''];
 
+    // On an inactive market only borrowers can add collateral, at high utilization, to defend their positions
+    const isBorrowerPosition = baseAssetBalance < 0n;
+    const canSupplyOnInactiveMarket = isBorrowerPosition && isUtilizationHigh;
+
     const supplyButton = (
       <button
         onClick={() => {
@@ -215,7 +219,11 @@ function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, currency:
         }}
         className={`button${supplyButtonModifier}`}
         disabled={
-          walletBalance === 0n || transaction !== undefined || isCollateralError || isDeprecated || isSupplyLocked
+          walletBalance === 0n ||
+          transaction !== undefined ||
+          isCollateralError ||
+          isDeprecated ||
+          (isMarketInactive && !canSupplyOnInactiveMarket)
         }
       >
         <Plus />
@@ -225,7 +233,7 @@ function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, currency:
 
     buttons = (
       <>
-        {showUtilizationTooltip ? (
+        {isMarketInactive && isBorrowerPosition && !isUtilizationHigh ? (
           <Tooltip
             content={
               <span className="asset-row__tooltip-text">
