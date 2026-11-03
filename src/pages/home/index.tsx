@@ -45,6 +45,7 @@ import {
 
 import ActionModal from './components/ActionModal';
 import AssetRow from './components/AssetRow';
+import InactiveMarketBanner from './components/InactiveMarketBanner';
 import InstitutionalBanner from './components/InstitutionalBanner';
 import Masthead, { MastheadState } from './components/Masthead';
 import PositionCard, { PositionCardState } from './components/PositionCard';
@@ -133,6 +134,7 @@ const Home = ({
   let mastheadState: MastheadState;
   let positionCardState: PositionCardState;
   let isBulkerAllowed = false;
+  let hasPositions = false;
 
   const whitelistStatus = institutionalWhitelistStatus(web3.read.account);
 
@@ -195,6 +197,9 @@ const Home = ({
       isRewardsLoading
     } = state[1];
     isBulkerAllowed = state[1].isBulkerAllowed;
+
+    const isUtilizationHigh = BigInt(market.utilization ?? 0) >= 9n * 10n ** 17n;
+    hasPositions = baseAsset.balance !== 0n || collateralAssets.some((asset) => asset.balance > 0n);
 
     const actions = getActions(baseAsset, collateralAssets, rewards);
     const actionsForCompare = compare ? [] : actions;
@@ -325,6 +330,7 @@ const Home = ({
         earnAPR,
         earnRewardsAPR: supplyRewardsAPR,
         isInstitutional: isInstitutional ?? false,
+        isInactive: market.isInactive,
         institutionalWhitelistStatus: whitelistStatus,
         liquidationCapacity,
         liquidationCapacityPost: updatedDataPostActions.liquidationCapacity,
@@ -507,6 +513,8 @@ const Home = ({
               transaction: blockingTransaction,
               isCollateralError: collateral?.status === 'error',
               isDeprecated: collateral?.isDeprecated,
+              isMarketInactive: market.isInactive,
+              isUtilizationHigh,
               unwrappedAssetSupplyAction: stEthWrapSupplyAction,
               onDripClicked: () => {
                 writeState.drip(market, token.address);
@@ -564,6 +572,8 @@ const Home = ({
               pendingAction: pendingActionOrUndefined,
               transaction: blockingTransaction,
               isCollateralError: getCollateralFor(token.address)?.status === 'error',
+              isMarketInactive: market.isInactive,
+              isUtilizationHigh,
               wrappedAsset: matchingWrappedAsset,
               onCancelClicked: () => {
                 if (pendingActionOrUndefined) {
@@ -593,6 +603,7 @@ const Home = ({
     <div className="page home">
       <ActionModal isBulkerAllowed={isBulkerAllowed} state={actionModalState} transactions={transactions} />
       <InstitutionalBanner market={selectedMarket[1]} />
+      {selected?.isInactive && cometState !== StateType.Loading && !hasPositions && <InactiveMarketBanner />}
       <Masthead state={mastheadState} />
       <div className="home__content grid-container">
         <div className="home__assets grid-column--7">

@@ -7,10 +7,11 @@ import { areSameMarket, getMarket, getMarketsByNetwork, isV2Market, V2_MARKET_KE
 import { V2_URL } from '@helpers/urls';
 import { useMarkets } from '@hooks/useMarkets';
 import useOnClickOutside from '@hooks/useOnClickOutside';
+import { Theme } from '@hooks/useThemeManager';
 import { MarketData, MarketDataLoaded, MarketsByNetwork, StateType } from '@types';
 
 import IconPair from './IconPair';
-import { ArrowRightNoDash, CaretDown, CheckMark, CircleExclamation, TailSpin } from './Icons';
+import { ArrowRightNoDash, CaretDown, CheckMark, CircleExclamation, HoverUnder, TailSpin } from './Icons';
 import MarketNetworkIcon from './MarketNetworkIcon';
 
 const APPROVE_IN_WALLET = 'Approve in wallet';
@@ -20,11 +21,20 @@ const MARKETS_SECTION = 'Markets';
 const NEW = 'New';
 const MARKETS_UNAVAILABLE = 'Markets unavailable';
 const MARKET_UNAVAILABLE = 'Market temporarily unavailable.';
+const INACTIVE_MARKETS = 'Inactive Markets';
+const INACTIVE_MARKETS_TOOLTIP =
+  'These markets no longer accept new deposits or loans. Users with existing balances can still withdraw or repay loans.';
 
-const MarketSelector = () => {
+type SelectedNetwork = { chainId: number; isInactive: boolean };
+
+const MarketSelector = ({ theme }: { theme: Theme }) => {
   const [marketDropdownActive, setMarketDropdownActive] = useState<boolean>(false);
   const { selectedMarket, selectMarket } = useContext(getSelectedMarketContext());
-  const [selectedChainId, setSelectedChainId] = useState<number>(selectedMarket[1]?.chainInformation.chainId ?? 1);
+  // A network with both kinds of markets is listed twice, so the hovered entry is its chain plus the list it's in
+  const [selectedNetwork, setSelectedNetwork] = useState({
+    chainId: selectedMarket[1]?.chainInformation.chainId ?? 1,
+    isInactive: !!selectedMarket[1]?.isInactive,
+  });
   const [, currentMarket] = selectedMarket;
   const [marketsStateType, marketsState] = useMarkets();
   const marketsByNetwork = getMarketsByNetwork(marketsStateType === StateType.Hydrated ? marketsState.markets : []);
@@ -62,12 +72,15 @@ const MarketSelector = () => {
           <div className={`dropdown__content`}>
             <SupportedNetworks
               marketsByNetwork={marketsByNetwork}
-              selectedChainId={selectedChainId}
-              setSelectedChainId={setSelectedChainId}
+              selectedNetwork={selectedNetwork}
+              theme={theme}
+              onSelectNetwork={setSelectedNetwork}
             />
             <SupportedMarkets
               currentMarket={currentMarket}
-              markets={marketsByNetwork[selectedChainId].markets}
+              markets={marketsByNetwork[selectedNetwork.chainId].markets.filter(
+                (market) => !!market.isInactive === selectedNetwork.isInactive
+              )}
               pathname={location.pathname}
               onSelectMarket={(market: MarketData) => {
                 setMarketDropdownActive(false);
@@ -124,57 +137,94 @@ const SelectedMarket = ({ active, market, onClick }: SelectedMarketProps) => {
 
 type SupportedNetworksProps = {
   marketsByNetwork: MarketsByNetwork;
-  selectedChainId: number;
-  setSelectedChainId: (chainId: number) => void;
+  selectedNetwork: SelectedNetwork;
+  theme: Theme;
+  onSelectNetwork: (network: SelectedNetwork) => void;
 };
 
-const SupportedNetworks = ({ marketsByNetwork, selectedChainId, setSelectedChainId }: SupportedNetworksProps) => {
-  const networks = Object.entries(marketsByNetwork)
+const sortNetworks = (networks: MarketsByNetwork[number][]) =>
+  networks
     .sort((a, b) => {
-      if (a[1].markets.length < b[1].markets.length) {
+      if (a.markets.length < b.markets.length) {
         return -1;
       }
-      if (a[1].markets.length > b[1].markets.length) {
+      if (a.markets.length > b.markets.length) {
         return 1;
       }
 
-      return b[1].chainInformation.name.localeCompare(a[1].chainInformation.name);
+      return b.chainInformation.name.localeCompare(a.chainInformation.name);
     })
     .reverse();
 
-  if (networks.length <= 1) {
+const SupportedNetworks = ({
+  marketsByNetwork,
+  selectedNetwork,
+  theme,
+  onSelectNetwork,
+}: SupportedNetworksProps) => {
+  const [networks, inactiveNetworks] = [false, true].map((isInactive) =>
+    sortNetworks(
+      Object.values(marketsByNetwork)
+        .map((network) => ({
+          ...network,
+          markets: network.markets.filter((market) => !!market.isInactive === isInactive),
+        }))
+        .filter((network) => network.markets.length > 0)
+    )
+  );
+
+  if (networks.length + inactiveNetworks.length <= 1) {
     return null;
   }
+
+  const renderNetworks = (entries: typeof networks, isInactive: boolean) =>
+    entries.map(({ chainInformation, markets }) => {
+      const { chainId } = chainInformation;
+      const isActive = chainId === selectedNetwork.chainId && isInactive === selectedNetwork.isInactive;
+      return (
+        <div
+          className={`market-selector__option${isActive ? ' market-selector__option--active' : ''}`}
+          onMouseEnter={() => {
+            onSelectNetwork({ chainId, isInactive });
+          }}
+          key={chainId}
+        >
+          <MarketNetworkIcon icon={iconNameForChainId(chainId)} />
+          <div className="market-selector__option__info">
+            <span className="label text-color--1 L1">{chainInformation.name}</span>
+          </div>
+
+          <div className="market-selector__option__info--right">
+            <span className="label text-color--2 L1">{markets.filter((market) => !isV2Market(market)).length}</span>
+          </div>
+          <div className="market-selector__option__info market-selector__option--arrow">
+            <ArrowRightNoDash className="svg--icon--3 extension-list-row__arrow-select" />
+          </div>
+        </div>
+      );
+    });
 
   return (
     <>
       <div className="market-selector__options">
-        {networks.map(([_chainId, { chainInformation, markets }]) => {
-          const chainId = Number(_chainId);
-          return (
-            <div
-              className={`market-selector__option${
-                chainId === selectedChainId ? ' market-selector__option--active' : ''
-              }`}
-              onMouseEnter={() => {
-                setSelectedChainId(chainId);
-              }}
-              key={chainId}
-            >
-              <MarketNetworkIcon icon={iconNameForChainId(chainId)} />
-              <div className="market-selector__option__info">
-                <span className="label text-color--1 L1">{chainInformation.name}</span>
-              </div>
-
-              <div className="market-selector__option__info--right">
-                <span className="label text-color--2 L1">{markets.filter((market) => !isV2Market(market)).length}</span>
-              </div>
-              <div className="market-selector__option__info market-selector__option--arrow">
-                <ArrowRightNoDash className="svg--icon--3 extension-list-row__arrow-select" />
-              </div>
+        {renderNetworks(networks, false)}
+        {inactiveNetworks.length > 0 && (
+          <>
+            <div className="legacy-wrapper">
+              <Tooltip
+                content={<span className="market-selector__tooltip-text">{INACTIVE_MARKETS_TOOLTIP}</span>}
+                width={230}
+                yOffset={14}
+              >
+                <div className="market-selector__inactive-label">
+                  <label className="label label--secondary text-color--2">{INACTIVE_MARKETS}</label>
+                  <HoverUnder className="hover-under" long={true} theme={theme} />
+                </div>
+              </Tooltip>
             </div>
-          );
-        })}
+            {renderNetworks(inactiveNetworks, true)}
+          </>
+        )}
       </div>
       <div className="divider"></div>
     </>

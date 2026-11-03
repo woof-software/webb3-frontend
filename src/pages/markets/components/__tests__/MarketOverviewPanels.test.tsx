@@ -40,21 +40,30 @@ const renderPanels = (summaries: LatestMarketSummaries) =>
   );
 
 describe('MarketOverviewPanels — inactive markets', () => {
-  const coreSummary = makeSummary(1, '0xcore'); // Ethereum (core)
-  const scrollSummary = makeSummary(534352, '0xscroll'); // Scroll (inactive)
+  const coreSummary = makeSummary(1, '0xcore'); // Ethereum
+  const scrollSummary = makeSummary(534352, '0xscroll', { isInactive: true }); // Scroll
 
-  test('hides inactive chain panels behind a collapsed toggle by default', () => {
+  test('hides inactive market panels behind a collapsed toggle by default', () => {
     renderPanels([coreSummary, scrollSummary]);
     expect(screen.getByText('Ethereum')).toBeInTheDocument();
     expect(screen.queryByText('Scroll')).not.toBeInTheDocument();
     expect(screen.getByText('Show inactive markets')).toBeInTheDocument();
   });
 
-  test('reveals inactive chain panels when the toggle is clicked', async () => {
+  test('reveals inactive market panels when the toggle is clicked', async () => {
     renderPanels([coreSummary, scrollSummary]);
     await userEvent.click(screen.getByText('Show inactive markets'));
     expect(screen.getByText('Scroll')).toBeInTheDocument();
     expect(screen.getByText('Hide inactive markets')).toBeInTheDocument();
+  });
+
+  test('splits active and inactive markets of the same network', async () => {
+    renderPanels([coreSummary, makeSummary(1, '0xinactive', { isInactive: true })]);
+    expect(screen.getAllByText('Ethereum')).toHaveLength(1);
+
+    await userEvent.click(screen.getByText('Show inactive markets'));
+
+    expect(screen.getAllByText('Ethereum')).toHaveLength(2);
   });
 
   test('does not render the toggle when there are no inactive markets', () => {

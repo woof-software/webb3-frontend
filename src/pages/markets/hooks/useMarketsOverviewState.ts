@@ -143,6 +143,7 @@ export const sanitizeMarketSummary = (
     borrowAPR: borrowAPR,
     supplyAPR: supplyAPR,
     status: marketSummary.status,
+    isInactive: marketSummary.isInactive,
     errorCollateralSymbols: (marketSummary.collaterals ?? [])
       .filter((collateral) => collateral.status === 'error')
       .map((collateral) => collateral.symbol),

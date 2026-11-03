@@ -87,11 +87,16 @@ export function useSelectedMarketState(web3: Web3): SelectedMarketData {
       }
 
       const [, currentMarket] = state;
-      // if we've already selected the desired market, only take the statuses from the refreshed market list
+      // if we've already selected the desired market, only take the summary fields from the refreshed market list
       if (currentMarket !== undefined && areSameMarket(currentMarket, desiredMarket)) {
-        const { status, collaterals } = desiredMarket;
-        if (status !== currentMarket.status || collaterals !== currentMarket.collaterals) {
-          setState([state[0], { ...currentMarket, status, collaterals }] as MarketDataState);
+        const { status, collaterals, isInactive, utilization } = desiredMarket;
+        if (
+          status !== currentMarket.status ||
+          collaterals !== currentMarket.collaterals ||
+          isInactive !== currentMarket.isInactive ||
+          utilization !== currentMarket.utilization
+        ) {
+          setState([state[0], { ...currentMarket, status, collaterals, isInactive, utilization }] as MarketDataState);
         }
         return;
       }

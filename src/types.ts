@@ -360,6 +360,7 @@ export type LatestMarketSummaryResponse = {
   isDefault?: boolean;
   isInstitutional?: boolean;
   status?: MarketStatus;
+  isInactive?: boolean;
   // A market in the error status comes without the numbers
   borrowApr?: string;
   supplyApr?: string;
@@ -391,6 +392,8 @@ export type MarketData = {
   // Statuses from the latest market summary
   status?: MarketStatus;
   collaterals?: LatestMarketSummaryResponse['collaterals'];
+  isInactive?: boolean;
+  utilization?: string;
   // Overrides the base-asset part of the market's URL key (e.g. 'usdc-institutional' -> '?market=usdc-institutional-mainnet').
   // Required when multiple markets on the same chain share a base asset symbol.
   slug?: string;
@@ -451,6 +454,7 @@ export type MarketSummary = {
   isInstitutional?: boolean;
   isRewardsLoading?: boolean;
   status?: MarketStatus;
+  isInactive?: boolean;
   errorCollateralSymbols?: string[];
 };
 
