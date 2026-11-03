@@ -237,7 +237,7 @@ function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, currency:
           <Tooltip
             content={
               <span className="asset-row__tooltip-text">
-                {'Adding collateral in this market is only available when market utilization is above 90%'}
+                {'Adding collateral in this market is only available when market utilization is at least 90%'}
               </span>
             }
             width={240}
