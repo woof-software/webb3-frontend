@@ -1,5 +1,5 @@
+import { Interface } from '@ethersproject/abi';
 import { StaticJsonRpcProvider } from '@ethersproject/providers';
-import { Contract, Provider } from 'ethers-multicall';
 import { useEffect, useState, useRef, useCallback } from 'react';
 
 import { isTestnet, getChainKey, CHAINS } from '@constants/chains';
@@ -11,6 +11,7 @@ import { getEventLogCoders, proposalEvents, RawLog } from '@helpers/coders';
 import { SECONDS_PER_BLOCK } from '@helpers/constants';
 import { getGovernanceContractAddress, GovernanceNetworksEnum } from '@helpers/contracts';
 import { parseTitleDescriptionFromBody } from '@helpers/functions';
+import { contractCall, multicall, requireValues } from '@helpers/multicall';
 import { TIMESTAMP_API } from '@helpers/urls';
 import {
   VoteState,
@@ -29,6 +30,10 @@ import {
 
 // TODO(alex) --> confirm desired interval
 const VOTE_REFRESH_INTERVAL = 300_000; // 5 mins
+
+const GOVERNOR = new Interface(Governor);
+const TIMELOCK = new Interface(Timelock);
+const COMP_TOKEN = new Interface(COMP);
 
 export function useVoteState(
   web3: Web3,
@@ -95,7 +100,7 @@ const getBlockTimestamps = async (blockNumbers: number[], network: string) => {
   return await timestampsResult.json();
 };
 
-const proposalSucceeded = (proposal: Proposal, quorumVotes: bigint) => {
+const proposalSucceeded = (proposal: Pick<Proposal, 'forVotes' | 'againstVotes'>, quorumVotes: bigint) => {
   // we don't need to factor decimal shift here, as we're using values from same contract
   return proposal.forVotes > quorumVotes && proposal.forVotes > proposal.againstVotes;
 };
@@ -106,7 +111,6 @@ const getState = async (chainId = 1, account?: string): Promise<VoteState> => {
 
   const chainInfo: ChainInformation = CHAINS[chainId];
   const provider = new StaticJsonRpcProvider(chainInfo.url);
-  const ethcallProvider = new Provider(provider, chainId);
 
   // use Sepolia testnet info for any testnet
   // otherwise, use Eth mainnet for any other network, or no wallet connected
@@ -114,19 +118,21 @@ const getState = async (chainId = 1, account?: string): Promise<VoteState> => {
     isTestnet(chainId) ? GovernanceNetworksEnum.Testnet : GovernanceNetworksEnum.Mainnet
   );
 
-  const governorContract = new Contract(govAddress, Governor);
-  const timelockContract = new Contract(timelockAddress, Timelock);
   const chainKey = getChainKey(chainId);
 
   // fetch all proposal events within the timelock delay, to capture any queued proposals as well
   const currentBlock = await provider.getBlockNumber();
-  const [votingPeriod, votingDelay, timelockDelay, gracePeriod, quorumVotes] = await ethcallProvider.all([
-    governorContract.votingPeriod(),
-    governorContract.votingDelay(),
-    timelockContract.delay(),
-    timelockContract.GRACE_PERIOD(),
-    governorContract.quorumVotes(),
-  ]);
+  const [votingPeriod, votingDelay, timelockDelay, gracePeriod, quorumVotes, proposalThreshold] = requireValues(
+    await multicall(provider, [
+      contractCall(govAddress, GOVERNOR, 'votingPeriod'),
+      contractCall(govAddress, GOVERNOR, 'votingDelay'),
+      contractCall(timelockAddress, TIMELOCK, 'delay'),
+      contractCall(timelockAddress, TIMELOCK, 'GRACE_PERIOD'),
+      contractCall(govAddress, GOVERNOR, 'quorumVotes'),
+      contractCall(govAddress, GOVERNOR, 'proposalThreshold'),
+    ]),
+    'governance parameters'
+  );
 
   // we'll use this coder to determine the topic hash, and decode the raw log data
   // created using the event signatures:
@@ -150,7 +156,7 @@ const getState = async (chainId = 1, account?: string): Promise<VoteState> => {
   async function getLogs(topic: string) {
     const logs = (await provider.getLogs({
       address: govAddress,
-      fromBlock: currentBlock - votingPeriod - votingDelay - gracePeriod,
+      fromBlock: currentBlock - votingPeriod.toNumber() - votingDelay.toNumber() - gracePeriod.toNumber(),
       toBlock: currentBlock,
       topics: [topic],
     })) as RawLog[];
@@ -257,15 +263,23 @@ const getState = async (chainId = 1, account?: string): Promise<VoteState> => {
   const timestamps = uniqueBlockNumbers.length > 0 && (await getBlockTimestamps(uniqueBlockNumbers, chainKey));
   const currentTime = new Date().getTime() / 1000;
 
-  // create combined query to get proposal votes
-  const [...proposalVotes] = await ethcallProvider.all([
-    ...[...rawProposals.values()].map((proposal) => governorContract.proposals(Number(proposal.id))),
-  ]);
+  const proposalVotes = await multicall(
+    provider,
+    [...rawProposals.keys()].map((id) => contractCall(govAddress, GOVERNOR, 'proposals', String(id)))
+  );
 
   const proposals: Proposal[] = [];
-  [...rawProposals.values()].map((item) => {
-    // grab the latest vote count for the raw proposal
-    const votes = proposalVotes.find(({ id }) => id.eq(item.id));
+  [...rawProposals.values()].map((item, index) => {
+    // a proposal whose votes could not be read is left out rather than shown with zero votes
+    const result = proposalVotes[index];
+    if (!result.success) return;
+    const response = result.value;
+    const votes = {
+      forVotes: response.forVotes.toBigInt(),
+      againstVotes: response.againstVotes.toBigInt(),
+      abstainVotes: response.abstainVotes.toBigInt(),
+      eta: response.eta,
+    };
 
     // item is truly in 'pending' state if vote period hasn't started
     if (item.startBlock > currentBlock && item.state.state === ProposalStateEnum.Pending) {
@@ -315,7 +329,7 @@ const getState = async (chainId = 1, account?: string): Promise<VoteState> => {
         ...item,
         state: {
           state: ProposalStateEnum.Queued,
-          startTime: eta - timelockDelay,
+          startTime: eta - timelockDelay.toNumber(),
           endTime: eta,
         },
       });
@@ -351,8 +365,6 @@ const getState = async (chainId = 1, account?: string): Promise<VoteState> => {
     }
   });
 
-  const [proposalThreshold] = await ethcallProvider.all([governorContract.proposalThreshold()]);
-
   const state: VoteNoAccountState = {
     chainKey,
     chainId,
@@ -365,26 +377,32 @@ const getState = async (chainId = 1, account?: string): Promise<VoteState> => {
   };
 
   if (account) {
-    const compContract = new Contract(compAddress, COMP);
-
     // check vote status for active proposals
     const activeProposals = proposals.filter((proposal) => proposal.state.state === ProposalStateEnum.Active);
-    const receiptsCalls = activeProposals.map((proposal) => governorContract.getReceipt(proposal.id, account));
 
-    const [decimals, balance, votes, delegate, ...receipts] = await ethcallProvider.all([
-      compContract.decimals(),
-      compContract.balanceOf(account),
-      compContract.getCurrentVotes(account),
-      compContract.delegates(account),
-      ...receiptsCalls,
+    const [[decimals, balance, votes, delegate], receipts] = await Promise.all([
+      multicall(provider, [
+        contractCall(compAddress, COMP_TOKEN, 'decimals'),
+        contractCall(compAddress, COMP_TOKEN, 'balanceOf', account),
+        contractCall(compAddress, COMP_TOKEN, 'getCurrentVotes', account),
+        contractCall(compAddress, COMP_TOKEN, 'delegates', account),
+      ]).then((results) => requireValues(results, 'COMP account')),
+      multicall(
+        provider,
+        activeProposals.map((proposal) =>
+          contractCall(govAddress, GOVERNOR, 'getReceipt', String(proposal.id), account)
+        )
+      ),
     ]);
 
     // create map of vote status
     const voteReceipts = new Map<bigint, VoteReceipt>();
     activeProposals.forEach((element, index) => {
+      const receipt = receipts[index];
+      if (!receipt.success) return;
       voteReceipts.set(element.id, {
-        voted: receipts[index][0],
-        value: receipts[index][1],
+        voted: receipt.value.hasVoted,
+        value: receipt.value.support,
         proposalId: element.id,
       });
     });

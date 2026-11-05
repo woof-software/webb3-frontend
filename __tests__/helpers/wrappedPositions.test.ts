@@ -4,6 +4,7 @@ import { BigNumber } from 'ethers';
 import { WRAPPED_MARKET_REGISTRY, WrappedMarket } from '@constants/wrappedMarkets';
 import CometAbi from '@helpers/abis/Comet';
 import { LendingRoute } from '@helpers/lendingRoute';
+import { ContractCall } from '@helpers/multicall';
 import { MAX_UINT256 } from '@helpers/numbers';
 import {
   CometStateWithMarket,
@@ -50,30 +51,32 @@ type ChainValues = {
 type RecordedCall = { address: string; name: string; params: unknown[] };
 
 /** A multicall stand-in that answers each call by contract address and function name. */
-function fakeMulticall(market: WrappedMarket, values: ChainValues, calls: RecordedCall[] = []) {
-  return {
-    all: jest.fn(async (batch: { contract: { address: string }; name: string; params: unknown[] }[]) => {
-      return batch.map(({ contract, name, params }) => {
-        calls.push({ address: contract.address, name, params });
-        const address = contract.address.toLowerCase();
-        if (address === market.wrapperAddress.toLowerCase()) {
-          if (name === 'balanceOf') return BigNumber.from(values.shares);
-          if (name === 'totalSupply') return BigNumber.from(values.totalSupply);
-          if (name === 'asset') return values.asset;
-        }
-        if (address === market.cometAddress.toLowerCase()) {
-          if (name === 'balanceOf') return BigNumber.from(values.totalAssets);
-          if (name === 'totalsBasic') return { baseSupplyIndex: BigNumber.from(values.baseSupplyIndex) };
-          if (name === 'isWithdrawPaused') return values.isWithdrawPaused;
-        }
-        if (address === market.baseTokenAddress.toLowerCase()) {
-          if (name === 'balanceOf') return BigNumber.from(values.walletBalance);
-          if (name === 'allowance') return BigNumber.from(values.allowance);
-        }
-        throw new Error(`unexpected call ${name} on ${contract.address}`);
-      });
-    }),
+function fakeMulticall(market: WrappedMarket, values: ChainValues, calls: RecordedCall[] = [], failing?: string) {
+  const answer = (target: string, name: string): unknown => {
+    const address = target.toLowerCase();
+    if (address === market.wrapperAddress.toLowerCase()) {
+      if (name === 'balanceOf') return BigNumber.from(values.shares);
+      if (name === 'totalSupply') return BigNumber.from(values.totalSupply);
+      if (name === 'asset') return values.asset;
+    }
+    if (address === market.cometAddress.toLowerCase()) {
+      if (name === 'balanceOf') return BigNumber.from(values.totalAssets);
+      if (name === 'totalsBasic') return { baseSupplyIndex: BigNumber.from(values.baseSupplyIndex) };
+      if (name === 'isWithdrawPaused') return values.isWithdrawPaused;
+    }
+    if (address === market.baseTokenAddress.toLowerCase()) {
+      if (name === 'balanceOf') return BigNumber.from(values.walletBalance);
+      if (name === 'allowance') return BigNumber.from(values.allowance);
+    }
+    throw new Error(`unexpected call ${name} on ${target}`);
   };
+  return jest.fn(async (batch: ContractCall[]) =>
+    batch.map(({ address, name, params }) => {
+      calls.push({ address, name, params });
+      if (name === failing) return { success: false as const, error: new Error('reverted') };
+      return { success: true as const, value: answer(address, name) };
+    })
+  );
 }
 
 // 1,000.5 USDC of wrapper assets. With the 10 ** 12 virtual shares, the supply divides into
@@ -142,7 +145,7 @@ describe('readWrappedPosition', () => {
 
     const position = await readWrappedPosition(multicall, market, ACCOUNT);
 
-    expect(multicall.all).toHaveBeenCalledTimes(1);
+    expect(multicall).toHaveBeenCalledTimes(1);
     expect(position).toEqual({
       shares: 250n * 10n ** 18n,
       shareDecimals: 18,
@@ -192,8 +195,16 @@ describe('readWrappedPosition', () => {
 
   it('fails when the batch fails, instead of reading zero', async () => {
     const market = usdcMarket();
-    const multicall = { all: jest.fn().mockRejectedValue(new Error('rpc down')) };
+    const multicall = jest.fn().mockRejectedValue(new Error('rpc down'));
     await expect(readWrappedPosition(multicall, market, ACCOUNT)).rejects.toThrow(WrappedPositionReadError);
+  });
+
+  it('fails naming the figure when one call of the batch reverts, instead of reading zero', async () => {
+    const market = usdcMarket();
+    const multicall = fakeMulticall(market, BASE_VALUES, [], 'isWithdrawPaused');
+    await expect(readWrappedPosition(multicall, market, ACCOUNT)).rejects.toThrow(
+      'The wrapper read of isWithdrawPaused failed.'
+    );
   });
 });
 

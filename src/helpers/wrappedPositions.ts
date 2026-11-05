@@ -1,7 +1,6 @@
 import { Interface } from '@ethersproject/abi';
 import type { JsonRpcProvider, TransactionReceipt } from '@ethersproject/providers';
 import { BigNumber } from 'ethers';
-import { Contract, ContractCall } from 'ethers-multicall';
 
 import { WRAPPED_MARKET_REGISTRY, WrappedMarket, WrappedMarketRegistry } from '@constants/wrappedMarkets';
 import CometAbi from '@helpers/abis/Comet';
@@ -9,6 +8,7 @@ import ERC20Abi from '@helpers/abis/ERC20';
 import WrappedCometAbi from '@helpers/abis/WrappedCometERC4626';
 import { lendsBaseDirectly } from '@helpers/actions';
 import { LendingRoute } from '@helpers/lendingRoute';
+import { CallResult, contractCall, MulticallReader } from '@helpers/multicall';
 import { getTokenValue } from '@helpers/numbers';
 import type { WithdrawalLimits } from '@helpers/wrappedWithdrawals';
 import {
@@ -117,8 +117,9 @@ export async function waitForBlock(
   return blockNumber;
 }
 
-/** The one method of an `ethers-multicall` provider that reads a batch in a single call. */
-export type MulticallReader = { all: (calls: ContractCall[]) => Promise<unknown[]> };
+const WRAPPER = new Interface(WrappedCometAbi);
+const COMET = new Interface(CometAbi);
+const ERC20 = new Interface(ERC20Abi);
 
 /**
  * What `shares` are worth in base units. This is OpenZeppelin's ERC-4626 conversion with the
@@ -159,46 +160,43 @@ function toBigInt(value: unknown, name: string): bigint {
   throw new WrappedPositionReadError(`The wrapper read returned no number for ${name}.`);
 }
 
+function valueOf(result: CallResult, name: string): unknown {
+  if (!result.success)
+    throw new WrappedPositionReadError(`The wrapper read of ${name} failed.`, { cause: result.error });
+  return result.value;
+}
+
 /**
  * Reads `account`'s position in `market`'s wrapper. Every figure comes from one multicall, so
- * one block. The read fails, rather than returning zero, when the batch fails or the wrapper
- * does not hold the configured Comet.
+ * one block. The read fails, rather than returning zero, when the batch or any of its calls fails
+ * or the wrapper does not hold the configured Comet.
  */
 export async function readWrappedPosition(
   multicall: MulticallReader,
   market: WrappedMarket,
   account: string
 ): Promise<WrappedPosition> {
-  const wrapper = new Contract(market.wrapperAddress, WrappedCometAbi);
-  const comet = new Contract(market.cometAddress, CometAbi);
-  const baseToken = new Contract(market.baseTokenAddress, ERC20Abi);
-
-  let results: unknown[];
+  const reads = {
+    shares: contractCall(market.wrapperAddress, WRAPPER, 'balanceOf', account),
+    totalSupply: contractCall(market.wrapperAddress, WRAPPER, 'totalSupply'),
+    asset: contractCall(market.wrapperAddress, WRAPPER, 'asset'),
+    totalAssets: contractCall(market.cometAddress, COMET, 'balanceOf', market.wrapperAddress),
+    totalsBasic: contractCall(market.cometAddress, COMET, 'totalsBasic'),
+    isWithdrawPaused: contractCall(market.cometAddress, COMET, 'isWithdrawPaused'),
+    baseWalletBalance: contractCall(market.baseTokenAddress, ERC20, 'balanceOf', account),
+    wrapperAllowance: contractCall(market.baseTokenAddress, ERC20, 'allowance', account, market.wrapperAddress),
+  };
+  let results: CallResult[];
   try {
-    results = await multicall.all([
-      wrapper.balanceOf(account),
-      wrapper.totalSupply(),
-      wrapper.asset(),
-      comet.balanceOf(market.wrapperAddress),
-      comet.totalsBasic(),
-      comet.isWithdrawPaused(),
-      baseToken.balanceOf(account),
-      baseToken.allowance(account, market.wrapperAddress),
-    ]);
+    results = await multicall(Object.values(reads));
   } catch (error) {
     throw new WrappedPositionReadError('The wrapper position could not be read.', { cause: error });
   }
+  const values = Object.fromEntries(
+    Object.keys(reads).map((name, index) => [name, valueOf(results[index], name)])
+  ) as Record<keyof typeof reads, unknown>;
+  const { asset, isWithdrawPaused, totalsBasic } = values;
 
-  const [
-    sharesResult,
-    totalSupplyResult,
-    asset,
-    totalAssetsResult,
-    totalsBasic,
-    isWithdrawPaused,
-    walletResult,
-    allowanceResult,
-  ] = results;
   if (typeof asset !== 'string' || asset.toLowerCase() !== market.cometAddress.toLowerCase()) {
     throw new WrappedPositionReadError('The wrapper does not hold the configured market.');
   }
@@ -206,9 +204,9 @@ export async function readWrappedPosition(
     throw new WrappedPositionReadError('The wrapper read returned no withdrawal pause state.');
   }
 
-  const shares = toBigInt(sharesResult, 'shares');
-  const totalSupply = toBigInt(totalSupplyResult, 'totalSupply');
-  const totalAssets = toBigInt(totalAssetsResult, 'totalAssets');
+  const shares = toBigInt(values.shares, 'shares');
+  const totalSupply = toBigInt(values.totalSupply, 'totalSupply');
+  const totalAssets = toBigInt(values.totalAssets, 'totalAssets');
   const baseSupplyIndex = toBigInt((totalsBasic as { baseSupplyIndex?: unknown })?.baseSupplyIndex, 'baseSupplyIndex');
   const grossAssets = getGrossAssets(shares, totalSupply, totalAssets, market.baseDecimals);
   const redeemBuffer = getRedeemBuffer(baseSupplyIndex);
@@ -218,8 +216,8 @@ export async function readWrappedPosition(
     shareDecimals: market.shareDecimals,
     grossAssets,
     baseDecimals: market.baseDecimals,
-    baseWalletBalance: toBigInt(walletResult, 'baseWalletBalance'),
-    wrapperAllowance: toBigInt(allowanceResult, 'wrapperAllowance'),
+    baseWalletBalance: toBigInt(values.baseWalletBalance, 'baseWalletBalance'),
+    wrapperAllowance: toBigInt(values.wrapperAllowance, 'wrapperAllowance'),
     redeemBuffer,
     fullExitCash: getFullExitCash(grossAssets, redeemBuffer),
     isWithdrawPaused,
