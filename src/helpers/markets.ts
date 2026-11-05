@@ -71,27 +71,45 @@ export const V2_MARKET: MarketData = {
 export const MARKETS: MarketData[] = [
   ...(
     [
-      [1, 'USDC', 'USD Coin', mainnetUSDCRoots, {
-        rewardsOverwrite: {
-          rewardsAssetSymbol: "COMP",
-          supplyCompPerDay: 55n * 10n ** 18n,
-          borrowCompPerDay: 55n * 10n ** 18n,
-        }
-      }],
-      [1, 'ETH', 'Ether', mainnetWETHRoots, {
-        rewardsOverwrite: {
-          rewardsAssetSymbol: "COMP",
-          supplyCompPerDay: 10n * 10n ** 18n,
-          borrowCompPerDay: 20n * 10n ** 18n,
-        }
-      }],
-      [1, 'USDT', 'Tether', mainnetUSDTRoots, {
-        rewardsOverwrite: {
-          rewardsAssetSymbol: "COMP",
-          supplyCompPerDay: 30n * 10n ** 18n,
-          borrowCompPerDay: 30n * 10n ** 18n,
-        }
-      }],
+      [
+        1,
+        'USDC',
+        'USD Coin',
+        mainnetUSDCRoots,
+        {
+          rewardsOverwrite: {
+            rewardsAssetSymbol: 'COMP',
+            supplyCompPerDay: 55n * 10n ** 18n,
+            borrowCompPerDay: 55n * 10n ** 18n,
+          },
+        },
+      ],
+      [
+        1,
+        'ETH',
+        'Ether',
+        mainnetWETHRoots,
+        {
+          rewardsOverwrite: {
+            rewardsAssetSymbol: 'COMP',
+            supplyCompPerDay: 10n * 10n ** 18n,
+            borrowCompPerDay: 20n * 10n ** 18n,
+          },
+        },
+      ],
+      [
+        1,
+        'USDT',
+        'Tether',
+        mainnetUSDTRoots,
+        {
+          rewardsOverwrite: {
+            rewardsAssetSymbol: 'COMP',
+            supplyCompPerDay: 30n * 10n ** 18n,
+            borrowCompPerDay: 30n * 10n ** 18n,
+          },
+        },
+      ],
       [1, 'wstETH', 'Lido Wrapped Staked ETH', mainnetWSTETHRoots],
       [1, 'USDS', 'USDS', mainnetUSDSRoots],
       [1, 'WBTC', 'Wrapped BTC', mainnetWBTCRoots],
@@ -138,7 +156,6 @@ export const MARKETS: MarketData[] = [
       iconPair: [options?.institutional ? 'INSTITUTIONAL' : iconNameForChainId(chainId), baseAsset],
       marketAddress: root['comet'],
       bulkerAddress: root['bulker'],
-      fauceteerAddress: root['fauceteer'],
       rewardsAddress: root['rewards'],
       ...options,
       type: 'MarketData',
@@ -175,12 +192,12 @@ export function isV2Market(market: MarketData | MarketDataLoaded) {
   return areSameMarket(market, V2_MARKET);
 }
 
-export function getMarkets(showTestnet: boolean): MarketData[] {
-  return MARKETS.filter((market) => (showTestnet ? true : !market.chainInformation.testnet));
+export function getMarkets(): MarketData[] {
+  return [...MARKETS];
 }
 
-export function getMarketsByNetwork(showTestnet: boolean): MarketsByNetwork {
-  return getMarkets(showTestnet).reduce<MarketsByNetwork>((acc, market: MarketData) => {
+export function getMarketsByNetwork(): MarketsByNetwork {
+  return getMarkets().reduce<MarketsByNetwork>((acc, market: MarketData) => {
     const { chainInformation } = market;
     const networkInfo = acc[chainInformation.chainId] ?? { chainInformation, markets: [] };
     return {
@@ -196,7 +213,7 @@ export function getMarketsByNetwork(showTestnet: boolean): MarketsByNetwork {
 export function getMarket(chainId: number, marketAddress: string): MarketData | undefined {
   const market = MARKETS.find(
     (market) =>
-      market.chainInformation.chainId === chainId && market.marketAddress.toLowerCase() === marketAddress.toLowerCase()
+      market.chainInformation.chainId === chainId && market.marketAddress.toLowerCase() === marketAddress.toLowerCase(),
   );
 
   return market;

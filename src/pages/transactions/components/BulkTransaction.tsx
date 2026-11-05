@@ -36,20 +36,21 @@ const BulkTransaction = ({
     transaction.itemType === HistoryItemType.BULK
       ? 'Bulk Transaction'
       : transaction.itemType === HistoryItemType.LIQUIDATION
-      ? getLiquidationHeader(actions)
-      : 'External Transaction';
+        ? getLiquidationHeader(actions)
+        : 'External Transaction';
 
   const trxUrl = getBlockExplorerUrlForTransactionHistory(transaction);
+  const Row = trxUrl ? 'a' : 'div';
 
   const iconName =
     transaction.itemType === HistoryItemType.BULK
       ? 'COMPOUND'
       : transaction.itemType === HistoryItemType.LIQUIDATION
-      ? 'LIQUIDATE'
-      : 'EXTERNAL';
+        ? 'LIQUIDATE'
+        : 'EXTERNAL';
 
   return (
-    <a href={trxUrl} target="_blank" rel="noreferrer">
+    <Row {...(trxUrl ? { href: trxUrl, target: '_blank', rel: 'noreferrer' } : {})}>
       <div className="bulk-transaction" key={`${transactionHash}-${index}`}>
         <div className="bulk-transaction__header">
           <div className="bulk-transaction__header__info">
@@ -91,7 +92,7 @@ const BulkTransaction = ({
           })}
         </div>
       </div>
-    </a>
+    </Row>
   );
 };
 

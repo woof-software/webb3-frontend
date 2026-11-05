@@ -56,14 +56,13 @@ const Extension = ({
 }: BaseProps) => {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const showTestnet = searchParams.has('testnet');
   const { extensionId } = useParams();
   const { selectedMarket, selectMarket } = useContext(getSelectedMarketContext());
   const writeState = useWriteCometState(web3, addTransaction);
   const [extensionLoaded, setExtensionLoaded] = useState<boolean>(false);
   const iFrameHeight = 1000;
   const [extensionState, setExtensionState] = useState<ExtensionState>(undefined);
-  const markets = useMemo(() => getMarkets(showTestnet), [showTestnet]);
+  const markets = useMemo(() => getMarkets(), []);
   const timer = usePoll(10000);
   const iFrameRef = useRef<HTMLIFrameElement>(null);
   const sandboxInputRef = useRef<HTMLInputElement>(null);
@@ -244,7 +243,7 @@ const Extension = ({
     extension.supportedMarkets === AllMarkets
       ? AllMarkets
       : filterMap<[string, string | null], MarketData>(Object.entries(extension.supportedMarkets), ([key]) =>
-          parseMarketKey(markets, key)
+          parseMarketKey(markets, key),
         );
   const operatorAddressInfo: [string | null | undefined, number] | undefined =
     selectedMarket[1] !== undefined ? [operator, selectedMarket[1].chainInformation.chainId] : undefined;

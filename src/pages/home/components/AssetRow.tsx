@@ -38,8 +38,7 @@ type AssetRowHydrated = [
     onEditClicked: () => void;
     onSupplyClicked: () => void;
     onWithdrawClicked?: () => void;
-    onDripClicked?: () => void;
-  }
+  },
 ];
 
 export type AssetRowState = AssetRowLoading | AssetRowNoWallet | AssetRowHydrated;
@@ -90,7 +89,6 @@ type Content = {
   displayWalletBalance: ReactNode;
   buttons: ReactNode;
   tooltipContent: ReactNode;
-  onIconClick: () => void;
 };
 
 function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, currency: Currency): Content {
@@ -119,7 +117,6 @@ function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, currency:
       displayWalletBalance: '',
       buttons,
       tooltipContent,
-      onIconClick: () => undefined,
     };
   }
 
@@ -133,7 +130,6 @@ function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, currency:
     onEditClicked,
     onSupplyClicked,
     onWithdrawClicked,
-    onDripClicked,
   } = state[1];
   const { decimals, price, balance, walletBalance } = asset as TokenWithAccountState;
   const assetRowModifier = pendingAction !== undefined ? ` asset-row--active` : '';
@@ -158,7 +154,6 @@ function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, currency:
     }
   }
   const balanceToUse = balance + balanceDifferenceFromActions(pendingAction, actionAmount);
-  const onIconClick = () => onDripClicked && onDripClicked();
 
   let buttons: ReactNode;
 
@@ -243,7 +238,6 @@ function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, currency:
       displayWalletBalance: formattedWalletBalance,
       buttons,
       tooltipContent,
-      onIconClick,
     };
   } else {
     return {
@@ -258,7 +252,6 @@ function getFormattedState(state: AssetRowNoWallet | AssetRowHydrated, currency:
       displayWalletBalance: formattedWalletBalance,
       buttons,
       tooltipContent,
-      onIconClick,
     };
   }
 }
@@ -325,16 +318,8 @@ const AssetRow = ({ state }: AssetRowProps) => {
     return <LoadingAssetRow />;
   }
 
-  const {
-    asset,
-    assetRowModifier,
-    collateralValue,
-    assetBalance,
-    displayWalletBalance,
-    buttons,
-    tooltipContent,
-    onIconClick,
-  } = getFormattedState(state, currency);
+  const { asset, assetRowModifier, collateralValue, assetBalance, displayWalletBalance, buttons, tooltipContent } =
+    getFormattedState(state, currency);
 
   const closeDetails = () => {
     setDetailsActive(false);
@@ -360,7 +345,7 @@ const AssetRow = ({ state }: AssetRowProps) => {
             setHoverModifier('');
           }}
         >
-          <span className={`asset asset--${assetIconForAssetSymbol(asset.symbol)}`} onClick={onIconClick}></span>
+          <span className={`asset asset--${assetIconForAssetSymbol(asset.symbol)}`}></span>
           <div className="asset-row__info">
             <p className="body">{asset.name}</p>
             <div className="asset-row__info__details meta L2">

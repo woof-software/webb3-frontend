@@ -2,10 +2,7 @@ import { ethers } from 'ethers';
 
 import {
   ARBITRUM_URL,
-  AVALANCHE_URL,
   BASE_MAINNET_URL,
-  FUJI_URL,
-  SEPOLIA_URL,
   MAINNET_URL,
   OPTIMISM_URL,
   POLYGON_URL,
@@ -86,42 +83,7 @@ export const CHAINS: {
         WBTC: '0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c',
       },
     },
-    testnet: false,
     walletRpcUrls: ['https://mainnet.infura.io/v3/'],
-  },
-  11155111: {
-    chainId: 11155111,
-    url: SEPOLIA_URL,
-    key: 'sepolia',
-    name: 'Sepolia',
-    blockExplorerUrls: ['https://sepolia.etherscan.io'],
-    nativeToken: {
-      decimals: 18,
-      name: 'Ether',
-      symbol: 'ETH',
-    },
-    assetOverrides: {
-      // WETH
-      '0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9': {
-        symbol: 'ETH',
-        name: 'Ether',
-        address: ethers.constants.AddressZero,
-      },
-      // wstETH name only override
-      '0xB82381A3fBD3FaFA77B3a7bE693342618240067b': {
-        symbol: 'wstETH',
-        name: 'Lido Wrapped Staked ETH',
-        address: '0xB82381A3fBD3FaFA77B3a7bE693342618240067b',
-      },
-    },
-    unwrappedCollateralAssets: {},
-    extraPriceFeeds: {
-      nativeTokenToUsd: '0x694AA1769357215DE4FAC081bf1f309aDC325306',
-      rewards: { COMP: '0x619db7F74C0061E2917D1D57f834D9D24C5529dA' },
-      otherBaseTokensToUsd: {},
-    },
-    testnet: true,
-    walletRpcUrls: ['https://sepolia.infura.io/v3/'],
   },
   10: {
     chainId: 10,
@@ -155,7 +117,6 @@ export const CHAINS: {
       rewards: { COMP: '0xA6c8D1c55951e8AC44a0EaA959Be5Fd21cc07531' },
       otherBaseTokensToUsd: {},
     },
-    testnet: false,
     walletRpcUrls: ['https://optimism-mainnet.infura.io'],
   },
   137: {
@@ -197,47 +158,12 @@ export const CHAINS: {
       },
     },
     unwrappedCollateralAssets: {},
-    testnet: false,
     walletRpcUrls: ['https://polygon-rpc.com/', 'https://polygon-mainnet.infura.io'],
     extraPriceFeeds: {
       nativeTokenToUsd: '0xAB594600376Ec9fD91F8e885dADF0CE036862dE0',
       rewards: { COMP: '0x2A8758b7257102461BC958279054e372C2b1bDE6' },
       otherBaseTokensToUsd: {},
     },
-  },
-  43113: {
-    chainId: 43113,
-    url: FUJI_URL,
-    key: 'fuji',
-    name: 'Avalanche Fuji',
-    blockExplorerUrls: ['https://testnet.snowtrace.io'],
-    nativeToken: {
-      decimals: 18,
-      name: 'Avax',
-      symbol: 'AVAX',
-    },
-    assetOverrides: {},
-    unwrappedCollateralAssets: {},
-    extraPriceFeeds: { nativeTokenToUsd: '', rewards: {}, otherBaseTokensToUsd: {} },
-    testnet: true,
-    walletRpcUrls: ['https://api.avax-test.network/ext/bc/C/rpc'],
-  },
-  43114: {
-    chainId: 43114,
-    url: AVALANCHE_URL,
-    key: 'Avax',
-    name: 'Avalanche',
-    blockExplorerUrls: ['https://snowtrace.io'],
-    nativeToken: {
-      decimals: 18,
-      name: 'Avax',
-      symbol: 'AVAX',
-    },
-    assetOverrides: {},
-    unwrappedCollateralAssets: {},
-    extraPriceFeeds: { nativeTokenToUsd: '', rewards: {}, otherBaseTokensToUsd: {} },
-    testnet: true,
-    walletRpcUrls: ['https://avalanche-mainnet.infura.io'],
   },
   42161: {
     chainId: 42161,
@@ -283,7 +209,6 @@ export const CHAINS: {
       rewards: { COMP: '0xe7C53FFd03Eb6ceF7d208bC4C13446c76d1E5884' },
       otherBaseTokensToUsd: {},
     },
-    testnet: false,
     walletRpcUrls: ['https://arb1.arbitrum.io/rpc'],
   },
   8453: {
@@ -324,7 +249,6 @@ export const CHAINS: {
       rewards: { COMP: '0x9DDa783DE64A9d1A60c49ca761EbE528C35BA428' },
       otherBaseTokensToUsd: {},
     },
-    testnet: false,
     walletRpcUrls: ['https://mainnet.base.org'],
   },
   534352: {
@@ -365,7 +289,6 @@ export const CHAINS: {
       rewards: { COMP: '0x643e160a3C3E2B7eae198f0beB1BfD2441450e86' },
       otherBaseTokensToUsd: {},
     },
-    testnet: false,
     walletRpcUrls: ['https://rpc.scroll.io'],
   },
   5000: {
@@ -392,7 +315,7 @@ export const CHAINS: {
         address: '0xC96dE26018A54D51c097160568752c4E3BD6C364',
         name: 'FunctionBTC',
         symbol: 'FBTC',
-      }
+      },
     },
     unwrappedCollateralAssets: {},
     extraPriceFeeds: {
@@ -400,7 +323,6 @@ export const CHAINS: {
       rewards: { COMP: '0x0cd478875450BcdC75E16FF6084aF3a4782610b9' },
       otherBaseTokensToUsd: {},
     },
-    testnet: false,
     walletRpcUrls: ['https://rpc.mantle.xyz'],
   },
   59144: {
@@ -429,7 +351,6 @@ export const CHAINS: {
       rewards: { COMP: '0x0ECE76334Fb560f2b1a49A60e38Cf726B02203f0' },
       otherBaseTokensToUsd: {},
     },
-    testnet: false,
     walletRpcUrls: ['https://rpc.linea.build/'],
   },
   130: {
@@ -458,7 +379,6 @@ export const CHAINS: {
       rewards: { COMP: '0xdf78e4f0a8279942ca68046476919a90f2288656' },
       otherBaseTokensToUsd: {},
     },
-    testnet: false,
     walletRpcUrls: ['https://mainnet.unichain.org'],
   },
   2020: {
@@ -490,13 +410,8 @@ export const CHAINS: {
       rewards: { COMP: '0xB88e4078AAc88F10C0Ca71086ddCF512Ec54498a' }, //TODO: NEED COMP token address
       otherBaseTokensToUsd: { WETH: '0x5D173813B4505701e79E654b36A95E6c1FAD4448' },
     },
-    testnet: false,
     walletRpcUrls: ['https://api.roninchain.com/rpc'],
   },
-};
-
-export const isTestnet = (chainId: number) => {
-  return CHAINS[chainId].testnet;
 };
 
 export const getChainKey = (chainId: number) => {
@@ -517,7 +432,7 @@ export const URLS: { [chainId: number]: string } = Object.keys(CHAINS).reduce<{
 
 export function isUnwrappedCollateralAsset(chainInformation: ChainInformation, assetAddress: string) {
   const unwrappedCollateralAddresses = Object.values(chainInformation.unwrappedCollateralAssets).map(
-    (asset) => asset.address
+    (asset) => asset.address,
   );
   return unwrappedCollateralAddresses.includes(assetAddress);
 }

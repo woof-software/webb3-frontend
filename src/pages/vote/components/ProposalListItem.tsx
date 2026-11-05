@@ -19,10 +19,8 @@ export interface ProposalItemProps {
   chainKey: string;
   canVote: boolean;
   receipt?: VoteReceipt;
-  showQueueAction: boolean;
   transaction?: Transaction;
   onRefresh: () => void;
-  onProposalAction: (proposalId: bigint) => void;
   onVoteOpen: (screen: VoteModalScreenEnum, proposal: Proposal) => void;
 }
 
@@ -52,13 +50,11 @@ const ProposalItem = ({
   chainKey,
   canVote,
   receipt,
-  showQueueAction,
   transaction,
   onRefresh,
   onVoteOpen,
-  onProposalAction,
 }: ProposalItemProps) => {
-  const { state, id, title, eta } = proposal;
+  const { state, id, title } = proposal;
   const [remainingTime, setRemainingTime] = useState<string>(displayTime(state));
 
   const showVote = canVote && receipt && !receipt.voted;
@@ -113,24 +109,6 @@ const ProposalItem = ({
             <span className="L4 meta">{remainingTime}</span>
           </span>
         </div>
-        {showQueueAction && state.state === ProposalStateEnum.Succeeded && (
-          <button
-            className="button button--small"
-            aria-label="Queue proposal"
-            onClick={() => onProposalAction(proposal.id)}
-          >
-            Queue
-          </button>
-        )}
-        {showQueueAction && state.state === ProposalStateEnum.Queued && eta <= currentTime && (
-          <button
-            className="button button--small"
-            aria-label="Execute proposal"
-            onClick={() => onProposalAction(proposal.id)}
-          >
-            Execute
-          </button>
-        )}
       </div>
       {state.state === ProposalStateEnum.Active && (
         <div className="proposal-item__votes">

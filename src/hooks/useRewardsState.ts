@@ -1,6 +1,5 @@
 import { getAddress } from 'ethers/lib/utils';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router';
 
 import type { Web3 } from '@contexts/Web3Context';
 import { convertApiResponse } from '@helpers/functions';
@@ -49,7 +48,7 @@ type MarketsWithPriceFeeds = [
   {
     chainInformation: ChainInformation;
     markets: MarketData[];
-  }
+  },
 ][];
 
 function areRewardsSupported(chainInformation: ChainInformation) {
@@ -57,13 +56,11 @@ function areRewardsSupported(chainInformation: ChainInformation) {
 }
 
 export function useRewardsState(web3: Web3, transactions: Transaction[]): RewardsState {
-  const [searchParams] = useSearchParams();
   const [state, setState] = useState<RewardsState>([StateType.Loading]);
   const maybeAccount = web3.write.account;
   const accountRef = useRef(maybeAccount);
-  const includeTestnets = searchParams.has('testnet');
 
-  const marketsByNetwork = useMemo(() => getMarketsByNetwork(includeTestnets), [includeTestnets]);
+  const marketsByNetwork = useMemo(() => getMarketsByNetwork(), []);
 
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -90,7 +87,7 @@ export function useRewardsState(web3: Web3, transactions: Transaction[]): Reward
     }
 
     try {
-      const updatedState: RewardsState = await getState(marketsByNetwork, currentAccount, includeTestnets);
+      const updatedState: RewardsState = await getState(marketsByNetwork, currentAccount);
       if (currentAccount === accountRef.current) {
         setState(updatedState);
       }
@@ -101,11 +98,11 @@ export function useRewardsState(web3: Web3, transactions: Transaction[]): Reward
         setState((prevState) =>
           prevState[0] === StateType.Loading
             ? [currentAccount === undefined ? StateType.NoWallet : StateType.Hydrated, []]
-            : prevState
+            : prevState,
         );
       }
     }
-  }, [marketsByNetwork, includeTestnets]);
+  }, [marketsByNetwork]);
 
   useEffect(() => {
     const intervalId = setInterval(refreshData, REWARDS_API_REFRESH_INTERVAL);
@@ -125,19 +122,15 @@ export function useRewardsState(web3: Web3, transactions: Transaction[]): Reward
   return state;
 }
 
-const getState = async (
-  marketsByNetwork: MarketsByNetwork,
-  maybeAccount?: string,
-  includeTestnets = false
-): Promise<RewardsState> => {
+const getState = async (marketsByNetwork: MarketsByNetwork, maybeAccount?: string): Promise<RewardsState> => {
   const marketsWithPriceFeeds: MarketsWithPriceFeeds = Object.entries(marketsByNetwork).filter(
     ([, { chainInformation }]) => {
       return areRewardsSupported(chainInformation);
-    }
+    },
   );
 
   if (maybeAccount === undefined) {
-    const rewardsStateResponse = await fetch(getMarketRewardsStateEndpoint(includeTestnets));
+    const rewardsStateResponse = await fetch(getMarketRewardsStateEndpoint());
     const rewardsState = await rewardsStateResponse.json();
 
     const sanitizedRewardState: RewardsTokenState[] = rewardsState.map(convertApiResponse).map(sanitizeRewardState);
@@ -145,7 +138,7 @@ const getState = async (
 
     return [StateType.NoWallet, responses];
   } else {
-    const rewardStateResponse = await fetch(getAccountRewardsStateEndpoint(maybeAccount, includeTestnets));
+    const rewardStateResponse = await fetch(getAccountRewardsStateEndpoint(maybeAccount));
     const rewardState = await rewardStateResponse.json();
     const sanitizedRewardState: AccountRewardsState[] = rewardState
       .map(convertApiResponse)
@@ -214,7 +207,7 @@ function sanitizeRewardWithAccountState(rewardState: RewardsWithAccountStateResp
  */
 function getRewardStatesPerChain<T extends { chainId: number }>(
   rewardStates: T[],
-  marketsWithPriceFeeds: MarketsWithPriceFeeds
+  marketsWithPriceFeeds: MarketsWithPriceFeeds,
 ): [string, { chainInformation: ChainInformation; rewardsStates: T[] }][] {
   return marketsWithPriceFeeds.map(([chainId, { chainInformation }]) => {
     const rewardsStates = rewardStates.filter((rewardState) => {

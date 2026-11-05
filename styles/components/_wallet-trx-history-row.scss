@@ -7,7 +7,7 @@
   padding: 0.5rem;
   text-wrap: wrap;
 
-  &:hover {
+  &[href]:hover {
     background: var(--ui--hover-overlay);
     .wallet-trx-history-row__external-link {
       opacity: 1;

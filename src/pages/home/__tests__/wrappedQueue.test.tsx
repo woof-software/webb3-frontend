@@ -81,7 +81,6 @@ const mockWriteState = {
   withdraw: jest.fn(),
   invokeBulker: jest.fn(),
   claimReward: jest.fn(),
-  drip: jest.fn(),
 };
 jest.mock('@hooks/useWriteCometState', () => ({ useWriteCometState: () => mockWriteState }));
 
@@ -179,7 +178,7 @@ function supplyState(
   steps: WrappedStep[],
   statuses: WrappedStepState[],
   stepIndex = 0,
-  draft = draftFor('supply', steps)
+  draft = draftFor('supply', steps),
 ): WrappedActionState {
   return { phase, draft, steps: statuses, stepIndex };
 }
@@ -234,7 +233,7 @@ function lendingWith(
     route = routeFor(),
     position = APPROVED,
     supplyRefusal,
-  }: { route?: LendingRoute; position?: WrappedPosition | undefined; supplyRefusal?: WrappedBlockReason } = {}
+  }: { route?: LendingRoute; position?: WrappedPosition | undefined; supplyRefusal?: WrappedBlockReason } = {},
 ): Lending {
   return {
     route,
@@ -306,7 +305,7 @@ function actionQueue(actions: Action[] = [], pendingAction?: PendingAction): Que
       actions.map((action) =>
         action[0] === ActionType.Supply || action[0] === ActionType.Withdraw
           ? ([action[0], baseAsset, action[2]] as Action)
-          : action
+          : action,
       ),
     getPendingAction: (baseAsset: BaseAssetWithAccountState) =>
       pendingAction === undefined ? undefined : ([pendingAction[0], baseAsset, pendingAction[2]] as PendingAction),
@@ -355,7 +354,7 @@ function homeElement(
     web3 = WEB3,
     state,
     isDashboard = true,
-  }: HomeOptions = {}
+  }: HomeOptions = {},
 ) {
   const SelectedMarketContext = SelectedMarketContextHelpers.getSelectedMarketContext();
   const ActionQueueContext = ActionQueueContextHelpers.getActionQueueContext();
@@ -502,10 +501,10 @@ describe('Home on the wrapped route', () => {
       const { actionRules, baseAsset, collateralAssets } = positionCard();
 
       expect(
-        validateAddingAction(baseAsset, collateralAssets, [], [ActionType.Supply, baseAsset, 1n], actionRules)
+        validateAddingAction(baseAsset, collateralAssets, [], [ActionType.Supply, baseAsset, 1n], actionRules),
       ).toEqual([false, 'Supply Not Open Yet']);
       expect(
-        validateAddingAction(baseAsset, collateralAssets, [], [ActionType.Withdraw, baseAsset, 1n], actionRules)
+        validateAddingAction(baseAsset, collateralAssets, [], [ActionType.Withdraw, baseAsset, 1n], actionRules),
       ).toEqual([false, 'Withdrawals Not Open Yet']);
 
       // A form callback kept from before the controls closed queues nothing and asks for nothing.
@@ -627,7 +626,7 @@ describe('Home on the wrapped route', () => {
           {
             queue: queued,
             transactions: [wrapperTransaction('approve', state)],
-          }
+          },
         );
         expect(approvalRow()).toMatchObject({ state });
         // An approval does not hold the dashboard.
@@ -686,7 +685,7 @@ describe('Home on the wrapped route', () => {
       const draft = draftFor('supply', [SUPPLY_STEP]);
       rerenderHome(
         lendingWith(controller(supplyState('signing', [SUPPLY_STEP], [{ status: 'awaiting-signature' }], 0, draft))),
-        { queue, transactions: [wrapperTransaction('supply', TransactionState.AwaitingConfirmation)] }
+        { queue, transactions: [wrapperTransaction('supply', TransactionState.AwaitingConfirmation)] },
       );
       expect(card()).toBe(TransactionState.AwaitingConfirmation);
       expect(masthead().transaction).toBeDefined();
@@ -694,7 +693,7 @@ describe('Home on the wrapped route', () => {
       // The hash.
       rerenderHome(
         lendingWith(controller(supplyState('signing', [SUPPLY_STEP], [{ status: 'submitted', hash: HASH }], 0, draft))),
-        { queue, transactions: [wrapperTransaction('supply', TransactionState.Pending)] }
+        { queue, transactions: [wrapperTransaction('supply', TransactionState.Pending)] },
       );
       expect(card()).toBe(TransactionState.Pending);
       expect(queue.removeAction).not.toHaveBeenCalled();
@@ -763,7 +762,7 @@ describe('Home on the wrapped route', () => {
 
         act(() => positionCard().onSubmitClicked());
         expect(stopped.write.supply).toHaveBeenCalledTimes(1);
-      }
+      },
     );
 
     it.each<[WrappedBlockReason, string]>([
@@ -806,7 +805,7 @@ describe('Home on the wrapped route', () => {
 
       act(() => submit());
       const reading = lendingWith(
-        controller({ phase: 'reading', identity: draftFor('supply', [SUPPLY_STEP]).identity })
+        controller({ phase: 'reading', identity: draftFor('supply', [SUPPLY_STEP]).identity }),
       );
       rerenderHome(reading, { queue });
       act(() => submit());
@@ -1085,7 +1084,7 @@ describe('Home on the wrapped route', () => {
       const draft = draftFor('withdraw', [WITHDRAW_STEP], SHARES);
       rerenderHome(
         lendingWith(controller({ phase: 'signing', draft, steps: [{ status: 'checking' }], stepIndex: 0 })),
-        options
+        options,
       );
       expect(mockWriteState.supply).not.toHaveBeenCalled();
       rerenderHome(lendingWith(controller({ phase: 'complete', draft, steps: [confirmed()], stepIndex: 0 })), options);
@@ -1098,7 +1097,7 @@ describe('Home on the wrapped route', () => {
         MAX_UINT256,
         `Repay ${borrower.name}`,
         0,
-        expect.any(Function)
+        expect.any(Function),
       );
       expect(mockWriteState.invokeBulker).not.toHaveBeenCalled();
     });
@@ -1133,9 +1132,9 @@ describe('Home on the wrapped route', () => {
 
       rerenderHome(
         lendingWith(
-          controller(supplyState('stopped', [SUPPLY_STEP], [{ status: 'blocked', reason: 'supply-paused' }]))
+          controller(supplyState('stopped', [SUPPLY_STEP], [{ status: 'blocked', reason: 'supply-paused' }])),
         ),
-        { queue }
+        { queue },
       );
 
       expect(queue.removeAction).not.toHaveBeenCalled();
@@ -1183,7 +1182,7 @@ describe('Home on the wrapped route', () => {
         act(() => keptSubmit());
         expect(changed.write.supply).not.toHaveBeenCalled();
         expectNoDialog();
-      }
+      },
     );
   });
 });

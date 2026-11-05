@@ -4,7 +4,9 @@
 .bulk-transaction__header {
   display: flex;
   border-radius: 0.5rem;
-  cursor: pointer;
+  a & {
+    cursor: pointer;
+  }
   flex-wrap: nowrap;
   justify-content: space-between;
   gap: 1.25rem;
@@ -25,7 +27,7 @@
     transition: all 0.3s ease;
   }
 
-  &:hover::before {
+  a &:hover::before {
     opacity: 1;
   }
 
@@ -103,7 +105,7 @@
 @media (min-width: $device--sm) {
   .unit-transaction,
   .bulk-transaction__header {
-    &:hover {
+    a &:hover {
       .transaction__date-holder__text {
         transition: 300ms ease-in-out;
         transform: translate(-1em, 0);

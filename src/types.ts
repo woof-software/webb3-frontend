@@ -188,7 +188,7 @@ export type ProtocolAndMarketsState = Omit<ProtocolState, 'collateralAssets'> & 
   utilization: bigint;
   borrowRewardsAPR: bigint;
   supplyRewardsAPR: bigint;
-  rewardsAssetSymbol?: string
+  rewardsAssetSymbol?: string;
   isInstitutional?: boolean;
   type: 'ProtocolAndMarketState';
 };
@@ -339,7 +339,6 @@ export interface ChainInformation {
     otherBaseTokensToUsd: { [symbol: string]: string };
   };
   blockExplorerUrls: string[];
-  testnet: boolean;
   walletRpcUrls: string[];
 }
 
@@ -349,7 +348,6 @@ export type MarketData = {
   iconPair: [string, string];
   marketAddress: string;
   bulkerAddress: string;
-  fauceteerAddress?: string;
   rewardsAddress?: string;
   // Overrides the base-asset part of the market's URL key (e.g. 'usdc-institutional' -> '?market=usdc-institutional-mainnet').
   // Required when multiple markets on the same chain share a base asset symbol.
@@ -451,7 +449,7 @@ export type MarketOverviewStateHydrated = [
   {
     latestMarketSummaries: LatestMarketSummaries;
     historicalMarketSummaries: HistoricalMarketSummaries;
-  }
+  },
 ];
 export type MarketOverviewState = MarketOverviewStateLoading | MarketOverviewStateHydrated;
 
@@ -467,7 +465,7 @@ export type VoteState = VoteStateLoading | VoteStateNoWallet | VoteStateHydrated
 export type RewardStateInfo = [string, { chainInformation: ChainInformation; rewardsStates: RewardsTokenState[] }];
 export type RewardAccountStateInfo = [
   string,
-  { chainInformation: ChainInformation; rewardsStates: AccountRewardsState[] }
+  { chainInformation: ChainInformation; rewardsStates: AccountRewardsState[] },
 ];
 export type RewardsStateLoading = [StateType.Loading];
 export type RewardsStateNoWallet = [StateType.NoWallet, undefined | RewardStateInfo[]];
@@ -513,11 +511,11 @@ export type ActionQueue = {
   getActions: (
     baseAsset: BaseAssetWithAccountState,
     collateralAssets: TokenWithAccountState[],
-    rewardsState: RewardsState
+    rewardsState: RewardsState,
   ) => Action[];
   getPendingAction: (
     baseAsset: BaseAssetWithAccountState,
-    collateralAssets: TokenWithAccountState[]
+    collateralAssets: TokenWithAccountState[],
   ) => PendingAction | undefined;
   removeAction: (action: Action) => void;
   setPendingAction: (pendingAction?: PendingAction) => void;
@@ -619,7 +617,7 @@ export enum Currency {
   USDbC = 'USDbC',
   'USDC.e' = 'USDC.e',
   USDe = 'USDe',
-  USDT0 = 'USDT0'
+  USDT0 = 'USDT0',
 }
 
 // START of transaction history types

@@ -13,14 +13,11 @@ type ProposalListHydrated = [
     proposals: Proposal[];
     chainKey: string;
     canVote: boolean;
-    showQueueAction: boolean;
     transaction?: Transaction;
     voteReceipts: Map<bigint, VoteReceipt>;
     onRefresh: () => void;
-    onExecuteProposal: (proposalId: bigint) => void;
-    onQueueProposal: (proposalId: bigint) => void;
     onVoteOpen: (screen: VoteModalScreenEnum, proposal: Proposal) => void;
-  }
+  },
 ];
 
 export type ProposalListState = ProposalListLoading | ProposalListHydrated;
@@ -69,9 +66,9 @@ const ProposalList = ({ state }: ProposalListProps) => {
     setActiveProposals(
       data.proposals.filter((proposal) =>
         [ProposalStateEnum.Active, ProposalStateEnum.Pending, ProposalStateEnum.Succeeded].includes(
-          proposal.state.state
-        )
-      )
+          proposal.state.state,
+        ),
+      ),
     );
     setQueuedProposals(data.proposals.filter((proposal) => proposal.state.state === ProposalStateEnum.Queued));
   }, [data.proposals]);
@@ -91,9 +88,7 @@ const ProposalList = ({ state }: ProposalListProps) => {
                 proposal={proposal}
                 receipt={data.voteReceipts.get(proposal.id)}
                 chainKey={data.chainKey}
-                showQueueAction={data.showQueueAction}
                 transaction={data.transaction}
-                onProposalAction={data.onQueueProposal}
                 onVoteOpen={data.onVoteOpen}
                 onRefresh={data.onRefresh}
               />
@@ -129,9 +124,7 @@ const ProposalList = ({ state }: ProposalListProps) => {
                 proposal={proposal}
                 chainKey={data.chainKey}
                 transaction={undefined}
-                showQueueAction={data.showQueueAction}
                 onRefresh={() => undefined}
-                onProposalAction={data.onExecuteProposal}
                 onVoteOpen={data.onVoteOpen}
               />
             ))}

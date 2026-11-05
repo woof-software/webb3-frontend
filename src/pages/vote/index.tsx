@@ -1,6 +1,5 @@
 import { useState } from 'react';
 
-import { isTestnet } from '@constants/chains';
 import type { Web3 } from '@contexts/Web3Context';
 import { PreEstimatedAction } from '@helpers/gasEstimator';
 import { formatTokenBalance } from '@helpers/numbers';
@@ -70,12 +69,9 @@ const Vote = ({ web3, estimatedGasMap, transactions, addTransaction, switchWrite
         proposals,
         chainKey,
         canVote: false,
-        showQueueAction: false,
         transaction: undefined,
         voteReceipts: new Map(),
         onRefresh: () => externalRefreshData(),
-        onExecuteProposal: () => undefined,
-        onQueueProposal: () => undefined,
         onVoteOpen: () => undefined,
       },
     ];
@@ -104,10 +100,8 @@ const Vote = ({ web3, estimatedGasMap, transactions, addTransaction, switchWrite
     }
 
     const castVoteTransaction = transactions.find(
-      (transaction) => transaction.description === GovTransactionsEnum.CastVote
+      (transaction) => transaction.description === GovTransactionsEnum.CastVote,
     );
-
-    const showQueueAction = canWrite && isTestnet(chainId) && chainId === web3.write.chainId;
 
     voteHeroPanelState = [
       StateType.Hydrated,
@@ -134,7 +128,7 @@ const Vote = ({ web3, estimatedGasMap, transactions, addTransaction, switchWrite
             ? setDelegateModal(true)
             : switchWriteNetwork(
                 chainId,
-                delegateType === DelegateTypeEnum.Undelegated && !compAccount.votes ? 'get started' : 'delegate voting'
+                delegateType === DelegateTypeEnum.Undelegated && !compAccount.votes ? 'get started' : 'delegate voting',
               ),
       },
     ];
@@ -145,14 +139,9 @@ const Vote = ({ web3, estimatedGasMap, transactions, addTransaction, switchWrite
         proposals,
         chainKey,
         canVote: canWrite && delegateType !== DelegateTypeEnum.Delegated && compAccount.votes > 0,
-        showQueueAction,
         transaction: castVoteTransaction,
         voteReceipts,
         onRefresh: () => externalRefreshData(),
-        onExecuteProposal: (proposalId: bigint) =>
-          writeState.executeProposal(proposalId, estimatedGasMap.get(PreEstimatedAction.ExecuteProposal) || 0),
-        onQueueProposal: (proposalId: bigint) =>
-          writeState.queueProposal(proposalId, estimatedGasMap.get(PreEstimatedAction.QueueProposal) || 0),
         onVoteOpen: (screen: VoteModalScreenEnum, proposal: Proposal) => {
           if (web3.write.chainId === chainId) {
             setVoteModal(true);
@@ -170,8 +159,8 @@ const Vote = ({ web3, estimatedGasMap, transactions, addTransaction, switchWrite
     const delegateModalScreen = !delegateTransaction
       ? DelegateModalScreenEnum.ChooseType
       : delegateTransaction.state === TransactionState.AwaitingConfirmation
-      ? DelegateModalScreenEnum.ConfirmTransaction
-      : DelegateModalScreenEnum.PendingTransaction;
+        ? DelegateModalScreenEnum.ConfirmTransaction
+        : DelegateModalScreenEnum.PendingTransaction;
 
     delegateModalState = [
       StateType.Hydrated,
@@ -208,7 +197,7 @@ const Vote = ({ web3, estimatedGasMap, transactions, addTransaction, switchWrite
             support,
             reason,
             estimatedGasMap.get(PreEstimatedAction.CastVote) || 0,
-            chainId
+            chainId,
           ),
       },
     ];

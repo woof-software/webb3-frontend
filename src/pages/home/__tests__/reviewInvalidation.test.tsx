@@ -58,7 +58,6 @@ const mockWriteState = {
   withdraw: jest.fn(),
   invokeBulker: jest.fn(),
   claimReward: jest.fn(),
-  drip: jest.fn(),
 };
 // The add-transaction function Home gives its writes. The tests call it as the real writes do.
 const mockWriteDependencies: { addTransaction?: AddTransaction } = {};
@@ -365,40 +364,8 @@ describe('Home submission guards', () => {
       expect(mockWriteState.approve).not.toHaveBeenCalled();
       expect(switchWriteNetwork).not.toHaveBeenCalled();
       expect(queue.addOrUpdateAction).not.toHaveBeenCalled();
-    }
+    },
   );
-
-  it.each<[string, Partial<Setup>]>([
-    ['account', { web3: web3For({ account: OTHER_ACCOUNT }) }],
-    ['connection status (a reconnect)', { web3: web3For({ status: 'reconnecting' }) }],
-    ['wallet network', { web3: web3For({ chainId: 137 }) }],
-    ['market', { market: USDT_MARKET }],
-  ])('ignores faucet clicks kept from before a change of %s', (_change, changed) => {
-    const queue = actionQueue([]);
-    const { rerender } = render(homeElement({ queue }));
-    // The base asset's faucet button is on the position card, and each collateral row has its own.
-    const dripBaseAssetKept = positionCard().onDripClicked;
-    const dripCollateralKept = mockLastProps.AssetRow.state[1].onDripClicked;
-
-    rerender(homeElement({ queue, ...changed }));
-    act(() => {
-      dripBaseAssetKept();
-      dripCollateralKept();
-    });
-
-    expect(mockWriteState.drip).not.toHaveBeenCalled();
-  });
-
-  it('asks the faucet while its visit is current', () => {
-    render(homeElement({ queue: actionQueue([]) }));
-
-    act(() => {
-      positionCard().onDripClicked();
-      mockLastProps.AssetRow.state[1].onDripClicked();
-    });
-
-    expect(mockWriteState.drip).toHaveBeenCalledTimes(2);
-  });
 
   it('ignores a submit kept from before a change of wallet network, and asks for no switch', () => {
     const switchWriteNetwork = jest.fn();
@@ -430,12 +397,12 @@ describe('Home submission guards', () => {
             outcomes.push(error instanceof SendWithdrawnError ? 'withdrawn' : 'failed');
             return undefined;
           }
-        }
+        },
       );
       return { addTransaction, outcomes, finishPreparing: () => finishPreparing() };
     }
 
-    const walletApprove = jest.fn(async () => ({ hash: '0xapproval' } as unknown as TransactionResponse));
+    const walletApprove = jest.fn(async () => ({ hash: '0xapproval' }) as unknown as TransactionResponse);
 
     beforeEach(() => {
       walletApprove.mockClear();
@@ -450,8 +417,8 @@ describe('Home submission guards', () => {
             jest.fn(),
             [spender, MAX_UINT256.toString()],
             0n,
-            callback
-          )
+            callback,
+          ),
       );
     });
 
@@ -466,7 +433,7 @@ describe('Home submission guards', () => {
         const manager = preparingManager();
         const pendingSupply: PendingAction = [ActionType.SupplyCollateral, COMP, 10n ** 18n];
         const { rerender } = render(
-          homeElement({ queue: actionQueue([], pendingSupply), addTransaction: manager.addTransaction })
+          homeElement({ queue: actionQueue([], pendingSupply), addTransaction: manager.addTransaction }),
         );
         act(() => positionCard().onPendingActionConfirm(10n ** 18n));
         expect(manager.addTransaction).toHaveBeenCalledTimes(1);
@@ -476,7 +443,7 @@ describe('Home submission guards', () => {
 
         expect(walletApprove).not.toHaveBeenCalled();
         expect(manager.outcomes).toEqual(['withdrawn']);
-      }
+      },
     );
 
     it('asks the wallet for an approval whose visit is still current', async () => {
@@ -497,7 +464,7 @@ describe('Home submission guards', () => {
       const manager = preparingManager();
       const pendingSupply: PendingAction = [ActionType.SupplyCollateral, COMP, 10n ** 18n];
       const { unmount } = render(
-        homeElement({ queue: actionQueue([], pendingSupply), addTransaction: manager.addTransaction })
+        homeElement({ queue: actionQueue([], pendingSupply), addTransaction: manager.addTransaction }),
       );
       act(() => positionCard().onPendingActionConfirm(10n ** 18n));
       expect(manager.addTransaction).toHaveBeenCalledTimes(1);
@@ -509,7 +476,7 @@ describe('Home submission guards', () => {
           queue: actionQueue([]),
           addTransaction: manager.addTransaction,
           web3: web3For({ account: OTHER_ACCOUNT }),
-        })
+        }),
       );
       await act(async () => manager.finishPreparing());
 
@@ -523,12 +490,12 @@ describe('Home submission guards', () => {
       walletApprove.mockImplementationOnce(
         () =>
           new Promise<TransactionResponse>(
-            (resolve) => (answerWallet = () => resolve({ hash: '0xapproval' } as unknown as TransactionResponse))
-          )
+            (resolve) => (answerWallet = () => resolve({ hash: '0xapproval' } as unknown as TransactionResponse)),
+          ),
       );
       const pendingSupply: PendingAction = [ActionType.SupplyCollateral, COMP, 10n ** 18n];
       const { unmount } = render(
-        homeElement({ queue: actionQueue([], pendingSupply), addTransaction: manager.addTransaction })
+        homeElement({ queue: actionQueue([], pendingSupply), addTransaction: manager.addTransaction }),
       );
       act(() => positionCard().onPendingActionConfirm(10n ** 18n));
       await act(async () => manager.finishPreparing());

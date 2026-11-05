@@ -16,6 +16,7 @@ const UnitTransaction = ({ transaction, account }: { transaction: TransactionHis
   const { transactionHash, actions, timestamp, network } = transaction;
   const { chainId } = network;
   const trxUrl = getBlockExplorerUrlForTransactionHistory(transaction);
+  const Row = trxUrl ? 'a' : 'div';
 
   const action = actions[0];
   const { actionType, amount, token, contract } = action;
@@ -27,7 +28,7 @@ const UnitTransaction = ({ transaction, account }: { transaction: TransactionHis
     ${token.symbol}`;
 
   return (
-    <a href={trxUrl} target="_blank" rel="noreferrer" key={transactionHash}>
+    <Row {...(trxUrl ? { href: trxUrl, target: '_blank', rel: 'noreferrer' } : {})} key={transactionHash}>
       <div className="unit-transaction">
         <div className="unit-transaction__info">
           <div className="unit-transaction__info__icon-holder">
@@ -42,7 +43,7 @@ const UnitTransaction = ({ transaction, account }: { transaction: TransactionHis
         {/* date */}
         <TransactionDate timestamp={timestamp} />
       </div>
-    </a>
+    </Row>
   );
 };
 

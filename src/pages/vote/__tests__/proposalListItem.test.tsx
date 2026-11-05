@@ -8,24 +8,15 @@ import {
   activeProposal,
   mockReceipts,
   queuedProposal,
-  succeededProposal,
-  proposalToExecute,
   activeProposalNoVote,
 } from '../../../../handlers/mock-proposals';
 import ProposalItem from '../components/ProposalListItem';
 import { VoteModalScreenEnum } from '../components/VoteModal';
 
 const mockVoteOpen = jest.fn();
-const mockQueueAction = jest.fn();
 const mockRefresh = jest.fn();
 
-const renderProposalItem = (
-  proposal: Proposal,
-  canVote: boolean,
-  showQueueAction: boolean,
-  receipt?: VoteReceipt,
-  transaction?: Transaction
-) => {
+const renderProposalItem = (proposal: Proposal, canVote: boolean, receipt?: VoteReceipt, transaction?: Transaction) => {
   return render(
     <ProposalItem
       proposal={proposal}
@@ -34,16 +25,14 @@ const renderProposalItem = (
       receipt={receipt}
       transaction={transaction}
       onVoteOpen={mockVoteOpen}
-      onProposalAction={mockQueueAction}
-      showQueueAction={showQueueAction}
       onRefresh={mockRefresh}
-    />
+    />,
   );
 };
 
 describe('ProposalItem', () => {
   test('renders pending proposal status and time until voting', () => {
-    renderProposalItem(pendingProposal, true, true, undefined, undefined);
+    renderProposalItem(pendingProposal, true, undefined, undefined);
 
     expect(screen.getByText(ProposalStateEnum.Pending)).toBeInTheDocument();
     expect(screen.getByText(/until voting/)).toBeInTheDocument();
@@ -52,7 +41,7 @@ describe('ProposalItem', () => {
   });
 
   test('renders active proposal and voting disabled', () => {
-    renderProposalItem(activeProposal, false, false, undefined, undefined);
+    renderProposalItem(activeProposal, false, undefined, undefined);
 
     expect(screen.getByText(ProposalStateEnum.Active)).toBeInTheDocument();
     expect(screen.getByText(/left/)).toBeInTheDocument();
@@ -70,7 +59,7 @@ describe('ProposalItem', () => {
 
   test('renders active proposal with vote buttons', () => {
     const receipt = mockReceipts.get(activeProposalNoVote.id);
-    renderProposalItem(activeProposalNoVote, true, true, receipt, undefined);
+    renderProposalItem(activeProposalNoVote, true, receipt, undefined);
 
     const buttons = screen.queryAllByRole('button');
     expect(buttons.length).toBe(3);
@@ -80,7 +69,7 @@ describe('ProposalItem', () => {
   });
 
   test('disables vote buttons when criteria not met', () => {
-    renderProposalItem(activeProposal, false, false, undefined, undefined);
+    renderProposalItem(activeProposal, false, undefined, undefined);
 
     const buttons = screen.queryAllByRole('button');
     expect(buttons.length).toBe(0);
@@ -88,45 +77,26 @@ describe('ProposalItem', () => {
 
   test('hides active proposal buttons when displaying vote receipt', () => {
     const receipt = mockReceipts.get(activeProposal.id);
-    renderProposalItem(activeProposal, true, true, receipt, undefined);
+    renderProposalItem(activeProposal, true, receipt, undefined);
 
     const buttons = screen.queryAllByRole('button');
     expect(buttons.length).toBe(0);
     expect(screen.getByText('Your Vote')).toBeInTheDocument();
   });
 
-  test('only show Queue button on test network', () => {
-    renderProposalItem(succeededProposal, true, false, undefined, undefined);
-
-    const buttons = screen.queryAllByRole('button');
-    expect(buttons.length).toBe(0);
-    expect(screen.getByText(ProposalStateEnum.Succeeded)).toBeInTheDocument();
-  });
-
   test('renders queued proposal', () => {
-    renderProposalItem(queuedProposal, true, true, undefined, undefined);
+    renderProposalItem(queuedProposal, true, undefined, undefined);
 
     const buttons = screen.queryAllByRole('button');
     expect(buttons.length).toBe(0);
     expect(screen.getByText(ProposalStateEnum.Queued)).toBeInTheDocument();
-  });
-
-  test('renders queued proposal to execute', () => {
-    renderProposalItem(proposalToExecute, true, true, undefined, undefined);
-
-    const buttons = screen.queryAllByRole('button');
-    expect(buttons.length).toBe(1);
-    expect(screen.getByText(ProposalStateEnum.Queued)).toBeInTheDocument();
-
-    fireEvent.click(screen.getByLabelText('Execute proposal'));
-    expect(mockQueueAction).toHaveBeenCalledWith(proposalToExecute.id);
   });
 
   test('calls onRefresh when second countdown reaches zero', async () => {
     const proposal = { ...activeProposal };
     proposal.state = { state: ProposalStateEnum.Active, startTime: 0, endTime: 1 }; // set endTime to current time minus 1 second
 
-    renderProposalItem(proposal, true, true, undefined, undefined);
+    renderProposalItem(proposal, true, undefined, undefined);
 
     // wait for countdown to reach zero
     await new Promise((resolve) => setTimeout(resolve, 1000));

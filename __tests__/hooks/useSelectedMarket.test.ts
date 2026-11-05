@@ -5,7 +5,7 @@ import mainnetWETHRoots from 'comet/deployments/mainnet/weth/roots.json';
 import { DEFAULT_MARKET, getMarkets, marketKey } from '@helpers/markets';
 import { parseMarketKeyOrDefault, shortMarketKey } from '@hooks/useSelectedMarket';
 
-const MARKETS = getMarkets(true);
+const MARKETS = getMarkets();
 
 const marketByAddress = (address: string) => {
   const market = MARKETS.find((market) => market.marketAddress.toLowerCase() === address.toLowerCase());

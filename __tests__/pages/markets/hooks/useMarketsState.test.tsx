@@ -31,7 +31,7 @@ jest.mock('@ethersproject/providers', () => ({
   StaticJsonRpcProvider: jest.fn(),
 }));
 
-const marketData = getMarkets(false).find((market) => market.chainInformation.chainId === 1 && !market.rewardsOverwrite);
+const marketData = getMarkets().find((market) => market.chainInformation.chainId === 1 && !market.rewardsOverwrite);
 
 if (marketData === undefined) {
   throw new Error('Expected a mainnet market without a rewards overwrite');
@@ -65,7 +65,7 @@ const Wrapper = ({ children }: { children: ReactNode }) => (
 
 const serveHistory = (buckets: V3MarketApiBucket[]) =>
   server.use(
-    rest.get(`${getMarketDataUrlForMarket(market)}/historical/summary`, (_req, res, ctx) => res(ctx.json(buckets)))
+    rest.get(`${getMarketDataUrlForMarket(market)}/historical/summary`, (_req, res, ctx) => res(ctx.json(buckets))),
   );
 
 const renderMarketState = async () => {

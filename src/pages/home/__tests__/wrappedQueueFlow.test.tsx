@@ -40,7 +40,6 @@ const mockWriteState = {
   withdraw: jest.fn(),
   invokeBulker: jest.fn(),
   claimReward: jest.fn(),
-  drip: jest.fn(),
 };
 jest.mock('@hooks/useWriteCometState', () => ({ useWriteCometState: () => mockWriteState }));
 
@@ -214,7 +213,7 @@ describe('the wrapped route through the normal form, queue and comparison', () =
     await user.type(amountInput(), '100');
     // Production's hint, without its promise that one approval is enough: the exact approval is spent.
     expect(
-      screen.getAllByText('You need to approve Compound on the USDC contract before you can use this asset.')[0]
+      screen.getAllByText('You need to approve Compound on the USDC contract before you can use this asset.')[0],
     ).toBeInTheDocument();
     expect(screen.queryByText(/You only need to do this once/)).toBeNull();
     await user.click(formButton('Approve & Add'));
@@ -239,8 +238,8 @@ describe('the wrapped route through the normal form, queue and comparison', () =
     await user.type(input, '150');
     expect(
       screen.getAllByText(
-        'This amount exceeds the allowance you previously set for this asset. You will be asked to approve an increase when you add this action.'
-      )[0]
+        'This amount exceeds the allowance you previously set for this asset. You will be asked to approve an increase when you add this action.',
+      )[0],
     ).toBeInTheDocument();
     expect(formButton('Approve & Add')).toBeEnabled();
     await user.clear(input);
@@ -403,7 +402,7 @@ describe('the wrapped route through the normal form, queue and comparison', () =
       MAX_UINT256,
       `Repay ${borrower.name}`,
       0,
-      expect.any(Function)
+      expect.any(Function),
     );
     expect(value.write.supply).not.toHaveBeenCalled();
     expect(mockWriteState.invokeBulker).not.toHaveBeenCalled();

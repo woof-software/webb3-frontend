@@ -1,5 +1,4 @@
 import { useState, useRef, useContext, Fragment } from 'react';
-import { useSearchParams } from 'react-router';
 
 import { getSelectedMarketContext } from '@contexts/SelectedMarketContext';
 import { iconNameForChainId } from '@helpers/assets';
@@ -23,8 +22,7 @@ const MarketSelector = () => {
   const { selectedMarket, selectMarket } = useContext(getSelectedMarketContext());
   const [selectedChainId, setSelectedChainId] = useState<number>(selectedMarket[1]?.chainInformation.chainId ?? 1);
   const [, currentMarket] = selectedMarket;
-  const [searchParams] = useSearchParams();
-  const marketsByNetwork = getMarketsByNetwork(searchParams.has('testnet'));
+  const marketsByNetwork = getMarketsByNetwork();
 
   const ref = useRef(null);
 

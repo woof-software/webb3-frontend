@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router';
 
 import { CircleMinus, CirclePlus, CircleRightArrow } from '@components/Icons';
 import { Web3 } from '@contexts/Web3Context';
@@ -109,8 +108,8 @@ const readCachedTranscations = (account: string) => {
   }
 };
 
-const fetchTransactions = async (account: string, cursor?: string, limit?: number, useTestnet = false) => {
-  const response = await fetch(getTransactionHistoryEndpoint(account, cursor, limit, useTestnet));
+const fetchTransactions = async (account: string, cursor?: string, limit?: number) => {
+  const response = await fetch(getTransactionHistoryEndpoint(account, cursor, limit));
   if (!response.ok) {
     throw new Error(`Error fetching transaction history: ${response.status}`);
   }
@@ -120,10 +119,6 @@ const fetchTransactions = async (account: string, cursor?: string, limit?: numbe
 
 export const useTransactionHistory = (web3: Web3, limit = LIMIT) => {
   const accountRef = useRef(web3.write.account);
-
-  // param for testing. in future we will pass markets based on filter criteria
-  const [searchParams] = useSearchParams();
-  const useTestnet = searchParams.has('sepolia-transactions');
 
   // check for cached data
   let initialState: TransactionsState = [StateType.Loading];
@@ -164,7 +159,7 @@ export const useTransactionHistory = (web3: Web3, limit = LIMIT) => {
   }, [web3.write.account]);
 
   const loadMore = async (account: string, cursor: string, items: TransactionHistoryItem[], limit: number = LIMIT) => {
-    const data = await fetchTransactions(account, cursor, limit, useTestnet);
+    const data = await fetchTransactions(account, cursor, limit);
     const mergedItems = [...new Set([...items, ...data.items])];
     mergedItems.sort((a, b) => b.timestamp - a.timestamp);
 

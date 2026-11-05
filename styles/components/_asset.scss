@@ -28,10 +28,6 @@
     background-image: url('/images/assets/asset_AAVE.svg');
   }
 
-  &--AVALANCHE {
-    background-image: url('/images/assets/asset_AVALANCHE.svg');
-  }
-
   &--AXS {
     background-image: url('/images/assets/asset_AXS.png');
   }
@@ -150,8 +146,8 @@
     background-image: url('/images/assets/asset_SUSHI.svg');
   }
 
-  &--TESTNET {
-    background-image: url('/images/assets/asset_TESTNET.svg');
+  &--UNSUPPORTED {
+    background-image: url('/images/assets/asset_UNSUPPORTED.svg');
   }
 
   &--TUSD {
@@ -317,7 +313,7 @@
   &--RONIN-NETWORK {
     background-image: url('/images/assets/asset_RONINCHAIN.svg');
   }
-  
+
   &--sdeUSD {
     background-image: url('/images/assets/asset_sdeUSD.svg');
   }

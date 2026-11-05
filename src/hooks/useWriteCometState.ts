@@ -4,10 +4,8 @@ import { useCallback } from 'react';
 import type { Web3 } from '@contexts/Web3Context';
 import Comet from '@helpers/abis/Comet';
 import ERC20 from '@helpers/abis/ERC20';
-import Fauceteer from '@helpers/abis/Fauceteer';
 import Rewards from '@helpers/abis/Rewards';
 import { getBulkerTrxData, BulkerTrxData } from '@helpers/bulkerActions';
-import { tryOrDecodeError } from '@helpers/functions';
 import { MAX_UINT256 } from '@helpers/numbers';
 import {
   AccountRewardsState,
@@ -26,14 +24,14 @@ export type WriteCometState = {
     address: string,
     description: string,
     estimatedGas: number,
-    callback?: () => void
+    callback?: () => void,
   ) => Promise<void>;
   allowOperator: (
     market: MarketDataLoaded | MarketData,
     operatorAddress: string,
     description: string,
     estimatedGas: number,
-    allow?: boolean
+    allow?: boolean,
   ) => Promise<void>;
   supply: (
     market: MarketDataLoaded,
@@ -41,7 +39,7 @@ export type WriteCometState = {
     amount: bigint,
     description: string,
     estimatedGas: number,
-    callback?: () => void
+    callback?: () => void,
   ) => Promise<void>;
   withdraw: (
     market: MarketDataLoaded,
@@ -49,14 +47,14 @@ export type WriteCometState = {
     amount: bigint,
     description: string,
     estimatedGas: number,
-    callback?: () => void
+    callback?: () => void,
   ) => Promise<void>;
   claimReward: (
     rewardsAccountState: AccountRewardsState,
     address: string,
     description: string,
     estimatedGas: number,
-    callback?: () => void
+    callback?: () => void,
   ) => Promise<void>;
   invokeBulker: (
     market: MarketDataLoaded,
@@ -65,9 +63,8 @@ export type WriteCometState = {
     collateralAssetsPre: TokenWithAccountState[],
     description: string,
     estimatedGas: number,
-    callback?: () => void
+    callback?: () => void,
   ) => Promise<void>;
-  drip: (market: MarketDataLoaded, address: string) => Promise<void>;
 };
 
 export function useWriteCometState(web3: Web3, addTransaction: AddTransaction): WriteCometState {
@@ -91,11 +88,11 @@ export function useWriteCometState(web3: Web3, addTransaction: AddTransaction): 
           tokenErc20.estimateGas.approve,
           [spender, MAX_UINT256.toString()],
           0n,
-          callback
+          callback,
         );
       }
     },
-    [web3.write.provider, web3.write.account, web3.write.chainId, web3.read.chainId]
+    [web3.write.provider, web3.write.account, web3.write.chainId, web3.read.chainId],
   );
 
   const allowOperator = useCallback(
@@ -104,7 +101,7 @@ export function useWriteCometState(web3: Web3, addTransaction: AddTransaction): 
       operatorAddress: string,
       description: string,
       estimatedGas: number,
-      allow = true
+      allow = true,
     ) => {
       if (
         web3.write.provider !== undefined &&
@@ -122,7 +119,7 @@ export function useWriteCometState(web3: Web3, addTransaction: AddTransaction): 
         ]);
       }
     },
-    [web3.write.provider, web3.write.account, web3.write.chainId, web3.read.chainId]
+    [web3.write.provider, web3.write.account, web3.write.chainId, web3.read.chainId],
   );
 
   const supply = useCallback(
@@ -132,7 +129,7 @@ export function useWriteCometState(web3: Web3, addTransaction: AddTransaction): 
       amount: bigint,
       description: string,
       estimatedGas: number,
-      callback?: () => void
+      callback?: () => void,
     ) => {
       if (
         web3.write.provider !== undefined &&
@@ -153,11 +150,11 @@ export function useWriteCometState(web3: Web3, addTransaction: AddTransaction): 
           comet.estimateGas.supply,
           [address, amount.toString()],
           0n,
-          callback
+          callback,
         );
       }
     },
-    [web3.write.provider, web3.write.account, web3.write.chainId, web3.read.chainId]
+    [web3.write.provider, web3.write.account, web3.write.chainId, web3.read.chainId],
   );
 
   const withdraw = useCallback(
@@ -167,7 +164,7 @@ export function useWriteCometState(web3: Web3, addTransaction: AddTransaction): 
       amount: bigint,
       description: string,
       estimatedGas: number,
-      callback?: () => void
+      callback?: () => void,
     ) => {
       if (web3.write.provider !== undefined && web3.write.chainId === web3.read.chainId && web3.write.account) {
         const sender = web3.write.account;
@@ -184,11 +181,11 @@ export function useWriteCometState(web3: Web3, addTransaction: AddTransaction): 
           comet.estimateGas.withdraw,
           [address, amount.toString()],
           0n,
-          callback
+          callback,
         );
       }
     },
-    [web3.write.provider, web3.write.account, web3.write.chainId, web3.read.chainId]
+    [web3.write.provider, web3.write.account, web3.write.chainId, web3.read.chainId],
   );
 
   const invokeBulker = useCallback(
@@ -199,7 +196,7 @@ export function useWriteCometState(web3: Web3, addTransaction: AddTransaction): 
       collateralAssetsPre: TokenWithAccountState[],
       description: string,
       estimatedGas: number,
-      callback?: () => void
+      callback?: () => void,
     ) => {
       if (web3.write.provider !== undefined && web3.write.chainId === web3.read.chainId && web3.write.account) {
         const { bulker, bulkerActions, bulkerCallData, bulkerCallValue }: BulkerTrxData = getBulkerTrxData(
@@ -208,7 +205,7 @@ export function useWriteCometState(web3: Web3, addTransaction: AddTransaction): 
           market,
           baseAssetPre,
           collateralAssetsPre,
-          actions
+          actions,
         );
 
         addTransaction(
@@ -219,29 +216,11 @@ export function useWriteCometState(web3: Web3, addTransaction: AddTransaction): 
           bulker.estimateGas.invoke,
           [bulkerActions, bulkerCallData],
           bulkerCallValue,
-          callback
+          callback,
         );
       }
     },
-    [web3.write.provider, web3.write.account, web3.write.chainId, web3.read.chainId]
-  );
-
-  const drip = useCallback(
-    async (market: MarketDataLoaded, address: string) => {
-      if (
-        web3.write.provider !== undefined &&
-        web3.write.chainId === web3.read.chainId &&
-        web3.write.account &&
-        market.fauceteerAddress !== undefined
-      ) {
-        const sender = web3.write.account;
-        const signer = web3.write.provider.getSigner(sender).connectUnchecked();
-
-        const fauceteer = new Contract(market.fauceteerAddress, Fauceteer, signer);
-        await tryOrDecodeError(fauceteer, 'drip', [address]);
-      }
-    },
-    [web3.write.provider, web3.write.account, web3.write.chainId, web3.read.chainId]
+    [web3.write.provider, web3.write.account, web3.write.chainId, web3.read.chainId],
   );
 
   const claimReward = useCallback(
@@ -250,7 +229,7 @@ export function useWriteCometState(web3: Web3, addTransaction: AddTransaction): 
       address: string,
       description: string,
       estimatedGas: number,
-      callback?: () => void
+      callback?: () => void,
     ) => {
       if (
         web3.write.provider !== undefined &&
@@ -269,11 +248,11 @@ export function useWriteCometState(web3: Web3, addTransaction: AddTransaction): 
           rewards.estimateGas.claim,
           [rewardsAccountState.comet, sender, true],
           0n,
-          callback
+          callback,
         );
       }
     },
-    [web3.write.provider, web3.write.account, web3.write.chainId, web3.read.chainId]
+    [web3.write.provider, web3.write.account, web3.write.chainId, web3.read.chainId],
   );
 
   return {
@@ -282,7 +261,6 @@ export function useWriteCometState(web3: Web3, addTransaction: AddTransaction): 
     supply,
     withdraw,
     invokeBulker,
-    drip,
     claimReward,
   };
 }

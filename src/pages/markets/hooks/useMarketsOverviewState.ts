@@ -10,14 +10,7 @@ import { getMarket, getMarketDescriptors } from '@helpers/markets';
 import { BASE_FACTOR, FACTOR_PRECISION, PRICE_PRECISION } from '@helpers/numbers';
 import { getMarketRewardsAPRs } from '@helpers/rewards';
 import { getHistoricalMarketSummaryEndpoint, getLatestMarketSummaryEndpoint } from '@helpers/urls';
-import {
-  AggregatedHistoricalSummary,
-  MarketOverviewState,
-  MarketSummary,
-  RewardsState,
-  StateType
-} from '@types';
-
+import { AggregatedHistoricalSummary, MarketOverviewState, MarketSummary, RewardsState, StateType } from '@types';
 
 const LATEST_SUMMARY_REFRESH_INTERVAL = 1000 * 60 * 10; // 10 minutes
 
@@ -51,15 +44,15 @@ type MarketSummaryResponse = {
   collateralAssetSymbols: string[];
 };
 
-const getState = async (rewardsState: RewardsState, includeTestnets = false,): Promise<MarketOverviewState> => {
-  const latestMarketSummariesResponse = await fetch(getLatestMarketSummaryEndpoint(includeTestnets));
+const getState = async (rewardsState: RewardsState): Promise<MarketOverviewState> => {
+  const latestMarketSummariesResponse = await fetch(getLatestMarketSummaryEndpoint());
   const latestMarketSummaries = await latestMarketSummariesResponse.json();
 
   const sanitizedLatestMarketSummaries: MarketSummary[] = latestMarketSummaries
     .map(convertApiResponse)
     .map((marketSummary: MarketSummaryResponse) => sanitizeMarketSummary(marketSummary, rewardsState));
 
-  const historicalMarketSummariesResponse = await fetch(getHistoricalMarketSummaryEndpoint(includeTestnets));
+  const historicalMarketSummariesResponse = await fetch(getHistoricalMarketSummaryEndpoint());
   const historicalMarketSummaries = await historicalMarketSummariesResponse.json();
   const sanitizedHistoricalMarketSummaries: MarketSummary[] = historicalMarketSummaries
     .map(convertApiResponse)
@@ -85,7 +78,7 @@ const getState = async (rewardsState: RewardsState, includeTestnets = false,): P
 
       return acc;
     },
-    []
+    [],
   );
 
   return [
@@ -106,7 +99,7 @@ const getState = async (rewardsState: RewardsState, includeTestnets = false,): P
  */
 export const sanitizeMarketSummary = (
   marketSummary: MarketSummaryResponse,
-  marketRewards?: RewardsState
+  marketRewards?: RewardsState,
 ): MarketSummary => {
   const baseUsdPrice = BigInt(Math.floor(Number(marketSummary.baseUsdPrice) * 10 ** PRICE_PRECISION));
   const borrowAPR = BigInt(Math.floor(Number(marketSummary.borrowApr) * 10 ** FACTOR_PRECISION));
@@ -146,11 +139,11 @@ export const sanitizeMarketSummary = (
     collateralAssetSymbols: filterLegacyCollateralSymbols(
       marketSummary.chainId,
       baseAsset,
-      marketSummary.collateralAssetSymbols ?? []
+      marketSummary.collateralAssetSymbols ?? [],
     ),
     borrowAPR: borrowAPR,
     supplyAPR: supplyAPR,
-    ...((() => {
+    ...(() => {
       if (!market || !marketRewards) {
         return {
           borrowRewardsAPR: 0n,
@@ -158,13 +151,8 @@ export const sanitizeMarketSummary = (
         };
       }
 
-      return getMarketRewardsAPRs(
-        market,
-        marketRewards,
-        totalSupplyValueInDollars,
-        totalBorrowValueInDollars
-      );
-    })()),
+      return getMarketRewardsAPRs(market, marketRewards, totalSupplyValueInDollars, totalBorrowValueInDollars);
+    })(),
     isRewardsLoading: !!market?.rewardsOverwrite && marketRewards?.[0] === StateType.Loading,
   };
 };

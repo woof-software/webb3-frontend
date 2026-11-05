@@ -53,7 +53,6 @@ const mockWriteState = {
   withdraw: jest.fn(),
   invokeBulker: jest.fn(),
   claimReward: jest.fn(),
-  drip: jest.fn(),
 };
 jest.mock('@hooks/useWriteCometState', () => ({ useWriteCometState: () => mockWriteState }));
 
@@ -138,7 +137,7 @@ function cometState(baseAsset: BaseAssetWithAccountState, read: CometRead = {}):
   recordCometStateSource(
     state,
     { chainId: market.chainInformation.chainId, cometAddress: market.marketAddress },
-    account
+    account,
   );
   return state;
 }
@@ -249,7 +248,7 @@ describe('Home on the wrapped route', () => {
         lending: wrappedLending(),
         state: cometState(EMPTY_ACCOUNT),
         queue: actionQueue([supplyAction(EMPTY_ACCOUNT)]),
-      })
+      }),
     );
 
     const [, positionCard] = mockLastProps.PositionCard.state;
@@ -265,7 +264,7 @@ describe('Home on the wrapped route', () => {
         lending: wrappedLending(),
         state: cometState(borrower),
         queue: actionQueue([[ActionType.Repay, borrower, MAX_UINT256]]),
-      })
+      }),
     );
 
     const [, positionCard] = mockLastProps.PositionCard.state;
@@ -278,7 +277,7 @@ describe('Home on the wrapped route', () => {
       MAX_UINT256,
       `Repay ${borrower.name}`,
       0,
-      expect.any(Function)
+      expect.any(Function),
     );
     expect(mockWriteState.invokeBulker).not.toHaveBeenCalled();
   });
@@ -295,7 +294,7 @@ describe('Home on the wrapped route', () => {
         lending: wrappedLending(),
         state: cometState(borrower),
         queue: actionQueue([[ActionType.Repay, borrower, amount]]),
-      })
+      }),
     );
 
     mockLastProps.PositionCard.state[1].onSubmitClicked();
@@ -306,7 +305,7 @@ describe('Home on the wrapped route', () => {
       amount,
       `Repay ${borrower.name}`,
       0,
-      expect.any(Function)
+      expect.any(Function),
     );
     expect(mockWriteState.invokeBulker).not.toHaveBeenCalled();
   });
@@ -370,7 +369,7 @@ describe('Home on the wrapped route', () => {
     const state = cometState(EMPTY_ACCOUNT, { market: USDT_MARKET });
     const loaded: WrappedLending = { ...wrappedLending(), position: LOADED };
     const { rerender } = render(
-      homeElement({ lending: wrappedLending(USDT_COMET), market: USDT_MARKET, state, queue: actionQueue([]) })
+      homeElement({ lending: wrappedLending(USDT_COMET), market: USDT_MARKET, state, queue: actionQueue([]) }),
     );
 
     rerender(homeElement({ lending: loaded, market: USDC_MARKET, state, queue: actionQueue([]) }));
@@ -378,7 +377,7 @@ describe('Home on the wrapped route', () => {
     expect(mockLastProps.PositionCard.state[1].actionRules.wrappedBase.maxPartialWithdrawal).toBeUndefined();
 
     rerender(
-      homeElement({ lending: loaded, market: USDC_MARKET, state: cometState(EMPTY_ACCOUNT), queue: actionQueue([]) })
+      homeElement({ lending: loaded, market: USDC_MARKET, state: cometState(EMPTY_ACCOUNT), queue: actionQueue([]) }),
     );
     expect(mockLastProps.Masthead.state[1].baseAsset.balance).toBe(7_000_000n);
     expect(mockLastProps.PositionCard.state[1].baseAsset.balance).toBe(7_000_000n);
@@ -441,7 +440,7 @@ describe('Home on the wrapped route', () => {
         lending: { ...wrappedLending(), position: LOADED },
         state: cometState(borrower),
         queue: actionQueue([[ActionType.Repay, borrower, MAX_UINT256]]),
-      })
+      }),
     );
 
     // useCometState recorded the account it read the state for, so a remounted dashboard knows it.
@@ -454,7 +453,7 @@ describe('Home on the wrapped route', () => {
     // A copy is a state useCometState never recorded.
     const unrecorded = [...cometState(EMPTY_ACCOUNT)] as unknown as CometState;
     render(
-      homeElement({ lending: { ...wrappedLending(), position: LOADED }, state: unrecorded, queue: actionQueue([]) })
+      homeElement({ lending: { ...wrappedLending(), position: LOADED }, state: unrecorded, queue: actionQueue([]) }),
     );
 
     expect(mockLastProps.Masthead.state[1].baseAsset.balance).toBe(0n);

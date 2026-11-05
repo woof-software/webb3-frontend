@@ -13,15 +13,13 @@ import {
 import ProposalList from '../components/ProposalList';
 
 const mockVoteOpen = jest.fn();
-const mockQueueAction = jest.fn();
 const mockRefresh = jest.fn();
 
 const renderProposalList = (
   proposals: Proposal[],
   canVote: boolean,
-  showQueueAction: boolean,
   voteReceipts: Map<bigint, VoteReceipt>,
-  transaction?: Transaction
+  transaction?: Transaction,
 ) => {
   return render(
     <ProposalList
@@ -31,22 +29,19 @@ const renderProposalList = (
           proposals,
           chainKey: 'mainnet',
           canVote,
-          showQueueAction,
           voteReceipts,
           transaction,
           onRefresh: mockRefresh,
-          onExecuteProposal: mockVoteOpen,
-          onQueueProposal: mockQueueAction,
           onVoteOpen: mockVoteOpen,
         },
       ]}
-    />
+    />,
   );
 };
 
 describe('ProposalList', () => {
   test('renders empty proposal state', () => {
-    renderProposalList([], true, true, new Map());
+    renderProposalList([], true, new Map());
 
     expect(screen.getByText('No active proposals.')).toBeInTheDocument();
     expect(screen.getByLabelText('See all proposals')).toBeInTheDocument();
@@ -54,7 +49,7 @@ describe('ProposalList', () => {
   });
 
   test('renders queued proposals and empty active list', () => {
-    renderProposalList([queuedProposal], true, true, new Map());
+    renderProposalList([queuedProposal], true, new Map());
 
     expect(screen.getByText('No active proposals.')).toBeInTheDocument();
     expect(screen.getByText('Queued Proposals')).toBeInTheDocument();
@@ -62,7 +57,7 @@ describe('ProposalList', () => {
   });
 
   test('renders active proposals with missing receipts', () => {
-    renderProposalList([activeProposal, activeProposalNoVote], true, true, new Map());
+    renderProposalList([activeProposal, activeProposalNoVote], true, new Map());
 
     expect(screen.getByText(activeProposal.title)).toBeInTheDocument();
     expect(screen.getByText(activeProposalNoVote.title)).toBeInTheDocument();
@@ -73,7 +68,7 @@ describe('ProposalList', () => {
   });
 
   test('renders active proposals buttons when has not voted', () => {
-    renderProposalList([activeProposal, activeProposalNoVote], true, true, mockReceipts);
+    renderProposalList([activeProposal, activeProposalNoVote], true, mockReceipts);
 
     const buttons = screen.queryAllByRole('button');
     expect(buttons.length).toBe(3);
@@ -94,7 +89,7 @@ describe('ProposalList', () => {
       proposalId: BigInt(152),
     });
 
-    renderProposalList([activeProposal, activeProposalNoVote], true, true, receipts);
+    renderProposalList([activeProposal, activeProposalNoVote], true, receipts);
 
     const buttons = screen.queryAllByRole('button');
     expect(buttons.length).toBe(0);
@@ -106,7 +101,7 @@ describe('ProposalList', () => {
 
   test('calls onRefresh when pending proposal countdown ends', async () => {
     const proposal = { ...pendingProposal, state: { state: ProposalStateEnum.Pending, startTime: 0, endTime: 10 } };
-    renderProposalList([proposal], true, true, mockReceipts);
+    renderProposalList([proposal], true, mockReceipts);
 
     expect(screen.getByText(/until voting/)).toBeInTheDocument();
 

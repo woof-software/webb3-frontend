@@ -1,8 +1,8 @@
-import { CHAINS, isTestnet } from '@constants/chains';
+import { CHAINS } from '@constants/chains';
 import { LIMIT } from '@hooks/useTransactionHistory';
 import { ChainInformation, PendingTransaction, MarketData, MarketDataLoaded, TransactionHistoryItem } from '@types';
 
-import { getGovernanceContractAddress, GovernanceNetworksEnum } from './contracts';
+import { getGovernanceContractAddress } from './contracts';
 
 export const COMPOUND_URL = 'https://compound.xyz/';
 export const V2_URL = 'https://v2-app.compound.xyz';
@@ -37,8 +37,9 @@ export function getBlockExplorerUrlForTransaction(transaction: PendingTransactio
   return `${getBlockExplorerUrl(transaction.networkId)}/tx/${transaction.hash}`;
 }
 
-export function getBlockExplorerUrlForTransactionHistory(transaction: TransactionHistoryItem): string {
-  return `${getBlockExplorerUrl(transaction.network.chainId)}/tx/${transaction.transactionHash}`;
+export function getBlockExplorerUrlForTransactionHistory(transaction: TransactionHistoryItem): string | undefined {
+  const explorerUrl = CHAINS[transaction.network.chainId]?.blockExplorerUrls[0];
+  return explorerUrl ? `${explorerUrl}/tx/${transaction.transactionHash}` : undefined;
 }
 
 export function getMarketDataUrlForMarket(market: MarketData | MarketDataLoaded): string {
@@ -51,45 +52,30 @@ export function getGovernanceUrlForChain(chainKey: string): string {
 }
 
 export function getTallyProfileForChain(chainId: number, address: string): string {
-  const [governor] = getGovernanceContractAddress(
-    isTestnet(chainId) ? GovernanceNetworksEnum.Testnet : GovernanceNetworksEnum.Mainnet,
-  );
+  const { governor } = getGovernanceContractAddress();
   return `${TALLY_URL}/profile/${address}?governanceId=eip155:${chainId}:${governor}`;
 }
 
-export function getTransactionHistoryEndpoint(
-  account: string,
-  cursor?: string,
-  limit?: number,
-  useTestnet?: boolean, // temporarily hardcode testnet markets to test transaction history
-): string {
-  const useTestnetSuffix = useTestnet
-    ? '&markets[]=11155111_0x2943ac1216979aD8dB76D9147F64E61adc126e96,11155111_0xAec1F48e02Cfb822Be958B68C7957156EB3F0b6e'
-    : '';
-
+export function getTransactionHistoryEndpoint(account: string, cursor?: string, limit?: number): string {
   return `${V3_API_URL}/account/${account}/transaction_history?${cursor ? `cursor=${cursor}&` : ''}limit=${
     limit || LIMIT
-  }${useTestnetSuffix}`;
-}
-
-export function getMarketRewardsStateEndpoint(includeTestnets = false): string {
-  return `${V3_API_URL}/market/all-networks/all-contracts/rewards/dapp-data${
-    includeTestnets ? '?testnets=include' : ''
   }`;
 }
 
-export function getAccountRewardsStateEndpoint(account: string, includeTestnets = false): string {
-  return `${V3_API_URL}/account/${account}/rewards${includeTestnets ? '?testnets=include' : ''}`;
+export function getMarketRewardsStateEndpoint(): string {
+  return `${V3_API_URL}/market/all-networks/all-contracts/rewards/dapp-data`;
 }
 
-export function getLatestMarketSummaryEndpoint(includeTestnets = false): string {
-  return `${V3_API_URL}/market/all-networks/all-contracts/summary${includeTestnets ? '?testnets=include' : ''}`;
+export function getAccountRewardsStateEndpoint(account: string): string {
+  return `${V3_API_URL}/account/${account}/rewards`;
 }
 
-export function getHistoricalMarketSummaryEndpoint(includeTestnets = false): string {
-  return `${V3_API_URL}/market/all-networks/all-contracts/historical/summary${
-    includeTestnets ? '?testnets=include' : ''
-  }`;
+export function getLatestMarketSummaryEndpoint(): string {
+  return `${V3_API_URL}/market/all-networks/all-contracts/summary`;
+}
+
+export function getHistoricalMarketSummaryEndpoint(): string {
+  return `${V3_API_URL}/market/all-networks/all-contracts/historical/summary`;
 }
 
 export function getV2MarketsUrl(): string {

@@ -201,7 +201,7 @@ describe('lendingRoute', () => {
 
   it('keeps the market list and market identities unchanged', () => {
     const before = JSON.stringify(MARKETS, (_key, value) => (typeof value === 'bigint' ? value.toString() : value));
-    const keysBefore = getMarkets(false).map(marketKey);
+    const keysBefore = getMarkets().map(marketKey);
 
     for (const market of MARKETS) {
       for (const session of [
@@ -215,7 +215,7 @@ describe('lendingRoute', () => {
     expect(JSON.stringify(MARKETS, (_key, value) => (typeof value === 'bigint' ? value.toString() : value))).toBe(
       before,
     );
-    expect(getMarkets(false).map(marketKey)).toEqual(keysBefore);
+    expect(getMarkets().map(marketKey)).toEqual(keysBefore);
     // No wrapper is listed as a market of its own, and each configured Comet is listed exactly once.
     for (const [, cometAddress] of CONFIGURED) {
       const wrapper = wrappedMarket(OPEN_REGISTRY, cometAddress).wrapperAddress.toLowerCase();
@@ -359,7 +359,7 @@ describe('lendingRoute', () => {
     ] as const;
     const WATCH_ONLY: Partial<LendingSession> = { connector: undefined, isWatchOnly: true, isSignerReady: false };
     const UNMAPPED_MARKETS = MARKETS.filter(
-      (market) => !CONFIGURED.some(([, comet]) => comet === market.marketAddress)
+      (market) => !CONFIGURED.some(([, comet]) => comet === market.marketAddress),
     );
 
     /** The wrapper a mapping names, with its units: every field but the two release controls. */
@@ -385,7 +385,7 @@ describe('lendingRoute', () => {
           expect(route.reads).toEqual(ELIGIBLE);
           expect(route.deposit).toEqual(isDepositEnabled ? ELIGIBLE : blocked('deposits-disabled'));
           expect(route.exit).toEqual(isExitEnabled ? ELIGIBLE : blocked('exits-disabled'));
-        }
+        },
       );
 
       it.each(CONFIGURED)(
@@ -400,7 +400,7 @@ describe('lendingRoute', () => {
             ...OTHER_CONNECTORS.map(([label]) => ({ label, route: { kind: 'standard', writes: ELIGIBLE } })),
             { label: 'watch-only', route: { kind: 'standard', writes: blocked('watch-only') } },
           ]);
-        }
+        },
       );
 
       it('leaves Anchorage on the standard route on every market without a wrapper', () => {
@@ -415,7 +415,7 @@ describe('lendingRoute', () => {
           UNMAPPED_MARKETS.map((market) => ({
             market: marketKey(market),
             route: { kind: 'standard', writes: ELIGIBLE },
-          }))
+          })),
         );
       });
     });
@@ -426,11 +426,11 @@ describe('lendingRoute', () => {
       // "lets safety failures disable exits as well" covers the wrong chain under the rollback.
       const rollback = registryWith(false, true);
       const screened = expectWrapped(
-        resolve(USDC_COMET, anchorage({ screeningStatus: 'blocked' }), { registry: rollback })
+        resolve(USDC_COMET, anchorage({ screeningStatus: 'blocked' }), { registry: rollback }),
       );
       expect(screened.exit).toEqual(blocked('screening'));
       const mismatched = expectWrapped(
-        resolve(USDC_COMET, anchorage(), { registry: rollback, validation: 'asset-mismatch' })
+        resolve(USDC_COMET, anchorage(), { registry: rollback, validation: 'asset-mismatch' }),
       );
       expect(mismatched.reads).toEqual(blocked('asset-mismatch'));
       expect(mismatched.exit).toEqual(blocked('asset-mismatch'));

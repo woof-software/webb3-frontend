@@ -210,9 +210,8 @@ const Home = ({
   }, [selectedMarket[0], selectedMarket[1]?.baseAsset?.symbol]);
 
   const rewards = useContext(RewardsStateContext);
-  const { addOrUpdateAction, clearActions, getActions, getPendingAction, removeAction, setPendingAction } = useContext(
-    getActionQueueContext()
-  );
+  const { addOrUpdateAction, clearActions, getActions, getPendingAction, removeAction, setPendingAction } =
+    useContext(getActionQueueContext());
 
   const [compare, setCompare] = useState(false);
   const [cometState] = state;
@@ -312,7 +311,7 @@ const Home = ({
     trxEstimateGasFn,
     fnArgs,
     value,
-    callback
+    callback,
   ) => {
     const visitKeyBefore = liveVisitKey.current;
     const sendWhileCurrent: typeof trxFn = (...args) =>
@@ -567,7 +566,7 @@ const Home = ({
       isSubmissionRefused(
         liveSession.current,
         { chainId: market.chainInformation.chainId, cometAddress: market.marketAddress },
-        actionsToSubmit
+        actionsToSubmit,
       ) ||
       // A kept callback writes through the session it was made in, whatever the live balances allow.
       !isSameWalletSession(walletSession, liveWalletSession.current);
@@ -604,10 +603,10 @@ const Home = ({
           setPendingAction(undefined);
           clearActions();
           setActionModalState(undefined);
-        }
+        },
       );
       setActionModalState(
-        actionModalStateBulker(market, transactions, directActions, directBaseAsset, collateralAssets, onRequestClose)
+        actionModalStateBulker(market, transactions, directActions, directBaseAsset, collateralAssets, onRequestClose),
       );
     };
 
@@ -635,7 +634,7 @@ const Home = ({
             amount,
             `Repay ${assetInfo.name}`,
             estimatedGasLimit,
-            submitSingleActionCallback
+            submitSingleActionCallback,
           );
           break;
         case ActionType.Supply: {
@@ -646,7 +645,7 @@ const Home = ({
             amount,
             `Supply ${assetInfo.name}`,
             estimatedGasLimit,
-            submitSingleActionCallback
+            submitSingleActionCallback,
           );
           break;
         }
@@ -657,7 +656,7 @@ const Home = ({
             amount,
             `Supply ${assetInfo.name}`,
             estimatedGasLimit,
-            submitSingleActionCallback
+            submitSingleActionCallback,
           );
           break;
         case ActionType.Borrow: {
@@ -668,7 +667,7 @@ const Home = ({
             amount,
             `Borrow ${assetInfo.name}`,
             estimatedGasLimit,
-            submitSingleActionCallback
+            submitSingleActionCallback,
           );
           break;
         }
@@ -680,7 +679,7 @@ const Home = ({
             amount,
             `Withdraw ${assetInfo.name}`,
             estimatedGasLimit,
-            submitSingleActionCallback
+            submitSingleActionCallback,
           );
           break;
         case ActionType.ClaimRewards:
@@ -689,7 +688,7 @@ const Home = ({
             assetInfo.address,
             `Claim Rewards`,
             estimatedGasLimit,
-            submitSingleActionCallback
+            submitSingleActionCallback,
           );
           break;
         default:
@@ -717,8 +716,8 @@ const Home = ({
             estimatedGasMap,
             onRequestClose,
             () => submitBulkerAction(directActions),
-            () => !isSameWalletSession(walletSession, liveWalletSession.current)
-          )
+            () => !isSameWalletSession(walletSession, liveWalletSession.current),
+          ),
         );
       } else {
         submitBulkerAction(directActions);
@@ -754,7 +753,7 @@ const Home = ({
         submissionStore.setRecord((current) =>
           current?.kind === 'approve' && current.status.kind === 'running' && current.scope === visitIdentity
             ? current
-            : stopped
+            : stopped,
         );
         return;
       }
@@ -828,7 +827,7 @@ const Home = ({
     const wrapperApprovals = transactions.filter(isWrapperApproval);
     if (submission?.kind === 'approve' && isRunInFlight && wrapperApprovals.length === 0 && wrapperAddress) {
       wrapperApprovals.push(
-        inFlightTransaction(wrapperAddress, `Enable ${directBaseAsset.symbol}`, market.chainInformation.chainId)
+        inFlightTransaction(wrapperAddress, `Enable ${directBaseAsset.symbol}`, market.chainInformation.chainId),
       );
     }
     const approvalTransactions = [
@@ -837,7 +836,7 @@ const Home = ({
           transaction.key !== market.bulkerAddress &&
           transaction.key !== market.marketAddress &&
           transaction.key !== market.rewardsAddress &&
-          !isWrapperTransaction(transaction)
+          !isWrapperTransaction(transaction),
       ),
       ...wrapperApprovals.map((transaction) => ({ ...transaction, key: directBaseAsset.address })),
     ];
@@ -845,7 +844,7 @@ const Home = ({
     const cometTransaction = transactions.find((transaction) => transaction.key === market.marketAddress);
     const rewardTransaction = transactions.find((transaction) => transaction.key === market.rewardsAddress);
     let wrapperTransaction = transactions.find(
-      (transaction) => isWrapperTransaction(transaction) && !isWrapperApproval(transaction)
+      (transaction) => isWrapperTransaction(transaction) && !isWrapperApproval(transaction),
     );
     if (wrapperTransaction === undefined && submission?.kind === 'execute' && isRunInFlight && wrapperAddress) {
       const description = `${submission.wrapper.type === 'supply' ? 'Supply' : 'Withdraw'} ${directBaseAsset.symbol}`;
@@ -930,10 +929,6 @@ const Home = ({
           if (isQueueLocked()) return;
           removeAction(action);
         },
-        onDripClicked: () => {
-          if (isFromEarlierVisit()) return;
-          writeState.drip(market, directBaseAsset.address);
-        },
         onSelectAction: (action: Action) => {
           if (isQueueLocked()) return;
           setPendingAction(getPendingActionFromAction(action, updatedDataPostActions.baseAsset));
@@ -1015,7 +1010,7 @@ const Home = ({
 
     const [unwrappedAdditionalCollateralAssets, onlyActualCollateralAssets] = arrayPartition(
       collateralAssets,
-      (asset) => isUnwrappedCollateralAsset(market.chainInformation, asset.address)
+      (asset) => isUnwrappedCollateralAsset(market.chainInformation, asset.address),
     );
 
     const positiveBalanceAssets = onlyActualCollateralAssets
@@ -1043,7 +1038,7 @@ const Home = ({
 
       const stEthWrapSupplyAction = actions.find(
         (action) =>
-          action[0] === ActionType.SupplyCollateral && isStETH(action[1].symbol) && isWrappedStETH(token.symbol)
+          action[0] === ActionType.SupplyCollateral && isStETH(action[1].symbol) && isWrappedStETH(token.symbol),
       );
       return (
         <AssetRow
@@ -1057,10 +1052,6 @@ const Home = ({
               pendingAction: pendingActionOrUndefined,
               transaction: blockingTransaction,
               unwrappedAssetSupplyAction: stEthWrapSupplyAction,
-              onDripClicked: () => {
-                if (isFromEarlierVisit()) return;
-                writeState.drip(market, token.address);
-              },
               onCancelClicked: () => {
                 if (isFromEarlierVisit() || isQueueLocked()) return;
                 if (pendingActionOrUndefined) {
@@ -1209,7 +1200,7 @@ function actionModalStateBulker(
   actions: Action[],
   baseAsset: BaseAssetWithAccountState,
   collateralAssets: TokenWithAccountState[],
-  onRequestClose: () => void
+  onRequestClose: () => void,
 ): ActionModalBulker | undefined {
   const transactionPredicate = (transactions: Transaction[]) => {
     return transactions.find((transaction) => transaction.key === market.bulkerAddress);
@@ -1236,7 +1227,7 @@ function actionModalStateBulkerApprove(
   estimatedGasMap: Map<string, number>,
   onRequestClose: () => void,
   onCompleteClicked: () => void,
-  isFromAnotherWalletSession: () => boolean
+  isFromAnotherWalletSession: () => boolean,
 ): ActionModalBulkerApprove {
   const transactionPredicate = (transactions: Transaction[]) => {
     return transactions.find((transaction) => transaction.key === market.bulkerAddress);

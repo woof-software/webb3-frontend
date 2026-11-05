@@ -2,14 +2,14 @@ import { StaticJsonRpcProvider } from '@ethersproject/providers';
 import { Contract, Provider } from 'ethers-multicall';
 import { useEffect, useState, useRef, useCallback } from 'react';
 
-import { isTestnet, getChainKey, CHAINS } from '@constants/chains';
+import { getChainKey, CHAINS } from '@constants/chains';
 import type { Web3 } from '@contexts/Web3Context';
 import COMP from '@helpers/abis/COMP';
 import Governor from '@helpers/abis/Governor';
 import Timelock from '@helpers/abis/Timelock';
 import { getEventLogCoders, proposalEvents, RawLog } from '@helpers/coders';
 import { SECONDS_PER_BLOCK } from '@helpers/constants';
-import { getGovernanceContractAddress, GovernanceNetworksEnum } from '@helpers/contracts';
+import { getGovernanceContractAddress } from '@helpers/contracts';
 import { parseTitleDescriptionFromBody } from '@helpers/functions';
 import { TIMESTAMP_API } from '@helpers/urls';
 import {
@@ -32,7 +32,7 @@ const VOTE_REFRESH_INTERVAL = 300_000; // 5 mins
 
 export function useVoteState(
   web3: Web3,
-  transactions: Transaction[]
+  transactions: Transaction[],
 ): { state: VoteState; externalRefreshData: () => void } {
   const [state, setState] = useState<VoteState>([StateType.Loading]);
   const chainRef = useRef(web3.write.chainId);
@@ -51,10 +51,7 @@ export function useVoteState(
   // we care about which chain the wallet is connected to here
   // over selected market
   const refreshData = useCallback(async () => {
-    const state: VoteState =
-      web3.write.chainId !== undefined
-        ? await getState(web3.write.chainId, web3.write.account)
-        : await getState(web3.read.chainId);
+    const state: VoteState = web3.write.chainId !== undefined ? await getState(web3.write.account) : await getState();
 
     // Only update state if chainId has not changed since the start of this callback
     if (web3.write.chainId === chainRef.current) {
@@ -100,19 +97,14 @@ const proposalSucceeded = (proposal: Proposal, quorumVotes: bigint) => {
   return proposal.forVotes > quorumVotes && proposal.forVotes > proposal.againstVotes;
 };
 
-const getState = async (chainId = 1, account?: string): Promise<VoteState> => {
-  // we'll show Sepolia data for any known test network, otherwise show mainnet info
-  CHAINS[chainId] && isTestnet(chainId) ? (chainId = 11155111) : (chainId = 1);
+const getState = async (account?: string): Promise<VoteState> => {
+  const chainId = 1;
 
   const chainInfo: ChainInformation = CHAINS[chainId];
   const provider = new StaticJsonRpcProvider(chainInfo.url);
   const ethcallProvider = new Provider(provider, chainId);
 
-  // use Sepolia testnet info for any testnet
-  // otherwise, use Eth mainnet for any other network, or no wallet connected
-  const [govAddress, compAddress, timelockAddress] = getGovernanceContractAddress(
-    isTestnet(chainId) ? GovernanceNetworksEnum.Testnet : GovernanceNetworksEnum.Mainnet
-  );
+  const { governor: govAddress, comp: compAddress, timelock: timelockAddress } = getGovernanceContractAddress();
 
   const governorContract = new Contract(govAddress, Governor);
   const timelockContract = new Contract(timelockAddress, Timelock);

@@ -37,13 +37,11 @@ export const mockMarket = (overrides?: Partial<MarketData>): MarketData => ({
       rewards: { COMP: '0x54a06047087927D9B0fb21c1cf0ebd792764dDB8' },
       otherBaseTokensToUsd: {},
     },
-    testnet: true,
     walletRpcUrls: ['https://sepolia.infura.io/v3/'],
   },
   iconPair: ['ETHEREUM', 'USDC'],
   marketAddress: '0x3EE77595A8459e93C2888b13aDB354017B198188',
   bulkerAddress: '0x69dD076105977c55dC2835951d287f82D54606b4',
-  fauceteerAddress: '0x75442Ac771a7243433e033F3F8EaB2631e22938f',
   rewardsAddress: '0xef9e070044d62C38D2e316146dDe92AD02CF2c2c',
   ...overrides,
 });

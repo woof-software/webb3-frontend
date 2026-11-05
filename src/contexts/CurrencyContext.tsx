@@ -30,7 +30,7 @@ const initialCurrencyManagerContext = {
   baseAssetPriceInDollar: 0n,
   updateShowCurrencyToggle: () => undefined,
   showCurrencyToggle: false,
-  baseAssetSymbol: ''
+  baseAssetSymbol: '',
 };
 
 let CurrencyContext: Context<Currency>;
@@ -98,7 +98,7 @@ export const CurrencyContextProvider = ({ children }: { children: ReactNode | Re
 
   const getMarketData = () => {
     const marketKey = searchParams.get('market') ?? window.localStorage.getItem(MARKET_LOCAL_STORAGE_KEY);
-    return parseMarketKeyOrDefault(getMarkets(true), DEFAULT_MARKET, marketKey);
+    return parseMarketKeyOrDefault(getMarkets(), DEFAULT_MARKET, marketKey);
   };
 
   const baseAssetSymbol = getMarketData().baseAsset.symbol;
@@ -142,7 +142,7 @@ export const CurrencyContextProvider = ({ children }: { children: ReactNode | Re
         setPressUpAnimate,
         updateShowCurrencyToggle,
         showCurrencyToggle,
-        baseAssetSymbol
+        baseAssetSymbol,
       }}
     >
       {children}

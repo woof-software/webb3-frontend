@@ -86,6 +86,10 @@ export type WalletTrxHistoryRowProps = {
 export const WalletTrxHistoryRow = ({ connectedAccount, trxHistoryItem }: WalletTrxHistoryRowProps) => {
   const { transactionHash, itemType, actions, initiatedBy, network } = trxHistoryItem;
   const { chainId } = network;
+
+  const trxUrl = getBlockExplorerUrlForTransactionHistory(trxHistoryItem);
+  const Row = trxUrl ? 'a' : 'div';
+
   const initiatedBySuffix =
     connectedAccount && initiatedBy && connectedAccount.toLowerCase() !== initiatedBy.address.toLowerCase()
       ? `• Initiated by ${shortenAddress(initiatedBy?.address)}`
@@ -117,12 +121,10 @@ export const WalletTrxHistoryRow = ({ connectedAccount, trxHistoryItem }: Wallet
     }
   };
   return (
-    <a
+    <Row
       className={`label text-color--1 wallet-trx-history-row`}
       key={transactionHash}
-      href={getBlockExplorerUrlForTransactionHistory(trxHistoryItem)}
-      target="_blank"
-      rel="noreferrer"
+      {...(trxUrl ? { href: trxUrl, target: '_blank', rel: 'noreferrer' } : {})}
     >
       <div className={`wallet-trx-history-row__icons`}>
         {/* TODO: Use switch here instead */}
@@ -158,13 +160,13 @@ export const WalletTrxHistoryRow = ({ connectedAccount, trxHistoryItem }: Wallet
       <div className={`wallet-trx-history-row__details`}>
         <div className="wallet-trx-history-row__details__header">
           <span className="meta L3 text-color--1 body--emphasized">{getTitle()}</span>
-          <ExternalLink className={`svg--icon--3 wallet-trx-history-row__external-link`} />
+          {trxUrl && <ExternalLink className={`svg--icon--3 wallet-trx-history-row__external-link`} />}
         </div>
         <span className="meta L4 text-color--2">
           {getMarketDescriptors(address, chainId).join(' ')} {initiatedBySuffix}
         </span>
       </div>
-    </a>
+    </Row>
   );
 };
 

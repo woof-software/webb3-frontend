@@ -39,7 +39,7 @@ const NetworkSwitchModal = ({ state, onSwitchNetwork }: NetworkSwitchModalProps)
 
     icons = (
       <div className="modal__content__icons-holder">
-        <div className={`asset asset--${fromNetwork ? iconNameForChainId(fromChainId) : 'TESTNET'}`} />
+        <div className={`asset asset--${fromNetwork ? iconNameForChainId(fromChainId) : 'UNSUPPORTED'}`} />
         <div className="modal__content__icons-holder__arrows"></div>
         <div className={`asset asset--${iconNameForChainId(toChainId)}`} />
       </div>

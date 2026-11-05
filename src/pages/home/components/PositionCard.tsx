@@ -60,7 +60,7 @@ type PositionCardNoWallet = [
     rewardsAssetSymbol?: string;
     isInstitutional?: boolean;
     isRewardsLoading?: boolean;
-  }
+  },
 ];
 type PositionCardHydrated = [
   StateType.Hydrated,
@@ -86,7 +86,6 @@ type PositionCardHydrated = [
     onClearClicked: () => void;
     onCompareClicked: () => void;
     onDeleteAction: (action: Action) => void;
-    onDripClicked?: () => void;
     onPendingActionCancel: () => void;
     onPendingActionConfirm: (amount: bigint) => void;
     onPendingActionUpdateAmount: (amount?: bigint) => void;
@@ -96,7 +95,7 @@ type PositionCardHydrated = [
     isInstitutional?: boolean;
     /** Extra rules every queued and entered action must meet, such as the wrapped route's. */
     actionRules?: ActionRules;
-  }
+  },
 ];
 
 export type PositionCardState = PositionCardLoading | PositionCardNoWallet | PositionCardHydrated;
@@ -126,7 +125,6 @@ const PositionCard = ({ state }: PositionCardProps) => {
     borrowCapacity,
     availableToBorrow,
     rates,
-    onBaseAssetClicked,
   } = getContent(state, market as MarketData, currency);
   const itemClassName = 'body body--emphasized';
 
@@ -143,10 +141,7 @@ const PositionCard = ({ state }: PositionCardProps) => {
           </div>
           <div className="position-card__row">
             <div className="position-card__row__info">
-              <span
-                className={`asset asset--${assetIconForAssetSymbol(baseAssetSymbol)}`}
-                onClick={onBaseAssetClicked}
-              ></span>
+              <span className={`asset asset--${assetIconForAssetSymbol(baseAssetSymbol)}`} />
               <div>
                 {baseAssetWalletBalance}
                 {additionalWalletBalance}
@@ -224,7 +219,6 @@ type Content = {
   additionalLiquidationPoint: ReactNode;
   additionalBorrowCapacity: ReactNode;
   additionalAvailableToBorrow: ReactNode;
-  onBaseAssetClicked: () => void;
 };
 
 function getContent(state: PositionCardState, market: MarketData, currency: Currency): Content {
@@ -247,7 +241,6 @@ function getContent(state: PositionCardState, market: MarketData, currency: Curr
     additionalBorrowCapacity: null,
     additionalAvailableToBorrow: null,
     rates: null,
-    onBaseAssetClicked: noop,
   };
 
   if (stateType === StateType.Loading) {
@@ -336,7 +329,7 @@ function getContent(state: PositionCardState, market: MarketData, currency: Curr
       PRICE_PRECISION,
       getTokenValue(0n, currency, baseAssetPriceInDollars, symbol),
       true,
-      currency
+      currency,
     );
     return {
       ...defaultPanelState,
@@ -365,7 +358,6 @@ function getContent(state: PositionCardState, market: MarketData, currency: Curr
     onClearClicked,
     onCompareClicked,
     onDeleteAction,
-    onDripClicked,
     onPendingActionCancel,
     onPendingActionConfirm,
     onPendingActionUpdateAmount,
@@ -386,25 +378,25 @@ function getContent(state: PositionCardState, market: MarketData, currency: Curr
 
   const [wholeNumberWalletBalance, fractionalWalletBalance] = formatTokenBalance(
     baseAsset.decimals,
-    baseAssetPost.walletBalance
+    baseAssetPost.walletBalance,
   ).split('.');
   const collateralValueDisplay = formatTokenBalance(
     PRICE_PRECISION,
     getTokenValue(collateralValuePost, currency, baseAssetPriceInDollars, symbol),
     false,
-    currency
+    currency,
   );
   const liquidationPoint = formatTokenBalance(
     PRICE_PRECISION,
     getTokenValue(liquidationPointPost, currency, baseAssetPriceInDollars, symbol),
     false,
-    currency
+    currency,
   );
   const tokenValue = getTokenValue(
     adjustValueForAeroAsset(baseAssetPost.borrowCapacity, symbol, baseAsset.price),
     currency,
     baseAssetPriceInDollars,
-    symbol
+    symbol,
   );
   const borrowCapacity = formatTokenBalance(baseAsset.decimals + PRICE_PRECISION, tokenValue, false, currency);
   // TODO: Refactor formatTokenBalance & getTokenValue
@@ -412,11 +404,11 @@ function getContent(state: PositionCardState, market: MarketData, currency: Curr
     baseAsset.decimals + PRICE_PRECISION,
     getTokenValue(baseAsset.price * availableToBorrowPost, currency, baseAssetPriceInDollars, symbol),
     false,
-    currency
+    currency,
   );
 
   const borrowOrRepayAction = actions.find(
-    (action) => action[0] === ActionType.Borrow || action[0] === ActionType.Repay
+    (action) => action[0] === ActionType.Borrow || action[0] === ActionType.Repay,
   );
   const actionColor = borrowOrRepayAction === undefined ? 'supply' : 'borrow';
 
@@ -441,7 +433,7 @@ function getContent(state: PositionCardState, market: MarketData, currency: Curr
             baseAsset.decimals,
             getTokenValue(additionalWalletBalancesRaw, symbol as Currency, baseAssetPriceInDollars, symbol),
             true,
-            symbol as Currency
+            symbol as Currency,
           )}
         </p>
         <p className="L4 meta text-color--2">
@@ -452,10 +444,10 @@ function getContent(state: PositionCardState, market: MarketData, currency: Curr
               adjustValueForAeroAsset(additionalWalletBalancesRaw, symbol, baseAsset.price),
               Currency.USD,
               baseAssetPriceInDollars,
-              symbol
+              symbol,
             ),
             true,
-            Currency.USD
+            Currency.USD,
           )}
           )
         </p>
@@ -475,7 +467,7 @@ function getContent(state: PositionCardState, market: MarketData, currency: Curr
             PRICE_PRECISION,
             getTokenValue(additionalCollateralValueRaw, currency, baseAssetPriceInDollars, symbol),
             true,
-            currency
+            currency,
           )}
         </p>
       </div>
@@ -494,7 +486,7 @@ function getContent(state: PositionCardState, market: MarketData, currency: Curr
             PRICE_PRECISION,
             getTokenValue(additionalLiquidationPointRaw, currency, baseAssetPriceInDollars, symbol),
             true,
-            currency
+            currency,
           )}
         </p>
       </div>
@@ -519,7 +511,7 @@ function getContent(state: PositionCardState, market: MarketData, currency: Curr
             baseAsset.decimals + PRICE_PRECISION,
             getTokenValue(baseAsset.price * additionalBorrowCapacityRaw, currency, baseAssetPriceInDollars, symbol),
             true,
-            currency
+            currency,
           )}
         </p>
       </div>
@@ -538,7 +530,7 @@ function getContent(state: PositionCardState, market: MarketData, currency: Curr
             baseAsset.decimals + PRICE_PRECISION,
             getTokenValue(baseAsset.price * additionalAvailableToBorrowRaw, currency, baseAssetPriceInDollars, symbol),
             true,
-            currency
+            currency,
           )}
         </p>
       </div>
@@ -559,7 +551,7 @@ function getContent(state: PositionCardState, market: MarketData, currency: Curr
     const invalidAction = actions.find(
       (action, index) =>
         validateAddingAction(baseAsset, collateralAssets, actions.slice(0, index), action, actionRules) !== 'ok' ||
-        validateAllowanceForAction(baseAsset, collateralAssets, actions.slice(0, index), action, actionRules) !== 'ok'
+        validateAllowanceForAction(baseAsset, collateralAssets, actions.slice(0, index), action, actionRules) !== 'ok',
     );
 
     actionQueueItems = (
@@ -650,7 +642,6 @@ function getContent(state: PositionCardState, market: MarketData, currency: Curr
       </h3>
     ),
     collateralValue: collateralValueDisplay,
-    onBaseAssetClicked: () => onDripClicked && onDripClicked(),
   };
 }
 
@@ -658,10 +649,10 @@ function getPendingActionInitialValue(
   baseAssetPre: BaseAssetWithAccountState,
   collateralAssets: TokenWithAccountState[],
   actions: Action[],
-  pendingAction: PendingAction
+  pendingAction: PendingAction,
 ): [string, boolean] | undefined {
   const editActionIndex = actions.findIndex(
-    (action) => pendingAction !== undefined && isSameAction(pendingAction, action)
+    (action) => pendingAction !== undefined && isSameAction(pendingAction, action),
   );
   const actionsToUse = editActionIndex === -1 ? actions : actions.slice(0, editActionIndex);
   const { baseAsset } = calculateUpdatedBalances(baseAssetPre, collateralAssets, actionsToUse);

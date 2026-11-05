@@ -5,7 +5,9 @@
   flex-direction: column;
   gap: 0.5rem;
   position: relative;
-  cursor: pointer;
+  a & {
+    cursor: pointer;
+  }
 
   &::before {
     content: '';
@@ -21,7 +23,7 @@
     transition: all 0.3s ease;
   }
 
-  &:hover::before {
+  a &:hover::before {
     opacity: 1;
   }
 
