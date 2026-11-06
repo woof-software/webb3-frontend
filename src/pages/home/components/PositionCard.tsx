@@ -229,7 +229,6 @@ type Content = {
 
 function getContent(state: PositionCardState, market: MarketData, currency: Currency): Content {
   const [stateType] = state;
-  const [ratesDetailActive, setRatesDetailActive] = useState(false);
 
   const defaultPanelState: Content = {
     baseAssetSymbol: 'USDC',
@@ -304,12 +303,9 @@ function getContent(state: PositionCardState, market: MarketData, currency: Curr
         <Tooltip
           content={ratesTooltipContent}
           width={400}
-          hideArrow={true}
           interactive={true}
-          touchToggle={false}
-          yOffset={0}
         >
-          <div className="position-card__rates" onClick={() => setRatesDetailActive(true)}>
+          <div className="position-card__rates">
             <div className="position-card__rates__info position-card__rates__info--left">
               <label className="L2 label text-color--2">Net Borrow APR</label>
               <p className="body body--emphasized">{formatRateFactor(borrowAPR - (borrowRewardsAPR || 0n))}</p>
@@ -323,9 +319,6 @@ function getContent(state: PositionCardState, market: MarketData, currency: Curr
           </div>
         </Tooltip>
       )}
-      <DetailSheet active={ratesDetailActive} onClickOutside={() => setRatesDetailActive(false)}>
-        {ratesTooltipContent}
-      </DetailSheet>
     </>
   );
 

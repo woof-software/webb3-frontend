@@ -55,7 +55,8 @@ const NetRatesGraph = (state: NetRatesGraphState) => {
                   <div className='net-rates-graph__reward__asset'>
                     <Tooltip
                       width={226}
-                      yOffset={12}
+                      hideArrow={false}
+                      gap={2}
                       content={
                         <p className='net-rates-graph__tooltip-text'>
                           Boosted by Compound: Net Borrow APR equals the base interest rate
@@ -92,7 +93,8 @@ const NetRatesGraph = (state: NetRatesGraphState) => {
               <div className='net-rates-graph__reward__asset'>
                 <Tooltip
                   width={226}
-                  yOffset={12}
+                  hideArrow={false}
+                  gap={2}
                   content={
                     <p className='net-rates-graph__tooltip-text'>
                       Boosted by Compound: Net Borrow APR equals the base interest rate
@@ -140,7 +142,8 @@ const NetRatesGraph = (state: NetRatesGraphState) => {
                 <div className='net-rates-graph__reward__asset'>
                   <Tooltip
                     width={226}
-                    yOffset={12}
+                    hideArrow={false}
+                    gap={2}
                     content={
                       <p className='net-rates-graph__tooltip-text'>
                         Boosted by Compound: Net Supply APR equals the base interest rate ({formatRateFactor(earnAPR)})

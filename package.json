@@ -29,6 +29,7 @@
     "@ethersproject/experimental": "^5.8.0",
     "@ethersproject/providers": "^5.8.0",
     "@ethersproject/units": "^5.8.0",
+    "@floating-ui/react": "0.27.20",
     "@ledgerhq/hw-app-eth": "^6.45.19",
     "@ledgerhq/hw-transport-webusb": "^6.29.11",
     "@safe-global/safe-apps-provider": "^0.18.6",

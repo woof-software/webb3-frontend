@@ -109,12 +109,12 @@ const VoteHeroPanel = ({ state }: VoteHeroPanelProps) => {
       {showWeight && !isProposer && (
         <div className={'utilization-meter L2 utilization-meter--vote'}>
           <div className="utilization-meter__text utilization-meter__text--left meta">
-            <Tooltip content={tooltipContent} width={270}>
+            <Tooltip content={tooltipContent} width={270} hideArrow={false}>
               <div className="tooltip__text-trigger">Proposer Status</div>
             </Tooltip>
           </div>
           <Meter percentageFill={`${voteFill}%`} />
-          <Tooltip content={tooltipContent} width={270}>
+          <Tooltip content={tooltipContent} width={270} hideArrow={false}>
             <div className="utilization-meter__text utilization-meter__text--right meta utilization-meter__end tooltip__text-trigger">
               25K Votes
             </div>

@@ -1,7 +1,6 @@
 @use '../abstracts/variables' as *;
 
 .tooltip {
-  position: fixed;
   background-color: var(--ui--foreground--1);
   box-shadow: 0 2px 8px 0 rgba(black, 0.4);
   color: var(--text--1);
@@ -11,44 +10,21 @@
   z-index: 2000;
   padding: 1rem 1.25rem;
   white-space: normal;
-  opacity: 1;
-  transition: opacity 300ms ease;
+  animation: tooltip-fade-in 300ms ease;
 
-  &::before {
-    content: '';
-    width: 0;
-    height: 0;
+  &__arrow {
     position: absolute;
     bottom: -7px;
-    left: var(--tooltip-caret-left, calc(50% - 7px));
     border: 8px solid var(--ui--foreground--1);
     border-color: transparent transparent var(--ui--foreground--1) var(--ui--foreground--1);
     box-shadow: -4px 4px 6px -2px rgba(black, 40%);
     transform: rotate(315deg);
-  }
-  &--mini {
-    text-align: center;
-    padding: 0.5rem;
-  }
-  &--hide-arrow {
-    transform: translateY(20px);
-    &:before {
-      content: none;
-    }
-  }
-  &--inactive {
-    opacity: 0;
-    transform: scale(0);
-    pointer-events: none;
-  }
 
-  // Tooltip anchored below its trigger: flip the caret to the top so it points
-  // up at the origin (e.g. the rewards info icon).
-  &--below::before,
-  &--sticky::before {
-    bottom: unset;
-    top: -7px;
-    transform: rotate(135deg);
+    &--bottom {
+      bottom: unset;
+      top: -7px;
+      transform: rotate(135deg);
+    }
   }
 
   &--sticky {
@@ -157,5 +133,11 @@
         margin-top: 0.5rem;
       }
     }
+  }
+}
+
+@keyframes tooltip-fade-in {
+  from {
+    opacity: 0;
   }
 }

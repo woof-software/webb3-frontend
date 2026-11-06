@@ -350,7 +350,7 @@ const AssetRow = ({ state }: AssetRowProps) => {
       }}
     >
       <div className={`asset-row__hover${hoverModifier}`}></div>
-      <Tooltip content={tooltipContent} width={340} hideArrow={true} yOffset={30}>
+      <Tooltip content={tooltipContent} width={340} desktopOnly={true}>
         <div
           className="asset-row__detail-content"
           onMouseEnter={() => {

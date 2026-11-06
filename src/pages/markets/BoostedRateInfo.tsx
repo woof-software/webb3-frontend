@@ -24,9 +24,7 @@ export const BoostedRateInfo = (props: BoostedRateInfoProps) => {
   return (
     <Tooltip
       width={400}
-      hideArrow={true}
       interactive={true}
-      yOffset={12}
       content={
         <NetRatesTooltip
           borrowAPR={borrowAPR}

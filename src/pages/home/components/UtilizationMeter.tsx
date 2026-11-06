@@ -92,6 +92,7 @@ const UtilizationMeter = ({ state }: UtilizationMeterProps) => {
             </div>
           }
           width={250}
+          hideArrow={false}
         >
           <div className="utilization-meter__dot">
             <div className="utilization-meter__dot__label utilization-meter__dot__label--borrow-capacity meta">
@@ -121,6 +122,7 @@ const UtilizationMeter = ({ state }: UtilizationMeterProps) => {
             </div>
           }
           width={270}
+          hideArrow={false}
         >
           <div className="utilization-meter__dot">
             <div className="utilization-meter__dot__label utilization-meter__dot__label--borrow-capacity meta">
@@ -156,6 +158,7 @@ const UtilizationMeter = ({ state }: UtilizationMeterProps) => {
             </div>
           }
           width={270}
+          hideArrow={false}
         >
           <span className="tooltip__text-trigger">Liquidation Risk</span>
         </Tooltip>

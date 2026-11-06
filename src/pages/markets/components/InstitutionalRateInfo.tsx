@@ -23,11 +23,7 @@ const InstitutionalRateInfo = ({
   return (
     <Tooltip
       width={400}
-      hideArrow={true}
       interactive={true}
-      // Lifts the tooltip 0.75rem; combined with the hide-arrow 20px downshift
-      // it still overlaps the icon slightly, keeping the hover chain intact
-      yOffset={12}
       content={
         <NetRatesTooltip
           borrowAPR={0n}

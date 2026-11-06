@@ -5,6 +5,17 @@ import 'whatwg-fetch';
 
 Object.assign(global, { TextEncoder, TextDecoder, BroadcastChannel });
 
+// jsdom has no matchMedia, so components that read a media query render the desktop layout.
+if (typeof window !== 'undefined') {
+  window.matchMedia = (query: string) =>
+    ({
+      matches: false,
+      media: query,
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+    }) as unknown as MediaQueryList;
+}
+
 // Hook tests change no DOM, so `waitFor` checks them again only on its timer. Check every 5 ms instead
 // of Testing Library's 50 ms. A call that passes its own `interval` keeps it. A setup file shares each
 // test file's module registry, so this mock reaches every test file.

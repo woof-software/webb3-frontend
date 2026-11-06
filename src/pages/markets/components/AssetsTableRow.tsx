@@ -224,8 +224,6 @@ const AssetsTableRow = ({ state }: AssetRowProps) => {
             </div>
           }
           width={320}
-          hideArrow={true}
-          yOffset={15}
         >
           <div className="tooltip__trigger">
             <IconTextPair

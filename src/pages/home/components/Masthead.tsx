@@ -1,6 +1,5 @@
-import { Dispatch, ReactNode, useRef, useState } from 'react';
+import { Dispatch, ReactNode } from 'react';
 
-import DetailSheet from '@components/DetailSheet';
 import { Compare, HoverUnder } from '@components/Icons';
 import Tooltip from '@components/Tooltip';
 import NetRatesTooltip, {
@@ -92,7 +91,7 @@ type MastheadProps = {
 };
 
 const Masthead = ({ state }: MastheadProps) => {
-  const { balanceOverview, balanceValue, balance, wrappedSupply, notice, buttons, ratesDetail, utilizationMeterState } =
+  const { balanceOverview, balanceValue, balance, wrappedSupply, notice, buttons, utilizationMeterState } =
     getContent(state);
   const {
     currency,
@@ -130,7 +129,6 @@ const Masthead = ({ state }: MastheadProps) => {
           <div className="masthead__balance-value">{balanceValue}</div>
           {balance}
           {wrappedSupply}
-          {ratesDetail}
         </div>
         {notice}
         <div className="masthead__action-buttons">{buttons}</div>
@@ -149,14 +147,11 @@ type Content = {
   wrappedSupply?: ReactNode;
   notice?: ReactNode;
   buttons: ReactNode;
-  ratesDetail: ReactNode;
   utilizationMeterState: UtilizationMeterState;
 };
 
 function getContent(state: MastheadState): Content {
   const [stateType] = state;
-  const [ratesDetailActive, setRatesDetailActive] = useState(false);
-  const tooltipLeftAlign = useRef<HTMLDivElement>(null); // use to align interest rate tooltip
 
   const { currency, counterCurrency, pressDownAnimate, pressUpAnimate } = useCurrencyContext();
   const defaultContent: Omit<Content, 'balanceOverview'> = {
@@ -176,7 +171,6 @@ function getContent(state: MastheadState): Content {
         </button>
       </div>
     ),
-    ratesDetail: null,
     utilizationMeterState: [StateType.Loading],
   };
 
@@ -230,7 +224,6 @@ function getContent(state: MastheadState): Content {
       balance: <Balance wholeNumberBalance={wholeNumberBalance} fractionalNumberBalance={fractionalNumberBalance} />,
       balanceOverview,
       buttons,
-      ratesDetail: null,
       utilizationMeterState: [StateType.NoWallet],
     };
   }
@@ -271,7 +264,15 @@ function getContent(state: MastheadState): Content {
     ? [baseAsset, collateralValue, liquidationCapacity]
     : [baseAssetPost, collateralValuePost, liquidationCapacityPost];
   const compareButton = hasActions ? (
-    <Tooltip content={<div className="body">Compare</div>} mini={true} width={90}>
+    <Tooltip
+      content={
+        <div className="tooltip__content L4">
+          <p className="body">Compare</p>
+        </div>
+      }
+      hideArrow={false}
+      centered={true}
+    >
       <button
         className="button button--circle button--compare"
         onMouseDown={() => {
@@ -376,23 +377,14 @@ function getContent(state: MastheadState): Content {
     let buttons: ReactNode;
 
     if (!hasActions) {
-      const anchorRect = tooltipLeftAlign.current?.getBoundingClientRect();
       overviewDetails = (
-        <Tooltip
-          content={ratesTooltipContent}
-          width={400}
-          hideArrow={true}
-          x={anchorRect?.left}
-          y={anchorRect?.bottom}
-        >
-          <div className="masthead__overview-details" onClick={() => setRatesDetailActive(true)}>
-            <span className="meta text-color--3"> &#64; </span>
-            <div className="masthead__overview-details__net-rate">
-              <span className="meta">{formatRateFactor(borrowAPR - (borrowRewardsAPR || 0n))} Net APR</span>
-              <HoverUnder className="hover-under" long={true} theme={theme} />
-            </div>
+        <div className="masthead__overview-details">
+          <span className="meta text-color--3"> &#64; </span>
+          <div className="masthead__overview-details__net-rate">
+            <span className="meta">{formatRateFactor(borrowAPR - (borrowRewardsAPR || 0n))} Net APR</span>
+            <HoverUnder className="hover-under" long={true} theme={theme} />
           </div>
-        </Tooltip>
+        </div>
       );
     } else if (hasActions && compare) {
       overviewDetails = <p className="meta text-color--3"> Before Transaction </p>;
@@ -400,17 +392,22 @@ function getContent(state: MastheadState): Content {
       overviewDetails = <p className="meta text-color--3"> After Transaction </p>;
     }
 
-    const balanceOverview = (
+    const overview = (
       <div
         className={`masthead__overview-details ${pressDownAnimate ? 'press-down' : ''}
       ${pressUpAnimate ? 'press-up' : ''}
     }`}
       >
-        <p ref={tooltipLeftAlign} className="meta text-color--borrow">
-          Borrowing
-        </p>
+        <p className="meta text-color--borrow">Borrowing</p>
         {overviewDetails}
       </div>
+    );
+    const balanceOverview = hasActions ? (
+      overview
+    ) : (
+      <Tooltip content={ratesTooltipContent} width={400} gap={20} placement="bottom-start">
+        {overview}
+      </Tooltip>
     );
 
     let supplyOrWithdrawButton: ReactNode = null;
@@ -606,11 +603,6 @@ function getContent(state: MastheadState): Content {
       ),
       notice: noticeElement,
       buttons,
-      ratesDetail: (
-        <DetailSheet active={ratesDetailActive} onClickOutside={() => setRatesDetailActive(false)}>
-          {ratesTooltipContent}
-        </DetailSheet>
-      ),
       utilizationMeterState,
     };
   }
@@ -651,33 +643,20 @@ function getContent(state: MastheadState): Content {
     ratesTooltipContent = <NetRatesTooltip {...netRatesTooltipProps} view={NetRatesTooltipView.Supply} />;
 
     if (!hasActions) {
-      const anchorRect = tooltipLeftAlign.current?.getBoundingClientRect();
       // The rate includes the supply rewards, which only the direct supply earns. A wrapped-only
       // supplier earns no rewards on this route, so the rate is the wrapped supply's own.
       const netRateLabel = isMixedSupply ? 'Direct supply Net APR' : 'Net APR';
       overviewDetails =
         baseAssetToUse.balance > 0n ? (
-          <Tooltip
-            content={ratesTooltipContent}
-            width={400}
-            hideArrow={true}
-            interactive={true}
-            touchToggle={false}
-            x={anchorRect?.left}
-            // Overlap the trigger slightly so the pointer can cross from the
-            // rate text onto the tooltip without a gap breaking the hover
-            y={anchorRect !== undefined ? anchorRect.bottom - 18 : undefined}
-          >
-            <div className="masthead__overview-details" onClick={() => setRatesDetailActive(true)}>
-              <span className="meta text-color--3"> &#64; </span>
-              <div className="masthead__overview-details__net-rate">
-                <span className="meta">
-                  {formatRateFactor(earnAPR + (earnRewardsAPR || 0n))} {netRateLabel}
-                </span>
-                <HoverUnder className="hover-under" long={true} theme={theme} />
-              </div>
+          <div className="masthead__overview-details">
+            <span className="meta text-color--3"> &#64; </span>
+            <div className="masthead__overview-details__net-rate">
+              <span className="meta">
+                {formatRateFactor(earnAPR + (earnRewardsAPR || 0n))} {netRateLabel}
+              </span>
+              <HoverUnder className="hover-under" long={true} theme={theme} />
             </div>
-          </Tooltip>
+          </div>
         ) : (
           <></>
         );
@@ -687,18 +666,31 @@ function getContent(state: MastheadState): Content {
       overviewDetails = <p className="meta text-color--3"> After Transaction </p>;
     }
 
-    const balanceOverview = (
+    const overview = (
       <div
         className={`masthead__overview-details ${pressDownAnimate ? 'press-down' : ''}
       ${pressUpAnimate ? 'press-up' : ''}
     }`}
       >
-        <p ref={tooltipLeftAlign} className="meta text-color--supply">
-          {baseAssetToUse.balance > 0n ? 'Supplying' : 'Balance'}
-        </p>
+        <p className="meta text-color--supply">{baseAssetToUse.balance > 0n ? 'Supplying' : 'Balance'}</p>
         {overviewDetails}
       </div>
     );
+    const balanceOverview =
+      !hasActions && baseAssetToUse.balance > 0n ? (
+        <Tooltip
+          content={ratesTooltipContent}
+          width={400}
+          gap={20}
+         
+          interactive={true}
+          placement="bottom-start"
+        >
+          {overview}
+        </Tooltip>
+      ) : (
+        overview
+      );
 
     let repayBorrowOrWithdrawButton: ReactNode = null;
     if (pendingRepayAction) {
@@ -905,11 +897,6 @@ function getContent(state: MastheadState): Content {
       notice: noticeElement,
       buttons,
       utilizationMeterState,
-      ratesDetail: (
-        <DetailSheet active={ratesDetailActive} onClickOutside={() => setRatesDetailActive(false)}>
-          {ratesTooltipContent}
-        </DetailSheet>
-      ),
     };
   }
 }
