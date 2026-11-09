@@ -7,21 +7,19 @@ import IconPair from '@components/IconPair';
 import { CaretDown, CheckMark, CircleExclamation, CircleExclamationSmall } from '@components/Icons';
 import PanelWithHeader from '@components/PanelWithHeader';
 import PanelWithNoHeader from '@components/PanelWithNoHeader';
-import TokenVisibilityToggle from '@components/TokenVisibilityToggle';
 import Tooltip from '@components/Tooltip';
 import { NetRatesTooltipView } from '@components/Tooltips/NetRatesTooltip';
 import { CHAINS } from '@constants/chains';
 import { assetIconForAssetSymbol, iconNameForChainId } from '@helpers/assets';
-import { MARKETS_TOP_COLLATERAL_KEY } from '@helpers/constants';
 import { InstitutionalWhitelistStatus } from '@helpers/institutionalWhitelist';
 import { getMarket, getMarketDescriptors } from '@helpers/markets';
-import { formatRateFactor, formatValueInDollars, PRICE_PRECISION } from '@helpers/numbers';
-import { useLocalStorage } from '@hooks/useLocalStorage';
+import { BASE_FACTOR, formatRateFactor, formatValueInDollars, PRICE_PRECISION } from '@helpers/numbers';
 import { useMarkets } from '@hooks/useMarkets';
 import useOnClickOutside from '@hooks/useOnClickOutside';
 
 import { LatestMarketSummaries, MarketSummary, StateType } from '../../../types';
 import { BoostedRateInfo } from '../BoostedRateInfo';
+import { formatPercentage } from '../helpers/rateModelLines';
 
 import InstitutionalRateInfo from './InstitutionalRateInfo';
 
@@ -45,7 +43,6 @@ const MarketOverviewPanels = ({ latestMarketSummaries, institutionalWhitelistSta
   const [sortByDropdownActive, setSortByDropdownActive] = useState<boolean>(false);
   const [sortOrderDropdownActive, setSortOrderDropdownActive] = useState<boolean>(false);
   const [showInactive, setShowInactive] = useState<boolean>(false);
-  const [showTopCollateralOnly, setShowTopCollateralOnly] = useLocalStorage(MARKETS_TOP_COLLATERAL_KEY, true);
 
   const sortByDropdownRef = useRef(null);
   useOnClickOutside(sortByDropdownRef, () => setSortByDropdownActive(false));
@@ -59,11 +56,7 @@ const MarketOverviewPanels = ({ latestMarketSummaries, institutionalWhitelistSta
       if (!acc[chainId]) {
         acc[chainId] = [];
       }
-      acc[chainId].push(
-        showTopCollateralOnly
-          ? { ...marketSummary, collateralAssetSymbols: marketSummary.topCollateralAssetSymbols }
-          : marketSummary
-      );
+      acc[chainId].push(marketSummary);
       return acc;
     },
     {} as { [chainId: string]: LatestMarketSummaries },
@@ -109,52 +102,46 @@ const MarketOverviewPanels = ({ latestMarketSummaries, institutionalWhitelistSta
 
   return (
     <div>
-      <div className="market-overview-panels__controls">
-        <div className="market-overview-panels__dropdowns">
-          <div
-            className="dropdown"
-            onClick={() => setSortByDropdownActive(!sortByDropdownActive)}
-            ref={sortByDropdownRef}
-          >
-            <button className={`button market-overview-panels__sort-button L2 ${sortByStyle}`}>
-              <label className="label text-color--2">Sort by</label>
-              <label className="label text-color--1">{sortBy}</label>
-              <CaretDown />
-            </button>
+      <div className="market-overview-panels__dropdowns">
+        <div
+          className="dropdown"
+          onClick={() => setSortByDropdownActive(!sortByDropdownActive)}
+          ref={sortByDropdownRef}
+        >
+          <button className={`button market-overview-panels__sort-button L2 ${sortByStyle}`}>
+            <label className="label text-color--2">Sort by</label>
+            <label className="label text-color--1">{sortBy}</label>
+            <CaretDown />
+          </button>
 
-            <Dropdown
-              options={SORT_BY_OPTIONS}
-              currentOption={sortBy}
-              setOption={setSortBy}
-              active={sortByDropdownActive}
-              setActive={setSortByDropdownActive}
-            />
-          </div>
-
-          <div
-            className="dropdown"
-            onClick={() => setSortOrderDropdownActive(!sortOrderDropdownActive)}
-            ref={sortOrderDropdownRef}
-          >
-            <button className={`button market-overview-panels__sort-button L2 ${sortOrderStyle}`}>
-              <label className="label text-color--2">Order</label>
-              <label className="label text-color--1">{sortOrder}</label>
-              <CaretDown />
-            </button>
-
-            <Dropdown
-              options={SORT_ORDER_OPTIONS}
-              currentOption={sortOrder}
-              setOption={setSortOrder}
-              active={sortOrderDropdownActive}
-              setActive={setSortOrderDropdownActive}
-            />
-          </div>
+          <Dropdown
+            options={SORT_BY_OPTIONS}
+            currentOption={sortBy}
+            setOption={setSortBy}
+            active={sortByDropdownActive}
+            setActive={setSortByDropdownActive}
+          />
         </div>
-        <TokenVisibilityToggle
-          checked={showTopCollateralOnly}
-          onChange={() => setShowTopCollateralOnly(!showTopCollateralOnly)}
-        />
+
+        <div
+          className="dropdown"
+          onClick={() => setSortOrderDropdownActive(!sortOrderDropdownActive)}
+          ref={sortOrderDropdownRef}
+        >
+          <button className={`button market-overview-panels__sort-button L2 ${sortOrderStyle}`}>
+            <label className="label text-color--2">Order</label>
+            <label className="label text-color--1">{sortOrder}</label>
+            <CaretDown />
+          </button>
+
+          <Dropdown
+            options={SORT_ORDER_OPTIONS}
+            currentOption={sortOrder}
+            setOption={setSortOrder}
+            active={sortOrderDropdownActive}
+            setActive={setSortOrderDropdownActive}
+          />
+        </div>
       </div>
 
       {(() => {
@@ -334,7 +321,7 @@ const PanelRow = ({ marketSummary, institutionalWhitelistStatus }: PanelRowProps
   const market = getMarket(markets, marketSummary.chainId, marketSummary.comet.address);
   const showNewBadge = market?.isNew === true;
 
-  const utilization = formatRateFactor(marketSummary.utilization);
+  const utilization = formatPercentage((Number(marketSummary.utilization) / Number(BASE_FACTOR)) * 100, 2);
 
   const netEarnAPR = formatRateFactor(marketSummary.supplyAPR + marketSummary.supplyRewardsAPR);
   const netBorrowAPR = formatRateFactor(marketSummary.borrowAPR - marketSummary.borrowRewardsAPR);
@@ -367,7 +354,7 @@ const PanelRow = ({ marketSummary, institutionalWhitelistStatus }: PanelRowProps
 
   return (
     // The Link component doesn't work here because tr must be
-    // a direct child of tbody and td must be a direct child of tr.
+    // a direct child of tbody and td must be a direct child of tr
     <tr
       className={`market-overview-panels__table-row${rowModifier}`}
       onClick={isError ? undefined : handleRowClick}
@@ -665,12 +652,9 @@ export const MarketOverviewPanelsLoading = () => {
 
   return (
     <>
-      <div className="market-overview-panels__controls">
-        <div className="market-overview-panels__dropdowns">
-          <h1 className="placeholder-content" style={{ width: '8rem', height: '1.5rem' }}></h1>
-          <h1 className="placeholder-content" style={{ width: '8rem', height: '1.5rem' }}></h1>
-        </div>
-        <TokenVisibilityToggle isLoading={true} />
+      <div className="market-overview-panels__dropdowns">
+        <h1 className="placeholder-content" style={{ width: '8rem', height: '2rem' }}></h1>
+        <h1 className="placeholder-content" style={{ width: '8rem', height: '2rem' }}></h1>
       </div>
 
       {Array.from(Array(numPanels).keys()).map((i) => (

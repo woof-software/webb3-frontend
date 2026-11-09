@@ -2,10 +2,13 @@ import { ChangeEventHandler, ChangeEvent, Dispatch, useEffect, useRef, useState 
 
 import { isUnwrappedCollateralAsset } from '@constants/chains';
 import {
+  ActionRules,
+  addsSecondAction,
   calculateUpdatedBalances,
   getActionFromPendingAction,
   isSameAction,
   isSameToken,
+  QUEUED_ACTION_FIRST,
   validateAddingAction,
 } from '@helpers/actions';
 import { assetIconForAssetSymbol } from '@helpers/assets';
@@ -24,9 +27,18 @@ import {
 
 const approveAssetHelperText = (symbol: string) =>
   `You need to approve Compound on the ${symbol} contract before you can use this asset. You only need to do this once.`;
+// On the wrapped route each approval is for exactly the amount and the supply spends it, so the
+// hint does not say that one approval is enough.
+const approveWrapperHelperText = (symbol: string) =>
+  `You need to approve Compound on the ${symbol} contract before you can use this asset.`;
 const CONFIRM_BUTTON_TEXT_APPROVE = 'Approve & Add';
+const SINGLE_ACTION_HINT =
+  'On this market your wallet submits one action at a time. Submit or remove the queued action before you add another.';
 const UPDATE_ALLOWANCE_STRING =
   'This amount exceeds the allowance you previously set for this asset. You will be asked to approve an increase when you add this action.';
+
+const directSupplyHelperText = (amount: string, symbol: string) =>
+  `${amount} ${symbol} of this balance is supplied to Comet directly. Withdraw takes it out first, then the rest through the wrapper, each in its own transaction.`;
 
 type ActionInputViewProps = {
   actions: Action[];
@@ -38,6 +50,8 @@ type ActionInputViewProps = {
   onCancel: () => void;
   onConfirm: (amount: bigint, description: string) => void;
   setPendingActionAmount: (amount?: bigint) => void;
+  /** Extra rules the amount must meet, such as the wrapped route's release controls and withdrawal limit. */
+  actionRules?: ActionRules;
 };
 
 const ActionInputView = ({
@@ -50,6 +64,7 @@ const ActionInputView = ({
   onCancel,
   setPendingActionAmount,
   onConfirm,
+  actionRules,
 }: ActionInputViewProps) => {
   const [initialValueString, initialMaxClicked] = initialValue === undefined ? ['', false] : initialValue;
   const inputEl = useRef<HTMLInputElement>(null);
@@ -105,7 +120,8 @@ const ActionInputView = ({
     isUnwrappedCollateralAsset(market.chainInformation, pendingAction[1].address),
     setMaxClicked,
     setPendingActionAmount,
-    onConfirm
+    onConfirm,
+    actionRules
   );
 
   return (
@@ -198,7 +214,8 @@ function getContent(
   unwrappedCollateralAsset: boolean,
   setMaxClicked: Dispatch<boolean>,
   setPendingActionAmount: (amount?: bigint) => void,
-  onConfirm: (amount: bigint, description: string) => void
+  onConfirm: (amount: bigint, description: string) => void,
+  actionRules?: ActionRules
 ): Content {
   const [actionType, asset] = pendingAction;
   let title: string;
@@ -228,7 +245,8 @@ function getContent(
       baseAssetPre,
       collateralAssets,
       actionsToUse,
-      getActionFromPendingAction(pendingAction, amount)
+      getActionFromPendingAction(pendingAction, amount),
+      actionRules
     );
 
     if (isValid !== 'ok') {
@@ -292,12 +310,27 @@ function getContent(
         };
       }
 
-      if (baseAsset.allowance === 0n) {
-        actionHintString = approveAssetHelperText(baseAsset.symbol);
-        confirmButtonText = CONFIRM_BUTTON_TEXT_APPROVE;
-      } else if (maybeBigIntInputValue && baseAsset.allowance < maybeBigIntInputValue) {
-        actionHintString = UPDATE_ALLOWANCE_STRING;
-        confirmButtonText = CONFIRM_BUTTON_TEXT_APPROVE;
+      const wrappedBase = actionRules?.wrappedBase;
+      if (wrappedBase === undefined) {
+        if (baseAsset.allowance === 0n) {
+          actionHintString = approveAssetHelperText(baseAsset.symbol);
+          confirmButtonText = CONFIRM_BUTTON_TEXT_APPROVE;
+        } else if (maybeBigIntInputValue && baseAsset.allowance < maybeBigIntInputValue) {
+          actionHintString = UPDATE_ALLOWANCE_STRING;
+          confirmButtonText = CONFIRM_BUTTON_TEXT_APPROVE;
+        }
+      } else {
+        // On the wrapped route the supply spends the allowance to the wrapper, which Approve & Add
+        // asks for, for exactly the amount. Max supplies the wallet balance.
+        const wrapperAllowance = wrappedBase.supplyAllowance ?? 0n;
+        const amount = maxClicked ? availableAmountRaw : maybeBigIntInputValue;
+        if (wrapperAllowance === 0n) {
+          actionHintString = approveWrapperHelperText(baseAsset.symbol);
+          confirmButtonText = CONFIRM_BUTTON_TEXT_APPROVE;
+        } else if (amount && wrapperAllowance < amount) {
+          actionHintString = UPDATE_ALLOWANCE_STRING;
+          confirmButtonText = CONFIRM_BUTTON_TEXT_APPROVE;
+        }
       }
 
       onMaxButtonClicked = () => {
@@ -397,6 +430,12 @@ function getContent(
       title = `Withdraw ${baseAsset.symbol}`;
       modifier = 'withdraw';
       availableAmount = formatValue(baseAsset.decimals, earnBalance);
+      // On the wrapped route, part of the balance can be a direct Comet supply, which Withdraw takes
+      // first. While withdrawals are closed the form says so instead.
+      const directSupply = actionRules?.wrappedBase?.directSupply ?? 0n;
+      if (directSupply > 0n && actionRules?.wrappedBase?.withdrawBlockedReason === undefined) {
+        actionHintString = directSupplyHelperText(formatValue(baseAsset.decimals, directSupply), baseAsset.symbol);
+      }
 
       if (maybeBigIntInputValue !== undefined && maybeBigIntInputValue > 0n) {
         ({ modifier, titleAdditionalContent, confirmButtonDisabled } = _validateAmount(maybeBigIntInputValue));
@@ -407,10 +446,14 @@ function getContent(
           }
         };
       }
+      // On the wrapped route, Max pays the direct supply and the wrapper's full exit, which is less
+      // than the balance by the wrapper's buffer. The input shows what Max pays, as its queue row
+      // does, and the action stays a maximum.
+      const maxWithdrawal = actionRules?.wrappedBase?.fullExitCash ?? earnBalance;
       onMaxButtonClicked = () => {
         setPendingActionAmount(MAX_UINT256);
         setMaxClicked(true);
-        setInput(stringFromBigInt(earnBalance, baseAsset.decimals));
+        setInput(stringFromBigInt(maxWithdrawal, baseAsset.decimals));
       };
       break;
     }
@@ -456,6 +499,17 @@ function getContent(
         setMaxClicked(true);
       };
     }
+  }
+
+  // A queue limited to one action takes no second one, whatever the amount, so the form says so
+  // before an amount is typed, and asks for no approval.
+  if (actionRules?.isSingleAction && addsSecondAction(actionsToUse, pendingAction)) {
+    modifier = 'error';
+    titleAdditionalContent = QUEUED_ACTION_FIRST;
+    actionHintString = SINGLE_ACTION_HINT;
+    confirmButtonText = 'Add Action';
+    confirmButtonDisabled = true;
+    onConfirmButtonClicked = noop;
   }
 
   const inputFontSize = getStyleFontSize(sanitizedInputValue);

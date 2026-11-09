@@ -38,6 +38,11 @@ const MarketSelector = ({ theme }: { theme: Theme }) => {
   const [, currentMarket] = selectedMarket;
   const [marketsStateType, marketsState] = useMarkets();
   const marketsByNetwork = getMarketsByNetwork(marketsStateType === StateType.Hydrated ? marketsState.markets : []);
+  // A market list refresh can drop the network picked earlier
+  const shownNetwork: SelectedNetwork =
+    selectedNetwork.chainId in marketsByNetwork
+      ? selectedNetwork
+      : { chainId: Number(Object.keys(marketsByNetwork)[0]), isInactive: false };
 
   const ref = useRef(null);
 
@@ -72,15 +77,17 @@ const MarketSelector = ({ theme }: { theme: Theme }) => {
           <div className={`dropdown__content`}>
             <SupportedNetworks
               marketsByNetwork={marketsByNetwork}
-              selectedNetwork={selectedNetwork}
+              selectedNetwork={shownNetwork}
               theme={theme}
               onSelectNetwork={setSelectedNetwork}
             />
             <SupportedMarkets
               currentMarket={currentMarket}
-              markets={marketsByNetwork[selectedNetwork.chainId].markets.filter(
-                (market) => !!market.isInactive === selectedNetwork.isInactive
-              )}
+              markets={
+                marketsByNetwork[shownNetwork.chainId]?.markets.filter(
+                  (market) => !!market.isInactive === shownNetwork.isInactive
+                ) ?? []
+              }
               pathname={location.pathname}
               onSelectMarket={(market: MarketData) => {
                 setMarketDropdownActive(false);
@@ -102,8 +109,8 @@ type SelectedMarketProps = {
 
 const SelectedMarket = ({ active, market, onClick }: SelectedMarketProps) => {
   const [marketsStateType, marketsState] = useMarkets();
-  // The market list symbol stays the same once the market loads, unlike the on-chain one
-  // (e.g. USDC-cr of a test market becomes USDC), so the label doesn't change
+  // The market list symbol stays the same once the market loads, unlike the on-chain one,
+  // so the label doesn't change
   const configMarket =
     marketsStateType === StateType.Hydrated
       ? getMarket(marketsState.markets, market.chainInformation.chainId, market.marketAddress)

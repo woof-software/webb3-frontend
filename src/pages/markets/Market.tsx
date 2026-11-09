@@ -5,14 +5,13 @@ import IconPair from '@components/IconPair';
 import { ArrowLeft, ExternalLink } from '@components/Icons';
 import { getSelectedMarketContext } from '@contexts/SelectedMarketContext';
 import type { Web3 } from '@contexts/Web3Context';
-import { MARKET_DETAILS_TOP_COLLATERAL_KEY } from '@helpers/constants';
+import { useWrappedLending } from '@contexts/WrappedLendingContext';
 import { institutionalWhitelistStatus } from '@helpers/institutionalWhitelist';
 import { getMarket, isV2Market } from '@helpers/markets';
 import { formatTokenBalance, getTokenValue, PRICE_PRECISION } from '@helpers/numbers';
 import { getBlockExplorerUrlForAddress, INSTITUTIONAL_MARKET_URL } from '@helpers/urls';
-import { useLocalStorage } from '@hooks/useLocalStorage';
 import { useMarkets } from '@hooks/useMarkets';
-import { CTokenWithMarketState, Currency, StateType } from '@types';
+import { CTokenWithMarketState, Currency, StateType, TokenWithMarketState } from '@types';
 
 import AdditionalMarketDataPanel from './components/AdditionalMarketDataPanel';
 import AssetsTableRow from './components/AssetsTableRow';
@@ -33,13 +32,18 @@ type MarketsProps = {
 const Market = ({ web3 }: MarketsProps) => {
   const { selectedMarket } = useContext(getSelectedMarketContext());
   const [marketsStateType, marketsState] = useMarkets();
-  const [showTopCollateralOnly, setShowTopCollateralOnly] = useLocalStorage(MARKET_DETAILS_TOP_COLLATERAL_KEY, true);
 
   const marketCurrencyToShow = Currency.USD;
 
   const state = useMarketsState(web3, selectedMarket);
   const [, market] = selectedMarket;
   const [marketStateType, marketStateData] = market?.status === 'error' ? [StateType.Loading] : state;
+  const { route } = useWrappedLending();
+  const isWrappedRoute =
+    route.kind === 'wrapped' &&
+    market !== undefined &&
+    route.chainId === market.chainInformation.chainId &&
+    route.cometAddress.toLowerCase() === market.marketAddress.toLowerCase();
   const [currentChainName, currentChainId, currentBaseToken] =
     market !== undefined
       ? [market.chainInformation.name, market.chainInformation.chainId, market.baseAsset.symbol]
@@ -50,8 +54,8 @@ const Market = ({ web3 }: MarketsProps) => {
     market !== undefined && marketsStateType === StateType.Hydrated
       ? getMarket(marketsState.markets, market.chainInformation.chainId, market.marketAddress)
       : undefined;
-  // The market list symbol stays the same once the market loads, unlike the on-chain one
-  // (e.g. USDC-cr of a test market becomes USDC), so the title doesn't change
+  // The market list symbol stays the same once the market loads, unlike the on-chain one,
+  // so the title doesn't change
   const marketDisplayName = configMarket?.institutional
     ? configMarket.baseAsset.name
     : (configMarket?.baseAsset.symbol ?? currentBaseToken);
@@ -79,7 +83,7 @@ const Market = ({ web3 }: MarketsProps) => {
   } else if (marketStateType === StateType.Loading || market === undefined) {
     marketOverviewPanel = <MarketOverviewPanel state={[StateType.Loading, undefined]} />;
     assetRows = (
-      <CollateralAssetsPanel isLoading={true}>
+      <CollateralAssetsPanel>
         {[...Array(5)].map((_, index) => (
           <AssetsTableRow key={index} state={[StateType.Loading]} />
         ))}
@@ -165,35 +169,33 @@ const Market = ({ web3 }: MarketsProps) => {
     } = marketStateData;
 
     // While the boost is paying, a banner describes the connected account's
-    // access to it
-    if (isInstitutional && supplyRewardsAPR > 0n) {
+    // access to it. The boost does not reach a wrapped position, so the wrapped
+    // route shows no banner.
+    if (isInstitutional && supplyRewardsAPR > 0n && !isWrappedRoute) {
       whitelistStatusBanner = (
         <WhitelistStatusBanner whitelistStatus={institutionalWhitelistStatus(web3.read.account)} />
       );
     }
 
-    const rows = collateralAssets.flatMap((token) => {
-      const collateral = market.collaterals?.find((c) => c.address.toLowerCase() === token.address.toLowerCase());
-
-      const isError = collateral?.status === 'error';
-
-      if (collateral?.isDeprecated || (showTopCollateralOnly && collateral?.isVisible === false && !isError)) return [];
-
-      const totalSupplyValue = isError ? 0 : (Number(token.totalSupply) / 10 ** token.decimals) * Number(token.price);
-
-      return [{ token, isError, totalSupplyValue }];
-    });
-
     assetRows = (
-      <CollateralAssetsPanel
-        checked={showTopCollateralOnly}
-        onChange={() => setShowTopCollateralOnly(!showTopCollateralOnly)}
-        isFiltered={showTopCollateralOnly && !!market.collaterals?.some((c) => !c.isDeprecated && c.isVisible === false)}
-      >
-        {rows
-          .sort((a, b) => b.totalSupplyValue - a.totalSupplyValue)
-          .map(({ token, isError }, index) => (
-            <AssetsTableRow key={index} state={[StateType.Hydrated, token, baseAsset]} isCollateralError={isError} />
+      <CollateralAssetsPanel>
+        {collateralAssets
+          .sort((a: TokenWithMarketState, b: TokenWithMarketState): number =>
+            Number(a.totalSupply / BigInt(10 ** a.decimals)) * Number(a.price) >
+            Number(b.totalSupply / BigInt(10 ** b.decimals)) * Number(b.price)
+              ? -1
+              : 1
+          )
+          .map((token, index) => (
+            <AssetsTableRow
+              key={index}
+              state={[StateType.Hydrated, token, baseAsset]}
+              isCollateralError={
+                market.collaterals?.find(
+                  (collateral) => collateral.address.toLowerCase() === token.address.toLowerCase()
+                )?.status === 'error'
+              }
+            />
           ))}
       </CollateralAssetsPanel>
     );

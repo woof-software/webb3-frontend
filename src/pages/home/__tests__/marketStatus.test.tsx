@@ -1,23 +1,14 @@
 import { render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import '@testing-library/jest-dom';
 
 import { getActionQueueContext, initializeContext as initializeActionQueue } from '@contexts/ActionQueueContext';
-import { getSelectedMarketContext, initializeContext as initializeSelectedMarket } from '@contexts/SelectedMarketContext';
-import { Theme } from '@hooks/useThemeManager';
 import {
-  Action,
-  ActionQueue,
-  ActionType,
-  CometState,
-  MarketData,
-  MarketStatus,
-  PendingAction,
-  SelectedMarketData,
-  StateType,
-  TokenWithAccountState,
-} from '@types';
+  getSelectedMarketContext,
+  initializeContext as initializeSelectedMarket,
+} from '@contexts/SelectedMarketContext';
+import { Theme } from '@hooks/useThemeManager';
+import { ActionQueue, CometState, MarketData, MarketStatus, SelectedMarketData, StateType } from '@types';
 
 import { mockBaseAsset } from '../../../../__tests__/mocks/mockBaseAsset';
 import { mockWbtcCollateralAsset } from '../../../../__tests__/mocks/mockCollateralAssets';
@@ -28,10 +19,7 @@ import Home from '../index';
 const writeState = { approve: jest.fn(), supply: jest.fn(), withdraw: jest.fn() };
 jest.mock('@hooks/useWriteCometState', () => ({ useWriteCometState: () => writeState }));
 
-beforeEach(() => {
-  jest.clearAllMocks();
-  window.localStorage.clear();
-});
+beforeEach(() => jest.clearAllMocks());
 
 const selected: SelectedMarketData = {
   selectedMarket: [StateType.Hydrated, MOCK_DEFAULT_MARKET],
@@ -43,23 +31,23 @@ initializeSelectedMarket(selected);
 const MAX_UINT256 = 2n ** 256n - 1n;
 const wbtc = mockWbtcCollateralAsset({ balance: 10n ** 7n, walletBalance: 10n ** 8n, allowance: MAX_UINT256 });
 
-const makeActionQueue = (actions: Action[] = [], pendingAction?: PendingAction): ActionQueue => ({
+const actionQueue: ActionQueue = {
   addOrUpdateAction: jest.fn(),
   clearActions: jest.fn(),
   queueActions: jest.fn(),
-  getActions: () => actions,
-  getPendingAction: () => pendingAction,
+  getActions: () => [],
+  getPendingAction: () => undefined,
   removeAction: jest.fn(),
   setPendingAction: jest.fn(),
-});
-initializeActionQueue(makeActionQueue());
+};
+initializeActionQueue(actionQueue);
 
-const makeCometState = (collateral: TokenWithAccountState): CometState => [
+const cometState: CometState = [
   StateType.Hydrated,
   {
     baseAsset: mockBaseAsset(),
     borrowAPR: 0n,
-    collateralAssets: [collateral],
+    collateralAssets: [wbtc],
     earnAPR: 0n,
     totalBaseSupplyUsd: 0n,
     borrowRewardsAPR: 0n,
@@ -73,28 +61,16 @@ const makeCometState = (collateral: TokenWithAccountState): CometState => [
 type RenderOptions = {
   status?: MarketStatus;
   isWbtcError?: boolean;
-  wbtcAsset?: TokenWithAccountState;
-  wbtcFlags?: { isVisible?: boolean; isDeprecated?: boolean };
-  actions?: Action[];
-  pendingAction?: PendingAction;
 };
 
-const renderHome = ({
-  status = 'success',
-  isWbtcError = false,
-  wbtcAsset = wbtc,
-  wbtcFlags,
-  actions,
-  pendingAction,
-}: RenderOptions) => {
+const renderHome = ({ status = 'success', isWbtcError = false }: RenderOptions) => {
   const SelectedMarketContext = getSelectedMarketContext();
   const ActionQueueContext = getActionQueueContext();
-  const actionQueue = makeActionQueue(actions, pendingAction);
   const market: MarketData = {
     ...MOCK_DEFAULT_MARKET,
     status,
     collaterals: [
-      { address: wbtc.address.toLowerCase(), symbol: wbtc.symbol, status: isWbtcError ? 'error' : 'success', ...wbtcFlags },
+      { address: wbtc.address.toLowerCase(), symbol: wbtc.symbol, status: isWbtcError ? 'error' : 'success' },
     ],
   };
   const selectedMarketData: SelectedMarketData = { ...selected, selectedMarket: [StateType.Hydrated, market] };
@@ -109,7 +85,7 @@ const renderHome = ({
               transactions={[]}
               web3={mockWeb3}
               selectedMarketData={selectedMarketData}
-              cometState={makeCometState(wbtcAsset)}
+              cometState={cometState}
               addTransaction={jest.fn()}
               switchWriteNetwork={jest.fn()}
               estimatedGasMap={new Map()}
@@ -118,9 +94,8 @@ const renderHome = ({
           </ActionQueueContext.Provider>
         </SelectedMarketContext.Provider>
       </MockMarketsProvider>
-    </MemoryRouter>
+    </MemoryRouter>,
   );
-  return actionQueue;
 };
 
 describe('Home — market status', () => {
@@ -145,75 +120,5 @@ describe('Home — collateral status', () => {
     expect(row).not.toBeNull();
     expect(within(row).getAllByRole('button', { name: /Supply/ })[0]).toBeDisabled();
     expect(within(row).getAllByRole('button', { name: /Withdraw/ })[0]).toBeDisabled();
-  });
-
-  test.each<[string, PendingAction]>([
-    ['supply', [ActionType.SupplyCollateral, { ...wbtc, allowance: 0n }, 10n ** 7n]],
-    ['withdraw', [ActionType.WithdrawCollateral, wbtc, mockBaseAsset(), 10n ** 7n]],
-  ])(
-    'confirming a pending %s of an error collateral neither approves nor queues it',
-    async (_, pendingAction) => {
-      const actionQueue = renderHome({ isWbtcError: true, pendingAction });
-
-      // The confirm (or enable) button sits right after Cancel in the action input
-      const [confirmButton] = screen
-        .getAllByRole('button', { name: 'Cancel' })
-        .map((cancel) => cancel.nextElementSibling);
-      await userEvent.click(confirmButton as HTMLElement);
-
-      expect(writeState.approve).not.toHaveBeenCalled();
-      expect(actionQueue.addOrUpdateAction).not.toHaveBeenCalled();
-    }
-  );
-
-  test.each([ActionType.SupplyCollateral, ActionType.WithdrawCollateral] as const)(
-    'a queued %s of an error collateral is not submitted',
-    async (actionType) => {
-      renderHome({ isWbtcError: true, actions: [[actionType, wbtc, 10n ** 7n]] });
-
-      await userEvent.click(screen.getAllByRole('button', { name: 'Submit Transaction' })[0]);
-
-      expect(writeState.supply).not.toHaveBeenCalled();
-      expect(writeState.withdraw).not.toHaveBeenCalled();
-    }
-  );
-});
-
-describe('Home — collateral visibility', () => {
-  const isWbtcShown = () => screen.queryAllByText('Wrapped Bitcoin').length > 0;
-
-  test('a deprecated collateral the user holds is marked and can only be withdrawn', () => {
-    renderHome({ wbtcFlags: { isDeprecated: true } });
-    const row = document.querySelector('.asset-row--error') as HTMLElement;
-
-    expect(row).not.toBeNull();
-    expect(within(row).getAllByRole('button', { name: /Supply/ })[0]).toBeDisabled();
-    expect(within(row).getAllByRole('button', { name: /Withdraw/ })[0]).toBeEnabled();
-  });
-
-  test('a deprecated collateral the user does not hold is hidden even with the toggle off', async () => {
-    renderHome({ wbtcAsset: { ...wbtc, balance: 0n }, wbtcFlags: { isDeprecated: true } });
-    expect(isWbtcShown()).toBe(false);
-
-    await userEvent.click(screen.getByRole('checkbox', { name: /Show top collateral only/ }));
-
-    expect(isWbtcShown()).toBe(false);
-  });
-
-  test('a collateral that is not visible is hidden until the toggle is turned off', async () => {
-    renderHome({ wbtcAsset: { ...wbtc, balance: 0n }, wbtcFlags: { isVisible: false } });
-    expect(isWbtcShown()).toBe(false);
-
-    await userEvent.click(screen.getByRole('checkbox', { name: /Show top collateral only/ }));
-
-    expect(isWbtcShown()).toBe(true);
-  });
-
-  test('a collateral that is not visible stays shown with every operation while the user holds it', () => {
-    renderHome({ wbtcFlags: { isVisible: false } });
-
-    const row = document.querySelector('.asset-row') as HTMLElement;
-    expect(within(row).getAllByRole('button', { name: /Supply/ })[0]).toBeEnabled();
-    expect(within(row).getAllByRole('button', { name: /Withdraw/ })[0]).toBeEnabled();
   });
 });

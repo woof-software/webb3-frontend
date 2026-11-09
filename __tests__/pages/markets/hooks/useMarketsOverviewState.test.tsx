@@ -235,8 +235,6 @@ describe('useMarketsOverview', () => {
               totalSupplyValue: 31426863916176594n,
               utilization: 906942369819992364n,
               collateralAssetSymbols: ['COMP', 'WBTC', 'WETH', 'UNI', 'LINK'],
-
-              topCollateralAssetSymbols: ['COMP', 'WBTC', 'WETH', 'UNI', 'LINK'],
             },
             {
               borrowAPR: 33898024514016004n,
@@ -259,8 +257,6 @@ describe('useMarketsOverview', () => {
               totalSupplyValue: 5950870954216523n,
               utilization: 647373375204769162n,
               collateralAssetSymbols: ['cbETH', 'wstETH'],
-
-              topCollateralAssetSymbols: ['cbETH', 'wstETH'],
             },
             {
               borrowAPR: 41637919658256000n,
@@ -282,8 +278,6 @@ describe('useMarketsOverview', () => {
               totalSupplyValue: 2329143489247043n,
               utilization: 761083420635047735n,
               collateralAssetSymbols: ['WETH', 'WBTC', 'WMATIC', 'MaticX'],
-
-              topCollateralAssetSymbols: ['WETH', 'WBTC', 'WMATIC', 'MaticX'],
             },
             {
               borrowAPR: 46244384597376000n,
@@ -305,8 +299,6 @@ describe('useMarketsOverview', () => {
               totalSupplyValue: 403609749915354n,
               utilization: 812977538620675375n,
               collateralAssetSymbols: ['ARB', 'GMX', 'WETH', 'WBTC'],
-
-              topCollateralAssetSymbols: ['ARB', 'GMX', 'WETH', 'WBTC'],
             },
             {
               borrowAPR: 19339728476112000n,
@@ -328,8 +320,6 @@ describe('useMarketsOverview', () => {
               totalSupplyValue: 315045023059815n,
               utilization: 123992243058846637n,
               collateralAssetSymbols: ['ARB', 'GMX', 'WETH', 'WBTC'],
-
-              topCollateralAssetSymbols: ['ARB', 'GMX', 'WETH', 'WBTC'],
             },
             {
               borrowAPR: 18165959344512000n,
@@ -351,8 +341,6 @@ describe('useMarketsOverview', () => {
               totalSupplyValue: 636926202890887n,
               utilization: 222182424985284321n,
               collateralAssetSymbols: ['cbETH'],
-
-              topCollateralAssetSymbols: ['cbETH'],
             },
             {
               borrowAPR: 31609869295680000n,
@@ -374,8 +362,6 @@ describe('useMarketsOverview', () => {
               totalSupplyValue: 1244839758544010n,
               utilization: 474567695122316508n,
               collateralAssetSymbols: ['cbETH', 'WETH'],
-
-              topCollateralAssetSymbols: ['cbETH', 'WETH'],
             },
           ],
         },
