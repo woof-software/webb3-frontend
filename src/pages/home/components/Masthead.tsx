@@ -3,9 +3,15 @@ import { Dispatch, ReactNode, useRef, useState } from 'react';
 import DetailSheet from '@components/DetailSheet';
 import { Compare, HoverUnder } from '@components/Icons';
 import Tooltip from '@components/Tooltip';
-import NetRatesTooltip, { NetRatesTooltipView } from '@components/Tooltips/NetRatesTooltip';
+import NetRatesTooltip, {
+  MarketRewards,
+  NetRatesTooltipProps,
+  NetRatesTooltipView,
+  RewardsType
+} from '@components/Tooltips/NetRatesTooltip';
 import { useCurrencyContext } from '@contexts/CurrencyContext';
 import { sanitizedAmountForAction } from '@helpers/actions';
+import { InstitutionalWhitelistStatus } from '@helpers/institutionalWhitelist';
 import {
   displayValue,
   formatRateFactor,
@@ -15,6 +21,7 @@ import {
   PRICE_PRECISION,
   shouldShowValueInBaseAsset,
 } from '@helpers/numbers';
+import { getWrappedPositionValueInDollars } from '@helpers/wrappedPositions';
 import { Theme } from '@hooks/useThemeManager';
 import {
   Action,
@@ -26,7 +33,7 @@ import {
   StateType,
   Token,
   TokenWithAccountState,
-  Transaction,
+  Transaction
 } from '@types';
 
 import { iconForActionType } from './ActionQueueItem';
@@ -43,32 +50,50 @@ type MastheadHydrated = [
     baseAsset: BaseAssetWithAccountState;
     baseAssetPost: BaseAssetWithAccountState;
     borrowAPR: bigint;
-    borrowRewardsAPR: bigint | undefined;
+    borrowRewardsAPR?: bigint;
     collateralAssets: TokenWithAccountState[];
     collateralValue: bigint;
     collateralValuePost: bigint;
     compare: boolean;
     earnAPR: bigint;
-    earnRewardsAPR: bigint | undefined;
+    earnRewardsAPR?: bigint;
+    institutionalWhitelistStatus?: InstitutionalWhitelistStatus;
     liquidationCapacity: bigint;
     liquidationCapacityPost: bigint;
     pendingAction?: PendingAction;
-    rewardsAsset?: Token;
+    rewardsAssetSymbol?: string;
     theme: Theme;
     transaction?: Transaction;
     onSupplyAction: (pendingAction?: PendingAction) => void;
     onWithdrawAction: (pendingAction?: PendingAction) => void;
     setCompare: Dispatch<boolean>;
+    isInstitutional: boolean;
+    /**
+     * On the wrapped route, the wrapped position's value when Home could not add it to the base
+     * balance because the account borrows directly. It is shown beneath the borrow, never netted
+     * against it.
+     */
+    wrappedSupplyApart?: bigint;
+    /**
+     * Whether the base balance holds both a direct Comet supply and a wrapped supply. The supply
+     * rewards in the Net APR apply to the direct supply only.
+     */
+    isMixedSupply?: boolean;
+    /** A notice about the session or the wrapped position, such as a failed read, with its action. */
+    notice?: MastheadNotice;
   }
 ];
 export type MastheadState = MastheadLoading | MastheadNoWallet | MastheadHydrated;
+
+export type MastheadNotice = { message: string; actionLabel?: string; onAction?: () => void };
 
 type MastheadProps = {
   state: MastheadState;
 };
 
 const Masthead = ({ state }: MastheadProps) => {
-  const { balanceOverview, balanceValue, balance, buttons, ratesDetail, utilizationMeterState } = getContent(state);
+  const { balanceOverview, balanceValue, balance, wrappedSupply, notice, buttons, ratesDetail, utilizationMeterState } =
+    getContent(state);
   const {
     currency,
     pressDownAnimate,
@@ -104,8 +129,10 @@ const Masthead = ({ state }: MastheadProps) => {
           {balanceOverview}
           <div className="masthead__balance-value">{balanceValue}</div>
           {balance}
+          {wrappedSupply}
           {ratesDetail}
         </div>
+        {notice}
         <div className="masthead__action-buttons">{buttons}</div>
         <UtilizationMeter state={utilizationMeterState} />
       </div>
@@ -119,6 +146,8 @@ type Content = {
   balanceOverview: ReactNode;
   balanceValue: ReactNode;
   balance: ReactNode;
+  wrappedSupply?: ReactNode;
+  notice?: ReactNode;
   buttons: ReactNode;
   ratesDetail: ReactNode;
   utilizationMeterState: UtilizationMeterState;
@@ -218,15 +247,20 @@ function getContent(state: MastheadState): Content {
     compare,
     earnAPR,
     earnRewardsAPR,
+    institutionalWhitelistStatus,
     liquidationCapacity,
     liquidationCapacityPost,
     pendingAction,
-    rewardsAsset,
+    rewardsAssetSymbol,
     theme,
     transaction,
+    isInstitutional,
     onSupplyAction,
     onWithdrawAction,
     setCompare,
+    wrappedSupplyApart = 0n,
+    isMixedSupply = false,
+    notice,
   } = state[1];
   const {
     baseAsset: { symbol },
@@ -252,6 +286,28 @@ function getContent(state: MastheadState): Content {
     </Tooltip>
   ) : null;
 
+  // The wrapped value Home could not add to the base balance changes the borrow's wrapped line and
+  // nothing else. In dollars it is valued at the base token's dollar price.
+  let wrappedSupplyApartText: string | undefined;
+  if (wrappedSupplyApart > 0n) {
+    wrappedSupplyApartText = shouldShowValueInBaseAsset(symbol as Currency, currency)
+      ? `${displayValue(baseAsset.decimals, wrappedSupplyApart)} ${symbol}`
+      : formatValueInDollars(
+          baseAsset.decimals,
+          getWrappedPositionValueInDollars(wrappedSupplyApart, baseAsset.baseAssetPriceInDollars, symbol)
+        );
+  }
+  const noticeElement = notice !== undefined && (
+    <div className="masthead__notice" role="status">
+      <p className="meta text-color--2">{notice.message}</p>
+      {notice.actionLabel !== undefined && notice.onAction !== undefined && (
+        <button className="button button--small" onClick={notice.onAction}>
+          {notice.actionLabel}
+        </button>
+      )}
+    </div>
+  );
+
   const utilizationMeterState: UtilizationMeterState = [
     StateType.Hydrated,
     {
@@ -261,13 +317,26 @@ function getContent(state: MastheadState): Content {
     },
   ];
 
+  const rewards: MarketRewards = isInstitutional
+    ? {
+      type: RewardsType.Institutional,
+      supplyAPR: earnRewardsAPR ?? 0n,
+      borrowAPR: borrowRewardsAPR ?? 0n,
+      assetSymbol: rewardsAssetSymbol,
+      whitelistStatus: institutionalWhitelistStatus
+    }
+    : {
+      type: RewardsType.Standard,
+      supplyAPR: earnRewardsAPR ?? 0n,
+      borrowAPR: borrowRewardsAPR ?? 0n,
+      assetSymbol: rewardsAssetSymbol
+    };
+
   const netRatesTooltipProps = {
     borrowAPR,
-    borrowRewardsAPR,
     earnAPR,
-    earnRewardsAPR,
-    rewardsAsset,
-  };
+    rewards
+  } satisfies Omit<NetRatesTooltipProps, 'view'>;
 
   let ratesTooltipContent = <NetRatesTooltip {...netRatesTooltipProps} view={NetRatesTooltipView.Borrow} />;
 
@@ -307,13 +376,14 @@ function getContent(state: MastheadState): Content {
     let buttons: ReactNode;
 
     if (!hasActions) {
+      const anchorRect = tooltipLeftAlign.current?.getBoundingClientRect();
       overviewDetails = (
         <Tooltip
           content={ratesTooltipContent}
           width={400}
           hideArrow={true}
-          x={tooltipLeftAlign.current?.getBoundingClientRect().left}
-          y={tooltipLeftAlign.current?.getBoundingClientRect().bottom}
+          x={anchorRect?.left}
+          y={anchorRect?.bottom}
         >
           <div className="masthead__overview-details" onClick={() => setRatesDetailActive(true)}>
             <span className="meta text-color--3"> &#64; </span>
@@ -530,6 +600,11 @@ function getContent(state: MastheadState): Content {
       balance: (
         <Balance wholeNumberBalance={wholeNumberBalance} fractionalNumberBalance={fractionalNumberBalance}></Balance>
       ),
+      // The headline shows the borrow without subtracting the wrapped supply.
+      wrappedSupply: wrappedSupplyApartText !== undefined && (
+        <p className="meta text-color--3">{`Plus ${wrappedSupplyApartText} supplied through the wrapper`}</p>
+      ),
+      notice: noticeElement,
       buttons,
       ratesDetail: (
         <DetailSheet active={ratesDetailActive} onClickOutside={() => setRatesDetailActive(false)}>
@@ -576,19 +651,29 @@ function getContent(state: MastheadState): Content {
     ratesTooltipContent = <NetRatesTooltip {...netRatesTooltipProps} view={NetRatesTooltipView.Supply} />;
 
     if (!hasActions) {
+      const anchorRect = tooltipLeftAlign.current?.getBoundingClientRect();
+      // The rate includes the supply rewards, which only the direct supply earns. A wrapped-only
+      // supplier earns no rewards on this route, so the rate is the wrapped supply's own.
+      const netRateLabel = isMixedSupply ? 'Direct supply Net APR' : 'Net APR';
       overviewDetails =
         baseAssetToUse.balance > 0n ? (
           <Tooltip
             content={ratesTooltipContent}
             width={400}
             hideArrow={true}
-            x={tooltipLeftAlign.current?.getBoundingClientRect().left}
-            y={tooltipLeftAlign.current?.getBoundingClientRect().bottom}
+            interactive={true}
+            touchToggle={false}
+            x={anchorRect?.left}
+            // Overlap the trigger slightly so the pointer can cross from the
+            // rate text onto the tooltip without a gap breaking the hover
+            y={anchorRect !== undefined ? anchorRect.bottom - 18 : undefined}
           >
             <div className="masthead__overview-details" onClick={() => setRatesDetailActive(true)}>
               <span className="meta text-color--3"> &#64; </span>
               <div className="masthead__overview-details__net-rate">
-                <span className="meta">{formatRateFactor(earnAPR + (earnRewardsAPR || 0n))} Net APR</span>
+                <span className="meta">
+                  {formatRateFactor(earnAPR + (earnRewardsAPR || 0n))} {netRateLabel}
+                </span>
                 <HoverUnder className="hover-under" long={true} theme={theme} />
               </div>
             </div>
@@ -817,6 +902,7 @@ function getContent(state: MastheadState): Content {
         ></BalanceValue>
       ),
       balance: <Balance wholeNumberBalance={wholeNumberBalance} fractionalNumberBalance={fractionalNumberBalance} />,
+      notice: noticeElement,
       buttons,
       utilizationMeterState,
       ratesDetail: (

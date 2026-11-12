@@ -1,3 +1,5 @@
+import type { TransactionReceipt } from '@ethersproject/providers';
+
 type Decimal = {
   value: string;
 };
@@ -124,8 +126,8 @@ export type V3MarketApiBucket = {
   timestamp: number;
   total_collateral_value: number;
   total_borrow_value: number;
-  supply_apr: number;
-  borrow_apr: number;
+  supply_apr: string;
+  borrow_apr: string;
 };
 
 export type V3GovernanceApiProposal = {
@@ -141,8 +143,8 @@ export type MarketHistoricalBucket = {
   blockTimestamp: number;
   supplyTotal: number;
   borrowTotal: number;
-  supplyRate: number;
-  borrowRate: number;
+  supplyRate: bigint;
+  borrowRate: bigint;
 };
 
 export type ProtocolState = {
@@ -150,6 +152,13 @@ export type ProtocolState = {
   borrowAPR: bigint;
   collateralAssets: TokenWithState[];
   earnAPR: bigint;
+  // The market's total supplied base asset value in dollars, at PRICE_PRECISION
+  totalBaseSupplyUsd: bigint;
+  borrowRewardsAPR: bigint;
+  supplyRewardsAPR: bigint;
+  rewardsAssetSymbol?: string;
+  isInstitutional?: boolean;
+  isRewardsLoading?: boolean;
 };
 
 export type ProtocolAndAccountState = Omit<ProtocolState, 'baseAsset' | 'collateralAssets'> & {
@@ -158,20 +167,29 @@ export type ProtocolAndAccountState = Omit<ProtocolState, 'baseAsset' | 'collate
   collateralValue: bigint;
   isBulkerAllowed: boolean;
   liquidationCapacity: bigint;
+  borrowRewardsAPR: bigint;
+  supplyRewardsAPR: bigint;
+  rewardsAssetSymbol?: string;
+  isInstitutional?: boolean;
+  isRewardsLoading?: boolean;
 };
 
 export type ProtocolAndMarketsState = Omit<ProtocolState, 'collateralAssets'> & {
-  borrowRates: [bigint, number][];
   collateralAssets: TokenWithMarketState[];
   cometAddress: string;
   factorScale: number;
   marketHistory: MarketHistoricalBucket[];
   reserves: bigint;
-  supplyRates: [bigint, number][];
+  borrowRates: [bigint, bigint][];
+  supplyRates: [bigint, bigint][];
   targetReserves: bigint;
   totalBorrow: bigint;
   totalSupply: bigint;
   utilization: bigint;
+  borrowRewardsAPR: bigint;
+  supplyRewardsAPR: bigint;
+  rewardsAssetSymbol?: string
+  isInstitutional?: boolean;
   type: 'ProtocolAndMarketState';
 };
 
@@ -289,8 +307,6 @@ export type RewardsTokenState = {
   cometRewards: string;
   baseAsset: BaseAsset;
   rewardAsset: Token & { price: bigint };
-  earnRewardsAPR: bigint;
-  borrowRewardsAPR: bigint;
 };
 
 export type AccountRewardsState = RewardsTokenState & {
@@ -335,7 +351,21 @@ export type MarketData = {
   bulkerAddress: string;
   fauceteerAddress?: string;
   rewardsAddress?: string;
+  // Overrides the base-asset part of the market's URL key (e.g. 'usdc-institutional' -> '?market=usdc-institutional-mainnet').
+  // Required when multiple markets on the same chain share a base asset symbol.
+  slug?: string;
+  // Institutional markets are listed in their own section of the market selector
+  institutional?: boolean;
+  // Recently launched markets get a 'New' badge in the market selector
+  isNew?: boolean;
   type: 'MarketData';
+  rewardsOverwrite?: {
+    rewardsAssetSymbol: string;
+    supplyCompPerDay: bigint;
+    borrowCompPerDay: bigint;
+    borrowRewardsAPR?: bigint;
+    supplyRewardsAPR?: bigint;
+  };
 };
 
 export type MarketDataLoaded = Omit<MarketData, 'baseAsset' | 'type'> & {
@@ -358,6 +388,9 @@ export type MarketSummary = {
   };
   borrowAPR: bigint;
   supplyAPR: bigint;
+  borrowRewardsAPR: bigint;
+  supplyRewardsAPR: bigint;
+  rewardsAssetSymbol?: string;
   /**
    * Total borrow value in USD
    */
@@ -374,6 +407,8 @@ export type MarketSummary = {
   timestamp: number;
   collateralAssetSymbols: string[];
   date: string;
+  isInstitutional?: boolean;
+  isRewardsLoading?: boolean;
 };
 
 export type AggregatedHistoricalSummary = {
@@ -471,9 +506,15 @@ export type Action =
   | [ActionType.ClaimRewards, Token & { price: bigint }, bigint, AccountRewardsState];
 
 export type ActionQueue = {
-  addOrUpdateAction: (action: Action) => void;
+  /**
+   * Adds `action`, or updates the queued action of its kind and asset. Returns false, and changes
+   * nothing, when the queue is limited to one action and already holds another, or when the
+   * callback was kept from an earlier session or market.
+   */
+  addOrUpdateAction: (action: Action) => boolean;
   clearActions: () => void;
-  queueActions: (market: string, actions: Action[]) => void;
+  /** Defers `actions` until the market on `chainId` with Comet `marketAddress` is selected. */
+  queueActions: (chainId: number, marketAddress: string, actions: Action[]) => void;
   getActions: (
     baseAsset: BaseAssetWithAccountState,
     collateralAssets: TokenWithAccountState[],
@@ -527,17 +568,42 @@ export type BaseTransaction = {
   networkId: number;
   networkName: string;
   description: string;
+  /** The sender's confirmed nonce just before sending, or the transaction's own nonce once known. */
   nonce: number;
-  callback?: () => void;
+  /** Whether `nonce` is the transaction's own, or only a lower bound read before sending. */
+  nonceSource?: 'transaction' | 'lower-bound';
+  /** The sender, in lower case. Records stored before this field existed have none. */
+  account?: string;
+  /** For one transaction of a multi-step action, such as a wrapper supply, the step it is. */
+  step?: string;
 };
 export type AwaitingConfirmationTransaction = BaseTransaction & {
   state: TransactionState.AwaitingConfirmation;
+  /**
+   * A wallet request whose result cannot be followed: it was open at a reload, or the wallet
+   * answered with an ambiguous error. The wallet can still send it.
+   */
+  isInterrupted?: boolean;
+  /**
+   * The wallet answered that it still holds the request (`pending-in-wallet` in
+   * `@helpers/walletErrors`). Only the wording of the interrupted request reads it.
+   */
+  isPendingInWallet?: boolean;
 };
 export type PendingTransaction = BaseTransaction & {
   state: TransactionState.Pending;
   hash: string;
 };
 export type Transaction = AwaitingConfirmationTransaction | PendingTransaction;
+
+/** What became of a broadcast transaction. A receipt without a success flag is not a success. */
+export type TransactionOutcome =
+  | { status: 'confirmed'; receipt: TransactionReceipt }
+  | { status: 'reverted'; receipt: TransactionReceipt }
+  | { status: 'replaced' };
+
+/** A broadcast transaction and what became of it. */
+export type SettledTransaction = PendingTransaction & { outcome: TransactionOutcome };
 
 export type MarketsByNetwork = {
   [key: number]: { chainInformation: ChainInformation; markets: MarketData[] };

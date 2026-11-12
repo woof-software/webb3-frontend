@@ -144,8 +144,12 @@ const baseAssetWithState: BaseAssetWithState = {
 const mockProtocolState: ProtocolState = {
   borrowAPR,
   earnAPR,
+  totalBaseSupplyUsd: 1_000_000n * 10n ** 8n,
   baseAsset: baseAssetWithState,
   collateralAssets: [LINK, COMP, DAI, ETH, UNI, WBTC],
+  borrowRewardsAPR: 0n,
+  supplyRewardsAPR: 0n,
+  isRewardsLoading: false
 };
 
 const collateralAssetsForBorrow = [
@@ -196,6 +200,7 @@ const collateralAssetsForBorrow = [
 const mockProtocolAndAccountStateBorrowing: ProtocolAndAccountState = {
   borrowAPR,
   earnAPR,
+  totalBaseSupplyUsd: 1_000_000n * 10n ** 8n,
   baseAsset: {
     ...baseAssetWithState,
     bulkerAllowance: MAX_UINT256,
@@ -220,6 +225,9 @@ const mockProtocolAndAccountStateBorrowing: ProtocolAndAccountState = {
     baseAsset.symbol,
     collateralAssetsForBorrow
   ),
+  borrowRewardsAPR: 0n,
+  supplyRewardsAPR: 0n,
+  isRewardsLoading: false
 };
 
 const collateralAssetsForSupply = [
@@ -270,6 +278,7 @@ const collateralAssetsForSupply = [
 const mockProtocolAndAccountStateSupply: ProtocolAndAccountState = {
   borrowAPR,
   earnAPR,
+  totalBaseSupplyUsd: 1_000_000n * 10n ** 8n,
   baseAsset: {
     ...baseAssetWithState,
     bulkerAllowance: MAX_UINT256,
@@ -294,6 +303,9 @@ const mockProtocolAndAccountStateSupply: ProtocolAndAccountState = {
     baseAsset.symbol,
     collateralAssetsForSupply
   ),
+  borrowRewardsAPR: 0n,
+  supplyRewardsAPR: 0n,
+  isRewardsLoading: false
 };
 
 const collateralAssetsForMarkets = [
@@ -337,6 +349,7 @@ const collateralAssetsForMarkets = [
 const mockProtocolMarketState: ProtocolAndMarketsState = {
   borrowAPR,
   earnAPR,
+  totalBaseSupplyUsd: 1_000_000n * 10n ** 8n,
   baseAsset: baseAssetWithState,
   collateralAssets: collateralAssetsForMarkets,
   cometAddress: '0xcC861650dc6f25cB5Ab4185d4657a70c923FDb27',
@@ -346,10 +359,13 @@ const mockProtocolMarketState: ProtocolAndMarketsState = {
   totalSupply: BigInt(2_896_785_179e6),
   utilization: BigInt(0.5e18),
   factorScale: 1e18,
-  borrowRates: [...Array(101).keys()].map((n) => [BigInt(n * 1e16), n * 0.05]),
-  supplyRates: [...Array(101).keys()].map((n) => [BigInt(n * 1e16), n * 0.03]),
+  borrowRates: [...Array(101).keys()].map((n) => [BigInt(n * 1e16), BigInt(n * 5e14)]),
+  supplyRates: [...Array(101).keys()].map((n) => [BigInt(n * 1e16), BigInt(n * 3e14)]),
   marketHistory: [],
   type: 'ProtocolAndMarketState',
+  borrowRewardsAPR: 0n,
+  supplyRewardsAPR: 0n,
+  isRewardsLoading: false
 };
 
 const mockRewardsState: RewardAccountStateInfo = [
@@ -365,8 +381,6 @@ const mockRewardsState: RewardAccountStateInfo = [
         rewardAsset: COMP,
         amountOwed: BigInt(100e18),
         walletBalance: BigInt(100e18),
-        earnRewardsAPR,
-        borrowRewardsAPR,
         supplyBalance: BigInt(0),
         borrowBalance: BigInt(15_500_000.15e6),
       },

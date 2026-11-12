@@ -1,5 +1,3 @@
-import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill';
-
 import react from '@vitejs/plugin-react';
 
 import { resolve } from 'path';
@@ -8,6 +6,11 @@ import nodePolyfills from 'rollup-plugin-polyfill-node';
 
 import { defineConfig } from 'vite';
 import pluginRewriteAll from 'vite-plugin-rewrite-all';
+
+// The Buffer and process shims that the dependency optimizer injects into pre-bundled dependencies. They
+// are the files @esbuild-plugins/node-globals-polyfill injected before Vite 8, whose esbuild plugin Vite 8's
+// optimizer cannot run.
+const nodeGlobalsPolyfill = (file) => resolve(__dirname, 'node_modules/@esbuild-plugins/node-globals-polyfill', file);
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -30,6 +33,9 @@ export default defineConfig({
   },
   build: {
     target: ['es2020'],
+    // Vite 8 minifies with Oxc and Lightning CSS by default. Keep esbuild, which built every release so far.
+    minify: 'esbuild',
+    cssMinify: 'esbuild',
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
@@ -39,9 +45,10 @@ export default defineConfig({
         vote: resolve(__dirname, 'vote/index.html'),
         extensionDetail: resolve(__dirname, 'extensions/ipfs-404.html'),
         transactions: resolve(__dirname, 'transactions/index.html'),
+        rewards: resolve(__dirname, 'rewards/index.html'),
+        redirect: resolve(__dirname, 'redirect/index.html'),
       },
       plugins: [nodePolyfills()],
-      external: ['@safe-global/safe-apps-sdk', '@safe-globalThis/safe-apps-sdk', '@safe-globalThis/safe-apps-provider'],
     },
   },
   base: '',
@@ -54,6 +61,18 @@ export default defineConfig({
     alias: {
       comet: resolve(__dirname, 'node_modules/comet'),
       '/fonts': resolve(__dirname, 'node_modules/compound-styles/public/fonts'),
+      // Redirect the (transitive) WalletConnect provider to its self-contained UMD
+      // bundle, which carries its own WalletConnect 2.21.1 packages. package.json
+      // resolves the separately installed WalletConnect packages to 2.21.10 so the
+      // audit passes, and ethereum-provider 2.21.1 was never released against those
+      // versions. Without this alias, the dev server and the production build would
+      // load that untested mix on the pairing and signing path. Keep the alias at
+      // least until wagmi depends on @walletconnect/ethereum-provider 2.22.0 or
+      // later and those resolutions are removed.
+      '@walletconnect/ethereum-provider': resolve(
+        __dirname,
+        'node_modules/@walletconnect/ethereum-provider/dist/index.umd.js'
+      ),
       '@components': resolve(__dirname, 'src/components'),
       '@hooks': resolve(__dirname, 'src/hooks'),
       '@contexts': resolve(__dirname, 'src/contexts'),
@@ -63,20 +82,18 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    esbuildOptions: {
-      target: 'esnext',
-      // Node.js global to browser globalThis
-      define: {
-        global: 'globalThis',
-      },
-      // Enable esbuild polyfill plugins
-      plugins: [
-        NodeGlobalsPolyfillPlugin({
-          buffer: true,
-        }),
-      ],
-      supported: {
-        bigint: true,
+    rolldownOptions: {
+      transform: {
+        target: 'esnext',
+        // Node.js global to browser globalThis
+        define: {
+          global: 'globalThis',
+        },
+        // Node.js Buffer and process globals for dependencies that expect them
+        inject: {
+          Buffer: [nodeGlobalsPolyfill('Buffer.js'), 'Buffer'],
+          process: [nodeGlobalsPolyfill('process.js'), 'process'],
+        },
       },
     },
   },

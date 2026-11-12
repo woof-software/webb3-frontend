@@ -1,18 +1,23 @@
+import BoostedSupplyRates from '@components/BoostedSupplyRates';
 import NetRatesGraph, { NetRatesGraphType } from '@components/NetRatesGraph';
 import PanelWithHeader from '@components/PanelWithHeader';
 import { formatRateFactor } from '@helpers/numbers';
-import { Token, StateType } from '@types';
+import { StateType } from '@types';
 
 type MarketRatesPanelLoading = [StateType.Loading];
 
 type MarketRatesPanelHydrated = [
   StateType.Hydrated,
   {
+    chainId: number;
+    marketAddress: string;
     borrowAPR: bigint;
     borrowRewardsAPR?: bigint;
     earnAPR: bigint;
     earnRewardsAPR?: bigint;
-    rewardsAsset?: Token;
+    rewardsAssetSymbol?: string;
+    isInstitutional?: boolean;
+    isRewardsLoading?: boolean;
   }
 ];
 
@@ -23,15 +28,17 @@ type PanelContent = {
   borrowRewardsAPR?: bigint;
   earnAPR: bigint;
   earnRewardsAPR?: bigint;
-  rewardsAsset?: Token;
+  rewardsAssetSymbol?: string;
+  isInstitutional?: boolean;
 };
 
-const defaultPanelContent = {
+const defaultPanelContent: PanelContent = {
   borrowAPR: 0n,
   borrowRewardsAPR: undefined,
   earnAPR: 0n,
   earnRewardsAPR: undefined,
-  rewardsAsset: undefined,
+  rewardsAssetSymbol: undefined,
+  isInstitutional: false,
 };
 
 function getMarketRatesPanelContent(state: MarketRatesPanelState): PanelContent {
@@ -44,7 +51,7 @@ function getMarketRatesPanelContent(state: MarketRatesPanelState): PanelContent 
 }
 
 const MarketRatesPanel = ({ state }: { state: MarketRatesPanelState }) => {
-  if (state[0] == StateType.Loading) {
+  if (state[0] == StateType.Loading || state[1].isRewardsLoading) {
     return <LoadingView />;
   } else {
     const panelContent = getMarketRatesPanelContent(state);
@@ -72,7 +79,7 @@ const LoadingView = () => {
           </div>
           <div className="market-rates__section grid-container grid-container--6">
             <div className="market-rates__section__labels-holder grid-column--2">
-              <label className="label text-color--2">Net Earn APR</label>
+              <label className="label text-color--2">Net Supply APR</label>
               <h4>
                 <span className="placeholder-content" style={{ width: '4rem' }}></span>
               </h4>
@@ -89,27 +96,41 @@ const LoadingView = () => {
   );
 };
 
-const MarketRatesPanelView = ({ borrowAPR, borrowRewardsAPR, earnAPR, earnRewardsAPR, rewardsAsset }: PanelContent) => {
-  const netBorrowAPR = borrowRewardsAPR ? borrowAPR - borrowRewardsAPR : borrowAPR;
-  const netSupplyAPR = earnRewardsAPR ? earnRewardsAPR + earnAPR : earnAPR;
+const MarketRatesPanelView = ({
+  borrowAPR,
+  borrowRewardsAPR = 0n,
+  earnAPR,
+  earnRewardsAPR = 0n,
+  rewardsAssetSymbol,
+  isInstitutional,
+}: PanelContent) => {
+  const netBorrowAPR = borrowAPR - borrowRewardsAPR;
+  const netSupplyAPR = earnAPR + earnRewardsAPR;
 
   const netBorrowRateGraph = (
     <NetRatesGraph
       state={NetRatesGraphType.Borrow}
       borrowAPR={borrowAPR}
       borrowRewardsAPR={borrowRewardsAPR}
-      rewardsAsset={rewardsAsset}
+      rewardsAssetSymbol={rewardsAssetSymbol}
+      boostLabel={'Rewards'}
     />
   );
 
-  const netEarnRateGraph = (
-    <NetRatesGraph
-      state={NetRatesGraphType.Earn}
-      earnAPR={earnAPR}
-      earnRewardsAPR={earnRewardsAPR}
-      rewardsAsset={rewardsAsset}
-    />
-  );
+  // Institutional markets show the base/boost breakdown bar; the whitelist
+  // status renders as a standalone banner on the page instead of a card here
+  const netEarnRateGraph =
+    isInstitutional && earnRewardsAPR > 0n ? (
+      <BoostedSupplyRates earnAPR={earnAPR} boostAPR={earnRewardsAPR} showWhitelistCard={false} />
+    ) : (
+      <NetRatesGraph
+        state={NetRatesGraphType.Earn}
+        earnAPR={earnAPR}
+        earnRewardsAPR={earnRewardsAPR}
+        rewardsAssetSymbol={rewardsAssetSymbol}
+        boostLabel={'Rewards'}
+      />
+    );
 
   return (
     <PanelWithHeader header="Market Rates" secondaryHeader="Net of Rewards" className="grid-column--6">
@@ -123,7 +144,7 @@ const MarketRatesPanelView = ({ borrowAPR, borrowRewardsAPR, earnAPR, earnReward
         </div>
         <div className="market-rates__section grid-container grid-container--6">
           <div className="market-rates__section__labels-holder grid-column--2">
-            <label className="label text-color--2">Net Earn APR</label>
+            <label className="label text-color--2">Net Supply APR</label>
             <h4 className="text-color--1 heading heading--emphasized L4">{formatRateFactor(netSupplyAPR)}</h4>
           </div>
           <div className="grid-column--4">{netEarnRateGraph}</div>

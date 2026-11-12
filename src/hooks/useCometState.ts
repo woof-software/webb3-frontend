@@ -1,18 +1,27 @@
 import { StaticJsonRpcProvider } from '@ethersproject/providers';
 import { ConnectionInfo } from 'ethers/lib/utils';
 import { Provider } from 'ethers-multicall';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { Web3 } from '@contexts/Web3Context';
 import { getAssetDisplayName, getAssetDisplaySymbol } from '@helpers/assets';
-import { getBaseAssetPriceFeed, getBaseAssetDollarPrice, adjustCollateralPrice } from '@helpers/baseAssetPrice';
+import { adjustCollateralPrice, getBaseAssetDollarPrice, getBaseAssetPriceFeed } from '@helpers/baseAssetPrice';
+import { recordCometStateSource } from '@helpers/cometStateSource';
 import { getIsDeprecatedwUSDMMarket } from '@helpers/deprecatedMarkets';
+import { aprAt, RateModel } from '@helpers/interestRates';
 import { shouldKeepCollateralAsset } from '@helpers/legacyCollateral';
-import { REFRESH_INTERVAL, getCapacity, getCollateralValue, MAX_UINT256 } from '@helpers/numbers';
+import { getCapacity, getCollateralValue, MAX_UINT256, REFRESH_INTERVAL } from '@helpers/numbers';
+import { getMarketRewardsAPRs } from '@helpers/rewards';
 import CometQuery from '@helpers/sleuth/out/CometQuery.sol/CometQuery.json';
 import { Sleuth } from '@helpers/sleuth/sleuth';
-import { CometStateResponse, CometWithAccountStateQuery, CometWithAccountStateResponse } from '@helpers/sleuth/types';
+import {
+  CometStateResponse,
+  CometWithAccountStateQuery,
+  CometWithAccountStateResponse,
+  RateModelResponse,
+} from '@helpers/sleuth/types';
 import { getStETHAccountState, isStETH, isWrappedStETH } from '@helpers/steth';
+import { delaysCometRefresh } from '@hooks/useTransactionManager';
 import { useWaiter } from '@hooks/useWaiter';
 import {
   CometState,
@@ -22,17 +31,30 @@ import {
   MarketDataLoaded,
   MarketDataState,
   ProtocolAndAccountState,
+  RewardsState,
   StateType,
   TokenWithAccountState,
-  Transaction,
+  Transaction
 } from '@types';
+
 
 import { getSleuthOptions, queryCometData, sanitizeCollateralAssetName } from './useSelectedMarket';
 
-export function useCometState(web3: Web3, marketState: MarketDataState, transactions: Transaction[]): CometState {
+export function useCometState(
+  web3: Web3,
+  marketState: MarketDataState,
+  transactions: Transaction[],
+  rewards: RewardsState
+): CometState {
   const [state, setState] = useState<CometState>([StateType.Loading, undefined]);
-  const { waitFor } = useWaiter<Transaction[]>(transactions);
+  // The transactions a refresh waits for. The list keeps its identity until `transactions` changes.
+  // A new list on every render makes useWaiter set a new queue and render again without end, and
+  // rebuilds refreshData on every render.
+  const refreshDelayingTransactions = useMemo(() => transactions.filter(delaysCometRefresh), [transactions]);
+  const { waitFor } = useWaiter<Transaction[]>(refreshDelayingTransactions);
   const marketRef = useRef(marketState);
+  const accountRef = useRef(web3.read.account);
+  accountRef.current = web3.read.account;
 
   // When network is changed, immediately set state to loading and update the chainIdRef
   useEffect(() => {
@@ -57,23 +79,35 @@ export function useCometState(web3: Web3, marketState: MarketDataState, transact
             marketStateData,
             account
           );
-          newState = formatCometStateHydrated(cometResponse, marketStateData);
+          newState = formatCometStateHydrated(cometResponse, marketStateData, rewards);
           const ethcallProvider = new Provider(web3.read.provider, marketStateData.chainInformation.chainId);
           await maybeHydrateStEthCollateral(newState, marketStateData, account, ethcallProvider);
         } else {
           const cometResponse = await queryCometData(web3.read.provider.connection, marketStateData);
-          newState = formatCometStateNoWallet(cometResponse, marketStateData);
+          newState = formatCometStateNoWallet(cometResponse, marketStateData, rewards);
         }
+        // The app keeps this state across an account switch until the next read arrives, so it
+        // carries the market and account it was read for.
+        recordCometStateSource(
+          newState,
+          { chainId: marketStateData.chainInformation.chainId, cometAddress: marketStateData.marketAddress },
+          account
+        );
 
-        // Only update state if chainId has not changed since the start of this callback
+        // Only update state if the market has not changed since the start of this callback
         // We compare to a ref because the `marketState` in the callback can be stale
-        if (marketState[1]?.marketAddress === marketRef.current[1]?.marketAddress) {
+        const requestedMarketAddress = marketState[1]?.marketAddress;
+        if (requestedMarketAddress === marketRef.current[1]?.marketAddress) {
           waitFor(
-            (transactions) => transactions.length === 0,
+            (delayingTransactions) => delayingTransactions.length === 0,
             async () => {
-              setState(newState);
+              // The update can be held back until transactions settle, and the user can pick
+              // another market or account meanwhile, so both are checked again when it is applied.
+              if (requestedMarketAddress === marketRef.current[1]?.marketAddress && account === accountRef.current) {
+                setState(newState);
+              }
             },
-            transactions
+            refreshDelayingTransactions
           );
         }
       }
@@ -83,7 +117,8 @@ export function useCometState(web3: Web3, marketState: MarketDataState, transact
       web3.read.provider,
       marketState[1]?.marketAddress,
       marketState[1]?.chainInformation.chainId,
-      transactions,
+      refreshDelayingTransactions,
+      rewards
     ]
   );
 
@@ -158,10 +193,37 @@ export const queryCometDataWithAccount = (
   ]);
 };
 
+type CometAPRs = {
+  borrowAPR: bigint;
+  earnAPR: bigint;
+};
+
+// The APRs at the market's current utilization, from the rate model the Sleuth query returns
+const getCometAPRs = ({
+  utilization,
+  factorScale,
+  borrowRateModel,
+  supplyRateModel,
+}: CometStateResponse | CometWithAccountStateResponse): CometAPRs => {
+  const toRateModel = (rateModel: RateModelResponse): RateModel => ({
+    kink: rateModel.kink.toBigInt(),
+    base: rateModel.perSecondInterestRateBase.toBigInt(),
+    slopeLow: rateModel.perSecondInterestRateSlopeLow.toBigInt(),
+    slopeHigh: rateModel.perSecondInterestRateSlopeHigh.toBigInt(),
+  });
+
+  return {
+    borrowAPR: aprAt(utilization.toBigInt(), toRateModel(borrowRateModel), factorScale.toBigInt()),
+    earnAPR: aprAt(utilization.toBigInt(), toRateModel(supplyRateModel), factorScale.toBigInt()),
+  };
+};
+
 const formatCometStateHydrated = (
   cometResponse: CometWithAccountStateResponse,
-  market: MarketData | MarketDataLoaded
+  market: MarketData | MarketDataLoaded,
+  rewards: RewardsState,
 ): CometStateHydrated => {
+  const { borrowAPR, earnAPR } = getCometAPRs(cometResponse);
   const wrappedNativeTokenSymbol = `W${market.chainInformation.nativeToken.symbol}`;
 
   const collateralAssets: TokenWithAccountState[] = cometResponse.collateralAssets.map((assetInfo) => {
@@ -194,11 +256,16 @@ const formatCometStateHydrated = (
   });
 
   const baseAssetDollarPrice = getBaseAssetDollarPrice(cometResponse, market);
+  
+  const totalBaseSupplyInDollars = (cometResponse.totalSupply.toBigInt() * baseAssetDollarPrice.toBigInt()) /
+      10n ** BigInt(cometResponse.baseAsset.decimals.toNumber());
+
+  const totalBaseBorrowInDollars = (cometResponse.totalBorrow.toBigInt() * baseAssetDollarPrice.toBigInt()) /
+    10n ** BigInt(cometResponse.baseAsset.decimals.toNumber());
 
   const state: ProtocolAndAccountState = {
-    borrowAPR: cometResponse.borrowAPR.toBigInt(),
     collateralAssets: collateralAssets,
-    earnAPR: cometResponse.earnAPR.toBigInt(),
+    totalBaseSupplyUsd: totalBaseSupplyInDollars,
     baseAsset: {
       address: cometResponse.baseAsset.baseAsset,
       symbol: getAssetDisplaySymbol(
@@ -244,6 +311,10 @@ const formatCometStateHydrated = (
       collateralAssets
     ),
     isBulkerAllowed: cometResponse.bulkerAllowance.gt(0),
+    borrowAPR,
+    earnAPR,
+    ...getMarketRewardsAPRs(market, rewards, totalBaseSupplyInDollars, totalBaseBorrowInDollars),
+    isRewardsLoading: rewards[0] === StateType.Loading
   };
 
   return [StateType.Hydrated, state];
@@ -295,11 +366,19 @@ const maybeHydrateStEthCollateral = async (
 
 const formatCometStateNoWallet = (
   cometResponse: CometStateResponse,
-  market: MarketData | MarketDataLoaded
+  market: MarketData | MarketDataLoaded,
+  rewards: RewardsState
 ): CometStateNoWallet => {
+  const { borrowAPR, earnAPR } = getCometAPRs(cometResponse);
   const baseAssetDollarPrice = getBaseAssetDollarPrice(cometResponse, market);
+
+  const totalBaseSupplyInDollars = (cometResponse.totalSupply.toBigInt() * baseAssetDollarPrice.toBigInt()) /
+    10n ** BigInt(cometResponse.baseAsset.decimals.toNumber());
+
+  const totalBaseBorrowInDollars = (cometResponse.totalBorrow.toBigInt() * baseAssetDollarPrice.toBigInt()) /
+    10n ** BigInt(cometResponse.baseAsset.decimals.toNumber());
+
   const state = {
-    borrowAPR: cometResponse.borrowAPR.toBigInt(),
     collateralAssets: cometResponse.collateralAssets.map((assetInfo) => ({
       address: assetInfo.collateralAsset,
       priceFeed: assetInfo.priceFeed,
@@ -321,7 +400,7 @@ const formatCometStateNoWallet = (
         assetInfo.price.toBigInt()
       ),
     })),
-    earnAPR: cometResponse.earnAPR.toBigInt(),
+    totalBaseSupplyUsd: totalBaseSupplyInDollars,
     baseAsset: {
       address: cometResponse.baseAsset.baseAsset,
       symbol: getAssetDisplaySymbol(
@@ -341,6 +420,10 @@ const formatCometStateNoWallet = (
       price: cometResponse.baseAsset.price.toBigInt(),
       baseAssetPriceInDollars: baseAssetDollarPrice.toBigInt(),
     },
+    borrowAPR,
+    earnAPR,
+    ...getMarketRewardsAPRs(market, rewards, totalBaseSupplyInDollars, totalBaseBorrowInDollars),
+    isRewardsLoading: rewards[0] === StateType.Loading
   };
 
   return [StateType.NoWallet, state];

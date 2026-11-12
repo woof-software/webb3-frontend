@@ -132,7 +132,15 @@ interface ERC20 {
 }
 
 contract CometQuery {
-  uint internal constant SECONDS_PER_YEAR = 60 * 60 * 24 * 365;
+  // Interest rate model parameters, per second at factorScale precision. The app computes the APRs
+  // from them because service-patched Comets return a zero rate from getBorrowRate/getSupplyRate
+  // while the market has no borrows.
+  struct RateModel {
+    uint kink;
+    uint perSecondInterestRateBase;
+    uint perSecondInterestRateSlopeLow;
+    uint perSecondInterestRateSlopeHigh;
+  }
 
   struct BaseAsset {
     address baseAsset;
@@ -197,14 +205,16 @@ contract CometQuery {
     uint baseMinForRewards;
     uint baseTrackingBorrowSpeed;
     uint baseTrackingSupplySpeed;
-    uint borrowAPR;
-    uint earnAPR;
+    RateModel borrowRateModel;
+    uint factorScale;
     uint nativeAssetInDollars;
+    RateModel supplyRateModel;
     uint totalBorrow;
     uint totalBorrowPrincipal;
     uint totalSupply;
     uint totalSupplyPrincipal;
     uint trackingIndexScale;
+    uint utilization;
   }
 
   struct CometState {
@@ -212,15 +222,17 @@ contract CometQuery {
     uint baseMinForRewards;
     uint baseTrackingBorrowSpeed;
     uint baseTrackingSupplySpeed;
-    uint borrowAPR;
+    RateModel borrowRateModel;
     CollateralAsset[] collateralAssets;
-    uint earnAPR;
+    uint factorScale;
     uint nativeAssetInDollars;
+    RateModel supplyRateModel;
     uint totalBorrow;
     uint totalBorrowPrincipal;
     uint totalSupply;
     uint totalSupplyPrincipal;
     uint trackingIndexScale;
+    uint utilization;
   }
 
   struct CometStateWithAccountState {
@@ -228,17 +240,19 @@ contract CometQuery {
     uint baseMinForRewards;
     uint baseTrackingBorrowSpeed;
     uint baseTrackingSupplySpeed;
-    uint borrowAPR;
+    RateModel borrowRateModel;
     uint bulkerAllowance;
     CollateralAssetWithAccountState[] collateralAssets;
-    uint earnAPR;
+    uint factorScale;
     uint nativeAssetInDollars;
     uint nativeAssetWalletBalance;
+    RateModel supplyRateModel;
     uint totalBorrow;
     uint totalBorrowPrincipal;
     uint totalSupply;
     uint totalSupplyPrincipal;
     uint trackingIndexScale;
+    uint utilization;
   }
 
   function query(Comet comet, address nativeTokenToUsd, bool checkDeprecatedwUSDM) public view returns (CometState memory) {
@@ -256,15 +270,17 @@ contract CometQuery {
         baseMinForRewards: response.baseMinForRewards,
         baseTrackingBorrowSpeed: response.baseTrackingBorrowSpeed,
         baseTrackingSupplySpeed: response.baseTrackingSupplySpeed,
-        borrowAPR: response.borrowAPR,
+        borrowRateModel: response.borrowRateModel,
         collateralAssets: tokens,
-        earnAPR: response.earnAPR,
+        factorScale: response.factorScale,
         nativeAssetInDollars: response.nativeAssetInDollars,
+        supplyRateModel: response.supplyRateModel,
         totalBorrow: response.totalBorrow,
         totalBorrowPrincipal: response.totalBorrowPrincipal,
         totalSupply: response.totalSupply,
         totalSupplyPrincipal: response.totalSupplyPrincipal,
-        trackingIndexScale: response.trackingIndexScale
+        trackingIndexScale: response.trackingIndexScale,
+        utilization: response.utilization
       });
   }
 
@@ -315,17 +331,19 @@ contract CometQuery {
         baseMinForRewards: response.baseMinForRewards,
         baseTrackingBorrowSpeed: response.baseTrackingBorrowSpeed,
         baseTrackingSupplySpeed: response.baseTrackingSupplySpeed,
-        borrowAPR: response.borrowAPR,
+        borrowRateModel: response.borrowRateModel,
         bulkerAllowance: comet.allowance(account, bulker),
         collateralAssets: tokens,
-        earnAPR: response.earnAPR,
+        factorScale: response.factorScale,
         nativeAssetInDollars: response.nativeAssetInDollars,
         nativeAssetWalletBalance: account.balance,
+        supplyRateModel: response.supplyRateModel,
         totalBorrow: response.totalBorrow,
         totalBorrowPrincipal: response.totalBorrowPrincipal,
         totalSupply: response.totalSupply,
         totalSupplyPrincipal: response.totalSupplyPrincipal,
-        trackingIndexScale: response.trackingIndexScale
+        trackingIndexScale: response.trackingIndexScale,
+        utilization: response.utilization
       });
   }
 
@@ -342,8 +360,18 @@ contract CometQuery {
     uint totalSupply = comet.totalSupply();
     uint totalBorrow = comet.totalBorrow();
     Comet.TotalsBasic memory totalsBasic = comet.totalsBasic();
-    uint borrowRatePerSecond = comet.getBorrowRate(utilization);
-    uint supplyRatePerSecond = comet.getSupplyRate(utilization);
+    RateModel memory borrowRateModel = RateModel({
+      kink: comet.borrowKink(),
+      perSecondInterestRateBase: comet.borrowPerSecondInterestRateBase(),
+      perSecondInterestRateSlopeLow: comet.borrowPerSecondInterestRateSlopeLow(),
+      perSecondInterestRateSlopeHigh: comet.borrowPerSecondInterestRateSlopeHigh()
+    });
+    RateModel memory supplyRateModel = RateModel({
+      kink: comet.supplyKink(),
+      perSecondInterestRateBase: comet.supplyPerSecondInterestRateBase(),
+      perSecondInterestRateSlopeLow: comet.supplyPerSecondInterestRateSlopeLow(),
+      perSecondInterestRateSlopeHigh: comet.supplyPerSecondInterestRateSlopeHigh()
+    });
 
     BaseAsset memory baseAsset = BaseAsset({
       baseAsset: baseToken,
@@ -362,21 +390,43 @@ contract CometQuery {
         baseMinForRewards: baseMinForRewards,
         baseTrackingBorrowSpeed: baseTrackingBorrowSpeed,
         baseTrackingSupplySpeed: baseTrackingSupplySpeed,
-        borrowAPR: borrowRatePerSecond * SECONDS_PER_YEAR,
-        earnAPR: supplyRatePerSecond * SECONDS_PER_YEAR,
+        borrowRateModel: borrowRateModel,
+        factorScale: comet.factorScale(),
         nativeAssetInDollars: nativeAssetInDollars,
+        supplyRateModel: supplyRateModel,
         totalBorrow: totalBorrow,
         totalBorrowPrincipal: totalsBasic.totalBorrowBase,
         totalSupply: totalSupply,
         totalSupplyPrincipal: totalsBasic.totalSupplyBase,
-        trackingIndexScale: trackingIndexScale
+        trackingIndexScale: trackingIndexScale,
+        utilization: utilization
       });
   }
 
   function collateralInfo(Comet comet, uint8 index, bool checkDeprecatedwUSDM) public view returns (CollateralAsset memory) {
     Comet.AssetInfo memory assetInfo = comet.getAssetInfo(index);
 
-    if (checkDeprecatedwUSDM && 
+    // pumpBTC / BTC exchange rate feed on mainnet cWBTCv3, deprecated by Chainlink
+    // on 2026-09-03 (all reads revert). The market is deprecated and empty, so
+    // hardcode the feed's last published answer (1.02447384 BTC, 8 decimals).
+    if (checkDeprecatedwUSDM && 0x351a133Fd850ea81ed8a782016e308aCBADDec91 == assetInfo.priceFeed) {
+      return
+        CollateralAsset({
+          collateralAsset: assetInfo.asset,
+          collateralFactor: assetInfo.borrowCollateralFactor,
+          decimals: ERC20(assetInfo.asset).decimals(),
+          liquidateCollateralFactor: assetInfo.liquidateCollateralFactor,
+          liquidationFactor: assetInfo.liquidationFactor,
+          name: ERC20(assetInfo.asset).name(),
+          price: 102447384,
+          priceFeed: assetInfo.priceFeed,
+          supplyCap: assetInfo.supplyCap,
+          symbol: ERC20(assetInfo.asset).symbol(),
+          totalSupply: comet.totalsCollateral(assetInfo.asset)
+        });
+    }
+
+    if (checkDeprecatedwUSDM &&
       ( 0xe3a409eD15CD53aFdEFdd191ad945cEC528A2496 == assetInfo.priceFeed 
       || 0x13cDFB7db5e2F58e122B2e789b59dE13645349C4 == assetInfo.priceFeed
       || 0x66228d797eb83ecf3465297751f6b1D4d42b7627 == assetInfo.priceFeed

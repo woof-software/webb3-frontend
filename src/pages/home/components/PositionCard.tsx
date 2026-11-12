@@ -3,10 +3,11 @@ import { useContext, useState, ReactNode } from 'react';
 import DetailSheet from '@components/DetailSheet';
 import { ArrowDown, ArrowUp, CaretDown, Compare, HoverUnder } from '@components/Icons';
 import Tooltip from '@components/Tooltip';
-import NetRatesTooltip, { NetRatesTooltipView } from '@components/Tooltips/NetRatesTooltip';
+import NetRatesTooltip, { MarketRewards, NetRatesTooltipView, RewardsType } from '@components/Tooltips/NetRatesTooltip';
 import { useCurrencyContext } from '@contexts/CurrencyContext';
 import { getSelectedMarketContext } from '@contexts/SelectedMarketContext';
 import {
+  ActionRules,
   calculateUpdatedBalances,
   isSameAction,
   validateAddingAction,
@@ -15,6 +16,7 @@ import {
 import { assetIconForAssetSymbol } from '@helpers/assets';
 import { adjustValueForAeroAsset } from '@helpers/baseAssetPrice';
 import { noop } from '@helpers/functions';
+import { InstitutionalWhitelistStatus } from '@helpers/institutionalWhitelist';
 import {
   MAX_UINT256,
   PRICE_PRECISION,
@@ -52,8 +54,12 @@ type PositionCardNoWallet = [
     borrowRewardsAPR?: bigint;
     earnAPR: bigint;
     earnRewardsAPR?: bigint;
+    institutionalWhitelistStatus?: InstitutionalWhitelistStatus;
     rewardsAsset?: Token;
     theme: Theme;
+    rewardsAssetSymbol?: string;
+    isInstitutional?: boolean;
+    isRewardsLoading?: boolean;
   }
 ];
 type PositionCardHydrated = [
@@ -70,10 +76,11 @@ type PositionCardHydrated = [
     collateralValuePost: bigint;
     earnAPR: bigint;
     earnRewardsAPR?: bigint;
+    institutionalWhitelistStatus?: InstitutionalWhitelistStatus;
     liquidationCapacity: bigint;
     liquidationCapacityPost: bigint;
     pendingAction?: PendingAction;
-    rewardsAsset?: Token;
+    rewardsAssetSymbol?: string;
     theme: Theme;
     transaction?: Transaction;
     onClearClicked: () => void;
@@ -85,6 +92,10 @@ type PositionCardHydrated = [
     onPendingActionUpdateAmount: (amount?: bigint) => void;
     onSelectAction: (action: Action) => void;
     onSubmitClicked: () => void;
+    isRewardsLoading?: boolean;
+    isInstitutional?: boolean;
+    /** Extra rules every queued and entered action must meet, such as the wrapped route's. */
+    actionRules?: ActionRules;
   }
 ];
 
@@ -243,37 +254,75 @@ function getContent(state: PositionCardState, market: MarketData, currency: Curr
     return defaultPanelState;
   }
 
-  const { borrowAPR, borrowRewardsAPR, earnAPR, earnRewardsAPR, rewardsAsset, theme } = state[1];
+  const {
+    borrowAPR,
+    borrowRewardsAPR,
+    earnAPR,
+    earnRewardsAPR,
+    rewardsAssetSymbol,
+    institutionalWhitelistStatus,
+    theme,
+    isInstitutional,
+    isRewardsLoading,
+  } = state[1];
+
+  const rewards: MarketRewards = isInstitutional
+    ? {
+        type: RewardsType.Institutional,
+        supplyAPR: earnRewardsAPR ?? 0n,
+        borrowAPR: borrowRewardsAPR ?? 0n,
+        assetSymbol: rewardsAssetSymbol,
+        whitelistStatus: institutionalWhitelistStatus,
+      }
+    : {
+        type: RewardsType.Standard,
+        supplyAPR: earnRewardsAPR ?? 0n,
+        borrowAPR: borrowRewardsAPR ?? 0n,
+        assetSymbol: rewardsAssetSymbol,
+      };
 
   const ratesTooltipContent = (
-    <NetRatesTooltip
-      borrowAPR={borrowAPR}
-      borrowRewardsAPR={borrowRewardsAPR}
-      earnAPR={earnAPR}
-      earnRewardsAPR={earnRewardsAPR}
-      rewardsAsset={rewardsAsset}
-      view={NetRatesTooltipView.All}
-    />
+    <NetRatesTooltip borrowAPR={borrowAPR} earnAPR={earnAPR} rewards={rewards} view={NetRatesTooltipView.All} />
   );
   let rates: ReactNode = (
     <>
       <div className="position-card__row position-card__row--divider">
         <div className="divider"></div>
       </div>
-      <Tooltip content={ratesTooltipContent} width={400} hideArrow={true}>
-        <div className="position-card__rates" onClick={() => setRatesDetailActive(true)}>
+      {isRewardsLoading ? (
+        <div className="position-card__rates">
           <div className="position-card__rates__info position-card__rates__info--left">
             <label className="L2 label text-color--2">Net Borrow APR</label>
-            <p className="body body--emphasized">{formatRateFactor(borrowAPR - (borrowRewardsAPR || 0n))}</p>
-            <HoverUnder className="hover-under" theme={theme} />
+            <span className="placeholder-content" style={{ width: '70px' }}></span>
           </div>
           <div className="position-card__rates__info position-card__rates__info--right">
             <label className="L2 label text-color--2">Net Supply APR</label>
-            <p className="body body--emphasized">{formatRateFactor(earnAPR + (earnRewardsAPR || 0n))}</p>
-            <HoverUnder className="hover-under" theme={theme} />
+            <span className="placeholder-content" style={{ width: '70px' }}></span>
           </div>
         </div>
-      </Tooltip>
+      ) : (
+        <Tooltip
+          content={ratesTooltipContent}
+          width={400}
+          hideArrow={true}
+          interactive={true}
+          touchToggle={false}
+          yOffset={0}
+        >
+          <div className="position-card__rates" onClick={() => setRatesDetailActive(true)}>
+            <div className="position-card__rates__info position-card__rates__info--left">
+              <label className="L2 label text-color--2">Net Borrow APR</label>
+              <p className="body body--emphasized">{formatRateFactor(borrowAPR - (borrowRewardsAPR || 0n))}</p>
+              <HoverUnder className="hover-under" theme={theme} />
+            </div>
+            <div className="position-card__rates__info position-card__rates__info--right">
+              <label className="L2 label text-color--2">Net Supply APR</label>
+              <p className="body body--emphasized">{formatRateFactor(earnAPR + (earnRewardsAPR || 0n))}</p>
+              <HoverUnder className="hover-under" theme={theme} />
+            </div>
+          </div>
+        </Tooltip>
+      )}
       <DetailSheet active={ratesDetailActive} onClickOutside={() => setRatesDetailActive(false)}>
         {ratesTooltipContent}
       </DetailSheet>
@@ -322,6 +371,7 @@ function getContent(state: PositionCardState, market: MarketData, currency: Curr
     onPendingActionUpdateAmount,
     onSelectAction,
     onSubmitClicked,
+    actionRules,
   } = state[1];
   const { baseAssetPriceInDollars, symbol } = baseAsset;
   const borrowBalancePre: bigint = baseAsset.balance < 0n ? -baseAsset.balance : 0n;
@@ -508,8 +558,8 @@ function getContent(state: PositionCardState, market: MarketData, currency: Curr
 
     const invalidAction = actions.find(
       (action, index) =>
-        validateAddingAction(baseAsset, collateralAssets, actions.slice(0, index), action) !== 'ok' ||
-        validateAllowanceForAction(baseAsset, collateralAssets, actions.slice(0, index), action) !== 'ok'
+        validateAddingAction(baseAsset, collateralAssets, actions.slice(0, index), action, actionRules) !== 'ok' ||
+        validateAllowanceForAction(baseAsset, collateralAssets, actions.slice(0, index), action, actionRules) !== 'ok'
     );
 
     actionQueueItems = (
@@ -529,6 +579,7 @@ function getContent(state: PositionCardState, market: MarketData, currency: Curr
             onDeleteAction,
             onSelectAction,
             onSubmitClicked,
+            actionRules,
           }}
         />
         <ActionQueueView
@@ -546,6 +597,7 @@ function getContent(state: PositionCardState, market: MarketData, currency: Curr
             onDeleteAction,
             onSelectAction,
             onSubmitClicked,
+            actionRules,
             mobile: true,
           }}
         />
@@ -565,6 +617,7 @@ function getContent(state: PositionCardState, market: MarketData, currency: Curr
         onCancel={onPendingActionCancel}
         onConfirm={onPendingActionConfirm}
         setPendingActionAmount={onPendingActionUpdateAmount}
+        actionRules={actionRules}
       />
     );
     actionInputViewActive = true;
@@ -654,6 +707,7 @@ type ActionQueueViewProps = {
   onDeleteAction: (action: Action) => void;
   onSelectAction: (action: Action) => void;
   onSubmitClicked: () => void;
+  actionRules?: ActionRules;
 };
 
 const ActionQueueView = ({
@@ -671,6 +725,7 @@ const ActionQueueView = ({
   onDeleteAction,
   onSelectAction,
   onSubmitClicked,
+  actionRules,
 }: ActionQueueViewProps) => {
   const [expanded, setExpanded] = useState(false);
   let actionQueueItems: ReactNode = actions.map((action: Action, actionIndex) => {
@@ -685,6 +740,7 @@ const ActionQueueView = ({
               actions,
               baseAsset,
               collateralAssets,
+              actionRules,
               onClick: () => {
                 onSelectAction(action);
               },
@@ -701,6 +757,7 @@ const ActionQueueView = ({
               approvalTransaction,
               baseAsset,
               collateralAssets,
+              actionRules,
             },
           ];
 

@@ -1,38 +1,44 @@
 import { BigNumber } from '@ethersproject/bignumber';
 import { JsonRpcProvider, StaticJsonRpcProvider } from '@ethersproject/providers';
+import { parseUnits } from '@ethersproject/units';
 import { Contract, Provider } from 'ethers-multicall';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router';
 
+import RewardsStateContext from '@contexts/RewardsStateContext';
 import type { Web3 } from '@contexts/Web3Context';
 import Comet from '@helpers/abis/Comet';
 import ERC20 from '@helpers/abis/ERC20';
 import { adjustCollateralPrice, getBaseAssetPriceFeed } from '@helpers/baseAssetPrice';
-import { getRemappedPriceFeed } from '@helpers/deprecatedMarkets';
+import { getHardcodedFeedPrice, getRemappedPriceFeed } from '@helpers/deprecatedMarkets';
+import { aprAt, RateModel } from '@helpers/interestRates';
 import { isV2Market } from '@helpers/markets';
 import { getMockMarketState } from '@helpers/mocks';
+import { FACTOR_PRECISION } from '@helpers/numbers';
+import { getMarketRewardsAPRs } from '@helpers/rewards';
 import { getMarketDataUrlForMarket } from '@helpers/urls';
 import { getV2State } from '@hooks/useV2MarketState';
 import {
-  MarketDataState,
   MarketData,
   MarketDataLoaded,
+  MarketDataState,
   MarketHistoricalBucket,
   MarketState,
   ProtocolAndMarketsState,
+  RewardsState,
   StateType,
   TokenWithMarketState,
-  V3MarketApiBucket,
+  V3MarketApiBucket
 } from '@types';
 
-const MARKETS_REFRESH_INTERVAL = 300_000; // 5 mins
 
-const SECONDS_PER_YEAR = BigInt(60 * 60 * 24 * 365);
+const MARKETS_REFRESH_INTERVAL = 300_000; // 5 mins
 
 export function useMarketsState(web3: Web3, marketState: MarketDataState): MarketState {
   const location = useLocation();
   const [state, setState] = useState<MarketState>([StateType.Loading]);
   const marketRef = useRef(marketState);
+  const rewardsState = useContext(RewardsStateContext);
 
   // When network is changed, immediately set state to loading and update the chainIdRef
   useEffect(() => {
@@ -49,7 +55,7 @@ export function useMarketsState(web3: Web3, marketState: MarketDataState): Marke
       if (new URLSearchParams(location.search).has('mock')) {
         state = getMockMarketState();
       } else {
-        state = await getState(web3.read.provider, marketState[1]);
+        state = await getState(web3.read.provider, marketState[1], rewardsState);
       }
 
       // Only update state if chainId has not changed since the start of this callback
@@ -58,7 +64,7 @@ export function useMarketsState(web3: Web3, marketState: MarketDataState): Marke
         setState(state);
       }
     }
-  }, [marketState]);
+  }, [marketState, rewardsState]);
 
   useEffect(() => {
     const intervalId = setInterval(refreshData, MARKETS_REFRESH_INTERVAL);
@@ -71,7 +77,7 @@ export function useMarketsState(web3: Web3, marketState: MarketDataState): Marke
   return state;
 }
 
-const getState = async (rawProvider: JsonRpcProvider, market: MarketData | MarketDataLoaded): Promise<MarketState> => {
+const getState = async (rawProvider: JsonRpcProvider, market: MarketData | MarketDataLoaded, rewardsState: RewardsState): Promise<MarketState> => {
   if (isV2Market(market)) {
     return getV2State();
   }
@@ -92,42 +98,62 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
   const utilizationDescale = factorScale / 1e2;
 
   const utilizationIntervals = [...Array(101).keys()].map((n) => BigInt(n * utilizationDescale));
-  const borrowRateCalls = utilizationIntervals.map((interval) => cometContract.getBorrowRate(interval));
-  const supplyRateCalls = utilizationIntervals.map((interval) => cometContract.getSupplyRate(interval));
 
   const baseAssetDollarPriceFeed = getBaseAssetPriceFeed(market);
 
   const [
-    borrowRatePerSecond,
-    supplyRatePerSecond,
     reserves,
     totalSupplyBN,
     totalBorrowBN,
     targetReserves,
     baseTokenPriceInDollars,
-    ...borrowAndSupplyRates
-  ] = await ethcallProvider.all([
-    cometContract.getBorrowRate(utilization),
-    cometContract.getSupplyRate(utilization),
+    borrowKink,
+    borrowBase,
+    borrowSlopeLow,
+    borrowSlopeHigh,
+    supplyKink,
+    supplyBase,
+    supplySlopeLow,
+    supplySlopeHigh,
+  ]: BigNumber[] = await ethcallProvider.all([
     cometContract.getReserves(),
     cometContract.totalSupply(),
     cometContract.totalBorrow(),
     cometContract.targetReserves(),
     cometContract.getPrice(baseAssetDollarPriceFeed),
-    ...borrowRateCalls,
-    ...supplyRateCalls,
+    cometContract.borrowKink(),
+    cometContract.borrowPerSecondInterestRateBase(),
+    cometContract.borrowPerSecondInterestRateSlopeLow(),
+    cometContract.borrowPerSecondInterestRateSlopeHigh(),
+    cometContract.supplyKink(),
+    cometContract.supplyPerSecondInterestRateBase(),
+    cometContract.supplyPerSecondInterestRateSlopeLow(),
+    cometContract.supplyPerSecondInterestRateSlopeHigh(),
   ]);
 
-  const borrowRates: [bigint, number][] = borrowAndSupplyRates
-    .slice(0, utilizationIntervals.length)
-    .map((borrowRate, idx) => {
-      return [utilizationIntervals[idx], Number(borrowRate.toBigInt() * SECONDS_PER_YEAR) / utilizationDescale];
-    });
-  const supplyRates: [bigint, number][] = borrowAndSupplyRates
-    .slice(utilizationIntervals.length)
-    .map((supplyRate, idx) => {
-      return [utilizationIntervals[idx], Number(supplyRate.toBigInt() * SECONDS_PER_YEAR) / utilizationDescale];
-    });
+  const rateFactorScale = factorScaleBN.toBigInt();
+  const borrowRateModel: RateModel = {
+    kink: borrowKink.toBigInt(),
+    base: borrowBase.toBigInt(),
+    slopeLow: borrowSlopeLow.toBigInt(),
+    slopeHigh: borrowSlopeHigh.toBigInt(),
+  };
+  const supplyRateModel: RateModel = {
+    kink: supplyKink.toBigInt(),
+    base: supplyBase.toBigInt(),
+    slopeLow: supplySlopeLow.toBigInt(),
+    slopeHigh: supplySlopeHigh.toBigInt(),
+  };
+
+  const borrowRates: [bigint, bigint][] = utilizationIntervals.map((interval) => [
+    interval,
+    aprAt(interval, borrowRateModel, rateFactorScale),
+  ]);
+  const supplyRates: [bigint, bigint][] = utilizationIntervals.map((interval) => [
+    interval,
+    aprAt(interval, supplyRateModel, rateFactorScale),
+  ]);
+
   const baseTokenContract = new Contract(market.baseAsset.address, ERC20);
 
   let ignoredCollateralPriceIndex = -1;
@@ -158,9 +184,10 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
   const numAssets = market.collateralAssets.length;
 
   const prices = combinedCalls.slice(0, numAssets).map((price, index) => {
-    // If we found the deprecated feed, then let's ignore it.
+    // If we found a deprecated feed, ignore the dummy call's result and use
+    // the hardcoded price for that feed instead (0 for the wUSDM feeds).
     if (ignoredCollateralPriceIndex === index) {
-      return 0n;
+      return getHardcodedFeedPrice(market.collateralAssets[index].priceFeed);
     }
     return price.toBigInt();
   });
@@ -168,8 +195,10 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
   const collateralReserves = combinedCalls.slice(numAssets * 2, numAssets * 3).map((cr) => cr.toBigInt());
 
   const baseAssetPrice = baseTokenPrice.toBigInt();
-  const borrowAPR = borrowRatePerSecond.toBigInt() * SECONDS_PER_YEAR;
-  const earnAPR = supplyRatePerSecond.toBigInt() * SECONDS_PER_YEAR;
+
+  const borrowAPR = aprAt(utilization.toBigInt(), borrowRateModel, rateFactorScale);
+  const earnAPR = aprAt(utilization.toBigInt(), supplyRateModel, rateFactorScale);
+
   const totalSupply = totalSupplyBN.toBigInt();
   const totalBorrow = totalBorrowBN.toBigInt();
 
@@ -199,8 +228,8 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
           blockTimestamp: Number(v3HistoryBucket.timestamp * 1000),
           supplyTotal: Number(v3HistoryBucket.total_collateral_value),
           borrowTotal: Number(v3HistoryBucket.total_borrow_value),
-          supplyRate: Number(v3HistoryBucket.supply_apr),
-          borrowRate: Number(v3HistoryBucket.borrow_apr),
+          supplyRate: parseUnits(v3HistoryBucket.supply_apr, FACTOR_PRECISION).toBigInt(),
+          borrowRate: parseUnits(v3HistoryBucket.borrow_apr, FACTOR_PRECISION).toBigInt(),
         };
       })
       .sort((a, b) => (a.blockTimestamp > b.blockTimestamp ? 1 : -1));
@@ -208,18 +237,23 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
     console.error('Error fetching historical market data: ', e);
   }
 
+  const baseAssetWithState: ProtocolAndMarketsState['baseAsset'] = {
+    ...market.baseAsset,
+    balanceOfComet: baseAssetBalanceOfComet.toBigInt(),
+    price: baseAssetPrice,
+    baseAssetPriceInDollars: baseTokenPriceInDollars.toBigInt(),
+  };
+
+  const totalSupplyValueInDollars = (totalSupply * baseAssetWithState.baseAssetPriceInDollars) / 10n ** BigInt(baseAssetWithState.decimals);
+
+  const totalBorrowValueInDollars = (totalBorrow * baseAssetWithState.baseAssetPriceInDollars) / 10n ** BigInt(baseAssetWithState.decimals);
+
   const state: ProtocolAndMarketsState = {
-    baseAsset: {
-      ...market.baseAsset,
-      balanceOfComet: baseAssetBalanceOfComet.toBigInt(),
-      price: baseAssetPrice,
-      baseAssetPriceInDollars: baseTokenPriceInDollars.toBigInt(),
-    },
-    borrowAPR,
+    baseAsset: baseAssetWithState,
     borrowRates,
     collateralAssets,
     cometAddress: market.marketAddress,
-    earnAPR,
+    totalBaseSupplyUsd: totalSupplyValueInDollars,
     factorScale,
     marketHistory: marketHistoryAsBuckets,
     reserves: reserves.toBigInt(),
@@ -229,6 +263,10 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
     totalSupply,
     utilization: utilization.toBigInt(),
     type: 'ProtocolAndMarketState',
+    borrowAPR: borrowAPR,
+    earnAPR: earnAPR,
+    ...getMarketRewardsAPRs(market, rewardsState, totalSupplyValueInDollars, totalBorrowValueInDollars),
+    isRewardsLoading: rewardsState[0] === StateType.Loading,
   };
   return [StateType.Hydrated, state];
 };
