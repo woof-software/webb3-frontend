@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import '@testing-library/jest-dom';
 
+import { ActionRules } from '@helpers/actions';
 import { MAX_UINT256 } from '@helpers/numbers';
 import {
   Action,
@@ -32,6 +33,7 @@ type WrappedActionInputViewProps = {
   market: MarketData;
   onCancel: () => void;
   onConfirm: () => void;
+  actionRules?: ActionRules;
 };
 /**
  * Lightweight wrapper around ActionInputView to allow for state management
@@ -351,6 +353,56 @@ describe('ActionInputView', () => {
 
       await user.click(getByText('Cancel'));
       expect(onCancel).toHaveBeenCalled();
+    });
+
+    it('confirms a max limited by the wallet balance as that fixed amount', async () => {
+      const user = userEvent.setup();
+      const onConfirm = jest.fn();
+
+      const { getByText, getByPlaceholderText } = render(
+        <WrappedActionInputView
+          actions={actions}
+          baseAsset={{ ...baseAsset, walletBalance: 4_000_000_000n }}
+          collateralAssets={collateralAssets}
+          initialValue={undefined}
+          pendingAction={pendingAction}
+          market={market}
+          onCancel={jest.fn()}
+          onConfirm={onConfirm}
+        />
+      );
+
+      await user.click(getByText('Max'));
+      expect(getByPlaceholderText('0')).toHaveValue('4,000');
+
+      await user.click(getByText('Add Action'));
+      expect(onConfirm).toHaveBeenCalledWith(4_000_000_000n, 'Repay 4,000 USDC');
+    });
+
+    it('confirms a max the user then edits as the edited fixed amount', async () => {
+      const user = userEvent.setup();
+      const onConfirm = jest.fn();
+
+      const { getByText, getByPlaceholderText } = render(
+        <WrappedActionInputView
+          actions={actions}
+          baseAsset={baseAsset}
+          collateralAssets={collateralAssets}
+          initialValue={undefined}
+          pendingAction={pendingAction}
+          market={market}
+          onCancel={jest.fn()}
+          onConfirm={onConfirm}
+        />
+      );
+
+      await user.click(getByText('Max'));
+      expect(getByPlaceholderText('0')).toHaveValue('10,000');
+      await user.clear(getByPlaceholderText('0'));
+      await user.type(getByPlaceholderText('0'), '9000');
+
+      await user.click(getByText('Add Action'));
+      expect(onConfirm).toHaveBeenCalledWith(9_000_000_000n, 'Repay 9,000 USDC');
     });
 
     it('shows an error message as expected', async () => {
@@ -685,6 +737,79 @@ describe('ActionInputView', () => {
 
       await user.click(getByText('Cancel'));
       expect(onCancel).toHaveBeenCalled();
+    });
+  });
+
+  describe('on a queue limited to one action', () => {
+    const SINGLE: ActionRules = { isSingleAction: true };
+
+    beforeEach(() => {
+      baseAsset = mockBaseAsset({ balance: 0n, walletBalance: 20_000_000_000n });
+      collateralAssets = [mockEthCollateralAsset({ walletBalance: BigInt(10e18) })];
+      market = mockMarket();
+    });
+
+    const renderForm = (queued: Action[], pending: PendingAction, onConfirm = jest.fn()) =>
+      render(
+        <WrappedActionInputView
+          actions={queued}
+          baseAsset={baseAsset}
+          collateralAssets={collateralAssets}
+          initialValue={undefined}
+          pendingAction={pending}
+          market={market}
+          onCancel={jest.fn()}
+          onConfirm={onConfirm}
+          actionRules={SINGLE}
+        />
+      );
+
+    it('explains, before an amount is typed, that the queued action goes first, and adds nothing', async () => {
+      const user = userEvent.setup();
+      const onConfirm = jest.fn();
+      const queued: Action[] = [[ActionType.SupplyCollateral, collateralAssets[0], BigInt(1e18)]];
+      const { getByText, getByPlaceholderText } = renderForm(
+        queued,
+        mockPendingBaseAction({ actionType: ActionType.Supply }),
+        onConfirm
+      );
+
+      expect(getByText('Submit Or Remove The Queued Action First')).toBeInTheDocument();
+      expect(getByText(/submit or remove the queued action before you add another/i)).toBeInTheDocument();
+      expect(getByText('Add Action')).toBeDisabled();
+
+      await user.type(getByPlaceholderText('0'), '1000');
+      expect(getByText('Add Action')).toBeDisabled();
+      await user.click(getByText('Add Action'));
+      expect(onConfirm).not.toHaveBeenCalled();
+    });
+
+    it('lets the queued action be edited', async () => {
+      const user = userEvent.setup();
+      const onConfirm = jest.fn();
+      const supply = mockPendingBaseAction({ actionType: ActionType.Supply, amount: 1_000_000_000n });
+      const queued: Action[] = [[ActionType.Supply, supply[1] as BaseAssetWithAccountState, 1_000_000_000n]];
+      const { getByText, getByPlaceholderText, queryByText } = renderForm(queued, supply, onConfirm);
+
+      expect(queryByText('Submit Or Remove The Queued Action First')).toBeNull();
+      await user.clear(getByPlaceholderText('0'));
+      await user.type(getByPlaceholderText('0'), '2000');
+      await user.click(getByText('Update Action'));
+      expect(onConfirm).toHaveBeenCalledWith(2_000_000_000n, 'Supply 2,000 USDC');
+    });
+
+    it('adds the first action to an empty queue', async () => {
+      const user = userEvent.setup();
+      const onConfirm = jest.fn();
+      const { getByText, getByPlaceholderText } = renderForm(
+        [],
+        mockPendingBaseAction({ actionType: ActionType.Supply }),
+        onConfirm
+      );
+
+      await user.type(getByPlaceholderText('0'), '1000');
+      await user.click(getByText('Add Action'));
+      expect(onConfirm).toHaveBeenCalledWith(1_000_000_000n, 'Supply 1,000 USDC');
     });
   });
 });

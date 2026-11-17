@@ -7,7 +7,6 @@ import { useLocation, useNavigate, useParams, useSearchParams } from 'react-rout
 import type { Web3 } from '@contexts/Web3Context';
 import { getAssetDisplayName, getAssetDisplaySymbol } from '@helpers/assets';
 import { MARKET_KEY_DELIMITER, MARKET_LOCAL_STORAGE_KEY } from '@helpers/constants';
-import { getIsDeprecatedwUSDMMarket } from '@helpers/deprecatedMarkets';
 import { V2_MARKET, areSameMarket, getMarket, isV2Market, marketKey } from '@helpers/markets';
 import { REFRESH_INTERVAL } from '@helpers/numbers';
 import CometQuery from '@helpers/sleuth/out/CometQuery.sol/CometQuery.json';
@@ -143,11 +142,15 @@ export function useSelectedMarketState(web3: Web3): SelectedMarketData {
       stateType === StateType.Loading
     ) {
       try {
-        const state = await getState(web3.read.provider.connection, market);
+        const [hydratedType, hydratedMarket] = await getState(web3.read.provider.connection, market);
         // Only update state if market key has not changed since the start of this callback
         // We compare to a ref because the `market` in the callback can be stale
         if (marketKey(market) === marketRef.current) {
-          setState(state);
+          // The market list may have refreshed the statuses while this request ran
+          setState(([, latest]) => [
+            hydratedType,
+            { ...hydratedMarket, status: latest?.status, collaterals: latest?.collaterals },
+          ]);
           setIsError(false);
         }
       } catch (e) {
@@ -206,12 +209,7 @@ export const queryCometData = async (
   ) {
     nativeTokenToUsdPriceFeed = market.chainInformation.extraPriceFeeds.otherBaseTokensToUsd[baseAssetSymbol];
   }
-  const checkDeprecatedwUSDM = getIsDeprecatedwUSDMMarket(market.baseAsset, market.chainInformation);
-  return sleuth.fetch<CometStateResponse, CometStateQuery>(QUERY, [
-    market.marketAddress,
-    nativeTokenToUsdPriceFeed,
-    checkDeprecatedwUSDM,
-  ]);
+  return sleuth.fetch<CometStateResponse, CometStateQuery>(QUERY, [market.marketAddress, nativeTokenToUsdPriceFeed]);
 };
 
 const getState = async (

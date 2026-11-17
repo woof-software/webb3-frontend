@@ -28,6 +28,8 @@ const MarketSelector = () => {
   const [, currentMarket] = selectedMarket;
   const [marketsStateType, marketsState] = useMarkets();
   const marketsByNetwork = getMarketsByNetwork(marketsStateType === StateType.Hydrated ? marketsState.markets : []);
+  // A market list refresh can drop the network picked earlier
+  const shownChainId = selectedChainId in marketsByNetwork ? selectedChainId : Number(Object.keys(marketsByNetwork)[0]);
 
   const ref = useRef(null);
 
@@ -62,12 +64,12 @@ const MarketSelector = () => {
           <div className={`dropdown__content`}>
             <SupportedNetworks
               marketsByNetwork={marketsByNetwork}
-              selectedChainId={selectedChainId}
+              selectedChainId={shownChainId}
               setSelectedChainId={setSelectedChainId}
             />
             <SupportedMarkets
               currentMarket={currentMarket}
-              markets={marketsByNetwork[selectedChainId].markets}
+              markets={marketsByNetwork[shownChainId]?.markets ?? []}
               pathname={location.pathname}
               onSelectMarket={(market: MarketData) => {
                 setMarketDropdownActive(false);
@@ -89,8 +91,8 @@ type SelectedMarketProps = {
 
 const SelectedMarket = ({ active, market, onClick }: SelectedMarketProps) => {
   const [marketsStateType, marketsState] = useMarkets();
-  // The market list symbol stays the same once the market loads, unlike the on-chain one
-  // (e.g. USDC-cr of a test market becomes USDC), so the label doesn't change
+  // The market list symbol stays the same once the market loads, unlike the on-chain one,
+  // so the label doesn't change
   const configMarket =
     marketsStateType === StateType.Hydrated
       ? getMarket(marketsState.markets, market.chainInformation.chainId, market.marketAddress)
