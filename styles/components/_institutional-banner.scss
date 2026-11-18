@@ -14,7 +14,7 @@
   // Border-box layer: the linear gradient stroke (green at both ends, teal through the middle).
   background:
     radial-gradient(circle at 0% 100%, rgba(8, 138, 28, 0.25) 0%, rgba(25, 131, 110, 0) 20%) padding-box,
-    url('/images/institutional-banner-art.png') right center / auto 100% no-repeat padding-box,
+    url('/images/institutional-banner-art.webp') right center / auto 100% no-repeat padding-box,
     linear-gradient(#09161c, #09161c) padding-box,
     linear-gradient(90deg, #00d791 0%, #174149 35%, #174149 65%, #00d791 100%) border-box;
   &__title {
@@ -32,7 +32,7 @@
     background:
       radial-gradient(circle at 0% 100%, rgba(8, 138, 28, 0.25) 0%, rgba(25, 131, 110, 0) 20%) padding-box,
       linear-gradient(90deg, rgba(9, 22, 28, 0.75) 0%, rgba(9, 22, 28, 0.35) 100%) padding-box,
-      url('/images/institutional-banner-art.png') right center / auto 100% no-repeat padding-box,
+      url('/images/institutional-banner-art.webp') right center / auto 100% no-repeat padding-box,
       linear-gradient(#09161c, #09161c) padding-box,
       linear-gradient(90deg, #00d791 0%, #174149 35%, #174149 65%, #00d791 100%) border-box;
 

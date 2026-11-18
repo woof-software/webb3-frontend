@@ -16,7 +16,7 @@ const WhitelistStatusBanner = ({ whitelistStatus }: WhitelistStatusBannerProps) 
     return (
       <div className="whitelist-status-banner grid-column--12">
         <div className="whitelist-status-banner__lead whitelist-status-banner__lead--badged">
-          <img className="whitelist-status-banner__icon" src="/images/whitelist-badge.png" alt="" />
+          <img className="whitelist-status-banner__icon" src="/images/whitelist-badge.webp" alt="" />
           <span className="new-badge label label--secondary">Approved</span>
           <p className="whitelist-status-banner__title L3 body body--emphasized">You are earning boosted yield</p>
         </div>
@@ -29,7 +29,7 @@ const WhitelistStatusBanner = ({ whitelistStatus }: WhitelistStatusBannerProps) 
     return (
       <div className="whitelist-status-banner grid-column--12">
         <div className="whitelist-status-banner__lead">
-          <img className="whitelist-status-banner__icon" src="/images/whitelist-coins.png" alt="" />
+          <img className="whitelist-status-banner__icon" src="/images/whitelist-coins.webp" alt="" />
           <p className="whitelist-status-banner__title L3 body body--emphasized">Earn boosted yield</p>
         </div>
         <p className="whitelist-status-banner__detail L4 body">
@@ -51,7 +51,7 @@ const WhitelistStatusBanner = ({ whitelistStatus }: WhitelistStatusBannerProps) 
   return (
     <div className="whitelist-status-banner grid-column--12">
       <div className="whitelist-status-banner__lead">
-        <img className="whitelist-status-banner__icon" src="/images/whitelist-coins.png" alt="" />
+        <img className="whitelist-status-banner__icon" src="/images/whitelist-coins.webp" alt="" />
         <div>
           <p className="whitelist-status-banner__title L3 body body--emphasized">Earn boosted yield</p>
           <p className="whitelist-status-banner__detail L4 body">
