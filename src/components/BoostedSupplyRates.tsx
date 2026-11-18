@@ -41,7 +41,7 @@ const BoostedSupplyRates = ({
   if (whitelistStatus === InstitutionalWhitelistStatus.Whitelisted) {
     whitelistCard = (
       <div className="boosted-supply-rates__whitelist-card">
-        <img className="boosted-supply-rates__whitelist-card__badge" src="/images/whitelist-badge.png" alt="" />
+        <img className="boosted-supply-rates__whitelist-card__badge" src="/images/whitelist-badge.webp" alt="" />
         <div>
           <p className="boosted-supply-rates__whitelist-card__title L3 body body--emphasized">
             You are earning boosted yield
@@ -55,7 +55,7 @@ const BoostedSupplyRates = ({
   } else if (whitelistStatus === InstitutionalWhitelistStatus.NotWhitelisted) {
     whitelistCard = (
       <div className="boosted-supply-rates__whitelist-card">
-        <img className="boosted-supply-rates__whitelist-card__badge" src="/images/whitelist-coins.png" alt="" />
+        <img className="boosted-supply-rates__whitelist-card__badge" src="/images/whitelist-coins.webp" alt="" />
         <div>
           <p className="boosted-supply-rates__whitelist-card__title L3 body body--emphasized">Earn boosted yield</p>
           <p className="boosted-supply-rates__whitelist-card__subtitle L4 meta">
