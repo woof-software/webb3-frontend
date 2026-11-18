@@ -46,6 +46,7 @@ export default {
     '<rootDir>/scripts/',
   ],
   moduleNameMapper: {
+    '\\.webp$': '<rootDir>/__tests__/mocks/fileMock.js',
     '\\.(scss|css)$': 'identity-obj-proxy', // Mock SCSS imports for CSS Modules (if you use them)
     '^@components(.*)$': '<rootDir>/src/components$1',
     '^@hooks(.*)$': '<rootDir>/src/hooks$1',
