@@ -1,5 +1,45 @@
 @forward '/node_modules/compound-styles/scss/base/typography';
 
+@font-face {
+  font-family: 'Haas Grot Disp R';
+  src: url('../../src/assets/fonts/NeueHaasGrotDispRound-55Roman.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Haas Grot Disp R';
+  src: url('../../src/assets/fonts/NeueHaasGrotDispRound-65Medium.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Haas Grot Text R';
+  src: url('../../src/assets/fonts/NeueHaasGrotTextRound-55Roman.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Haas Grot Text R';
+  src: url('../../src/assets/fonts/NeueHaasGrotTextRound-65Medium.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Haas Grot Text R';
+  src: url('../../src/assets/fonts/NeueHaasGrotTextRound-75Bold.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
 body {
   font-family: var(--body-font-family), sans-serif;
   font-weight: var(--body-font-weight);
