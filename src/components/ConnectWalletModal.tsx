@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { Connector } from '@contexts/Web3Context';
 import { getShortAddress } from '@helpers/address';
-import { getLedgerAddresses } from '@helpers/Ledger';
+import { getLedgerAddresses, preloadLedgerDevice } from '@helpers/Ledger';
 import { TERMS_URL } from '@helpers/urls';
 import { COINBASE_RDNS, type DiscoveredWallet } from '@helpers/walletConnectors';
 import useDisableScroll from '@hooks/useDisableScroll';
@@ -138,6 +138,13 @@ const ConnectWalletModal = ({ isOpen = false, onRequestClose, onSelectConnector 
   );
 
   const isLedgerAvailable = 'usb' in navigator;
+
+  // WebUSB opens its device picker only shortly after a click, so the Ledger code must be loaded before it.
+  useEffect(() => {
+    if (isOpen && isLedgerAvailable) {
+      preloadLedgerDevice();
+    }
+  }, [isOpen, isLedgerAvailable]);
 
   const attemptLedgerConnect = () => {
     getLedgerAddresses()

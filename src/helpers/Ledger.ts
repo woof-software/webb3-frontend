@@ -1,7 +1,6 @@
 import { Eip1193Bridge } from '@ethersproject/experimental';
-import Eth from '@ledgerhq/hw-app-eth';
-import Transport from '@ledgerhq/hw-transport';
-import TransportWebUSB from '@ledgerhq/hw-transport-webusb';
+import type Eth from '@ledgerhq/hw-app-eth';
+import type Transport from '@ledgerhq/hw-transport';
 import { Connector, createConnector } from '@wagmi/core';
 import { ethers } from 'ethers';
 import { numberToHex, getAddress, Chain } from 'viem';
@@ -10,6 +9,8 @@ const OLD_LEDGER_PATHS = ["44'/60'/0'/0", "44'/60'/0'/1", "44'/60'/0'/2"];
 const LEDGER_LIVE_PATHS = ["44'/60'/0'/0/0", "44'/60'/1'/0/0", "44'/60'/2'/0/0"];
 const GAS_BUFFER = 1.3;
 const DEFAULT_GAS_LIMIT = 300000;
+
+const loadLedger = () => Promise.all([import('@ledgerhq/hw-app-eth'), import('@ledgerhq/hw-transport-webusb')]);
 
 interface TrxParams {
   from: string;
@@ -46,12 +47,14 @@ async function setupProviderForChain(
   if (transport) {
     await transport.close();
   }
+  const [{ default: Eth }, { default: TransportWebUSB }] = await loadLedger();
   const newTransport = await TransportWebUSB.create();
 
   const provider = new LedgerEip1193Bridge(
     ethersProvider.getSigner(),
     ethersProvider,
     newTransport,
+    new Eth(newTransport),
     pathString,
     chainId
   );
@@ -98,13 +101,14 @@ export class LedgerEip1193Bridge extends Eip1193Bridge {
     signer: ethers.Signer,
     provider: ethers.providers.Provider,
     transport: Transport,
+    eth: Eth,
     pathString: string,
     networkId: number
   ) {
     super(signer, provider);
     this._provider = provider;
     this._transport = transport;
-    this._eth = new Eth(transport);
+    this._eth = eth;
     this._pathString = pathString;
     this._networkId = networkId;
   }
@@ -366,7 +370,12 @@ export function ledgerConnector() {
   }));
 }
 
+export function preloadLedgerDevice() {
+  loadLedger().catch(() => undefined);
+}
+
 export async function getLedgerAddresses() {
+  const [{ default: Eth }, { default: TransportWebUSB }] = await loadLedger();
   const transport = await TransportWebUSB.create();
 
   const eth = new Eth(transport);
