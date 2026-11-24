@@ -23,7 +23,7 @@ import { useWriteCometState } from '@hooks/useWriteCometState';
 import { CometState, MarketData, MarketDataLoaded, StateType, Transaction } from '@types';
 
 import { AllMarkets, Extension as ExtensionType } from './helpers/core';
-import { Context, handleMessage } from './helpers/handler';
+import type { Context } from './helpers/handler';
 import { allExtensions, getOperator, getSrc } from './helpers/list';
 import usePoll from './hooks/usePoll';
 
@@ -97,6 +97,7 @@ const Extension = ({
             addTransaction,
             selectedMarketData: selectedMarket[1] as MarketData | MarketDataLoaded,
           };
+          const { handleMessage } = await import('./helpers/handler');
           const response = await handleMessage(context, extension.permissions, msgId, message, operator);
           // Send the response back to the extension's iframe.
           event.source.postMessage(response, { targetOrigin: '*' });
