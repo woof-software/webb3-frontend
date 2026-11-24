@@ -1,5 +1,5 @@
+import { getAddress } from '@ethersproject/address';
 import { useQuery } from '@tanstack/react-query';
-import { getAddress } from 'ethers/lib/utils';
 
 import { CHAINS } from '@constants/chains';
 import { iconNameForChainId } from '@helpers/assets';

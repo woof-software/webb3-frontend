@@ -1,4 +1,4 @@
-import { getAddress } from 'ethers/lib/utils';
+import { getAddress } from '@ethersproject/address';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { Web3 } from '@contexts/Web3Context';
