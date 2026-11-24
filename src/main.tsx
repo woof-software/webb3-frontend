@@ -1,4 +1,3 @@
-import { SafeProvider } from '@safe-global/safe-apps-react-sdk';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -6,7 +5,6 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router';
 import { WagmiProvider } from 'wagmi';
 
 import { Web3Provider } from '@contexts/Web3Context';
-import { SAFE_ALLOWED_DOMAINS } from '@helpers/safe';
 
 import App from './App';
 import './init';
@@ -38,24 +36,22 @@ createRoot(document.getElementById('root') as HTMLElement).render(
         connector reuses a live session rather than showing a QR.
       */}
       <WagmiProvider config={config} reconnectOnMount={false}>
-        <SafeProvider opts={{ allowedDomains: SAFE_ALLOWED_DOMAINS }}>
-          <QueryClientProvider client={queryClient}>
-            <Web3Provider>
-              <Routes>
-                <Route path="/" element={<App Component={Home} pageProps={{}} />} />
-                <Route path="/markets/:marketId" element={<App Component={Market} pageProps={{}} />} />
-                <Route path="/markets" element={<App Component={MarketOverview} pageProps={{}} />} />
-                <Route path="/extensions/:extensionId" element={<App Component={Extension} pageProps={{}} />} />
-                <Route path="/extensions" element={<App Component={ExtensionList} pageProps={{}} />} />
-                <Route path="/vote" element={<App Component={Vote} pageProps={{}} />} />
-                <Route path="/transactions" element={<App Component={TransactionHistory} pageProps={{}} />} />
-                <Route path="/rewards" element={<App Component={Rewards} pageProps={{}} />} />
-                {/* Standalone interstitial: no header, footer, or wallet chrome. */}
-                <Route path="/redirect" element={<Redirect />} />
-              </Routes>
-            </Web3Provider>
-          </QueryClientProvider>
-        </SafeProvider>
+        <QueryClientProvider client={queryClient}>
+          <Web3Provider>
+            <Routes>
+              <Route path="/" element={<App Component={Home} pageProps={{}} />} />
+              <Route path="/markets/:marketId" element={<App Component={Market} pageProps={{}} />} />
+              <Route path="/markets" element={<App Component={MarketOverview} pageProps={{}} />} />
+              <Route path="/extensions/:extensionId" element={<App Component={Extension} pageProps={{}} />} />
+              <Route path="/extensions" element={<App Component={ExtensionList} pageProps={{}} />} />
+              <Route path="/vote" element={<App Component={Vote} pageProps={{}} />} />
+              <Route path="/transactions" element={<App Component={TransactionHistory} pageProps={{}} />} />
+              <Route path="/rewards" element={<App Component={Rewards} pageProps={{}} />} />
+              {/* Standalone interstitial: no header, footer, or wallet chrome. */}
+              <Route path="/redirect" element={<Redirect />} />
+            </Routes>
+          </Web3Provider>
+        </QueryClientProvider>
       </WagmiProvider>
     </Router>
   </React.StrictMode>,
