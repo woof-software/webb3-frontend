@@ -5,12 +5,12 @@ import { MemoryRouter } from 'react-router';
 import RewardsStateContext from '@contexts/RewardsStateContext';
 import { Web3 } from '@contexts/Web3Context';
 import Comet from '@helpers/abis/Comet';
-import { getMarkets } from '@helpers/markets';
 import { getMarketDataUrlForMarket } from '@helpers/urls';
 import { useMarketsState } from '@pages/markets/hooks/useMarketsState';
 import { MarketDataLoaded, MarketDataState, StateType, V3MarketApiBucket } from '@types';
 
 import { rest, server } from '../../../../handlers/server';
+import { MOCK_MARKETS } from '../../../mocks/mockMarkets';
 
 // On-chain reads return the value set in mockReads for that contract function, or 1e18,
 // which is enough for the hook to build its state without a node
@@ -23,7 +23,7 @@ jest.mock('@helpers/multicall', () => ({
   multicallReader: () => (read: Read) => mockReadContract(read),
 }));
 
-const marketData = getMarkets(false).find((market) => market.chainInformation.chainId === 1 && !market.rewardsOverwrite);
+const marketData = MOCK_MARKETS.find((market) => market.chainInformation.chainId === 1 && !market.rewardsOverwrite);
 
 if (marketData === undefined) {
   throw new Error('Expected a mainnet market without a rewards overwrite');

@@ -9,7 +9,6 @@ import type { Web3 } from '@contexts/Web3Context';
 import Comet from '@helpers/abis/Comet';
 import ERC20 from '@helpers/abis/ERC20';
 import { adjustCollateralPrice, getBaseAssetPriceFeed } from '@helpers/baseAssetPrice';
-import { getHardcodedFeedPrice, getRemappedPriceFeed } from '@helpers/deprecatedMarkets';
 import { aprAt, RateModel } from '@helpers/interestRates';
 import { isV2Market } from '@helpers/markets';
 import { getMockMarketState } from '@helpers/mocks';
@@ -87,12 +86,6 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
   const readContract = multicallReader(rawProvider, market.chainInformation);
   const comet = { address: market.marketAddress as Address, abi: Comet } as const;
 
-  // A deprecated feed's reads revert, so its hardcoded price is used instead of reading it
-  const collateralPrice = (priceFeed: string) =>
-    getRemappedPriceFeed(priceFeed) === ''
-      ? readContract({ ...comet, functionName: 'getPrice', args: [priceFeed as Address] })
-      : getHardcodedFeedPrice(priceFeed);
-
   const [
     utilization,
     rateFactorScale,
@@ -137,7 +130,8 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
     readContract({ ...comet, functionName: 'supplyPerSecondInterestRateSlopeHigh' }),
     ...market.collateralAssets.map((asset) =>
       Promise.all([
-        collateralPrice(asset.priceFeed),
+        // A reverting price feed is priced at 0, like in the Sleuth query
+        readContract({ ...comet, functionName: 'getPrice', args: [asset.priceFeed as Address] }).catch(() => 0n),
         readContract({ ...comet, functionName: 'totalsCollateral', args: [asset.address as Address] }),
         // getCollateralReserves reverts when the asset's balanceOf reverts or Comet's balance drops
         // below its recorded supply. Such a collateral shows 0 reserves instead of breaking the page.

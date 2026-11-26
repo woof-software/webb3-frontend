@@ -16,8 +16,7 @@ export type CometWithAccountStateQuery = [
   string, // nativeTokenToUsd (extra price feed)
   string, // account address
   string, // bulker address
-  string, // wrapped native token symbol
-  boolean // checkDeprecatedwUSDM
+  string // wrapped native token symbol
 ];
 
 export type StEthStateResponse = {
@@ -80,8 +79,7 @@ export type CometWithAccountStateResponse = {
 
 export type CometStateQuery = [
   string, // comet address
-  string, // nativeTokenToUsd (extra price feed)
-  boolean // checkDeprecatedwUSDM
+  string // nativeTokenToUsd (extra price feed)
 ];
 
 export type CometStateResponse = {
