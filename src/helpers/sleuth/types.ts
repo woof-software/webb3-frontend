@@ -19,6 +19,14 @@ export type CometWithAccountStateQuery = [
   string // wrapped native token symbol
 ];
 
+export type StEthStateResponse = {
+  stETH: string;
+  wstETH: string;
+  bulkerAllowance: BigNumber;
+  walletBalance: BigNumber;
+  wstETHPerStETH: BigNumber;
+};
+
 export type CometWithAccountStateResponse = {
   baseAsset: {
     baseAsset: string;
@@ -59,6 +67,7 @@ export type CometWithAccountStateResponse = {
   factorScale: BigNumber;
   nativeAssetInDollars: BigNumber;
   nativeAssetWalletBalance: BigNumber;
+  stETHState: StEthStateResponse;
   supplyRateModel: RateModelResponse;
   totalBorrow: BigNumber;
   totalBorrowPrincipal: BigNumber;

@@ -1,9 +1,8 @@
-import { BigNumber } from '@ethersproject/bignumber';
-import { JsonRpcProvider, StaticJsonRpcProvider } from '@ethersproject/providers';
+import { JsonRpcProvider } from '@ethersproject/providers';
 import { parseUnits } from '@ethersproject/units';
-import { Contract, Provider } from 'ethers-multicall';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router';
+import type { Address } from 'viem';
 
 import RewardsStateContext from '@contexts/RewardsStateContext';
 import type { Web3 } from '@contexts/Web3Context';
@@ -13,6 +12,7 @@ import { adjustCollateralPrice, getBaseAssetPriceFeed } from '@helpers/baseAsset
 import { aprAt, RateModel } from '@helpers/interestRates';
 import { isV2Market } from '@helpers/markets';
 import { getMockMarketState } from '@helpers/mocks';
+import { multicallReader } from '@helpers/multicall';
 import { FACTOR_PRECISION } from '@helpers/numbers';
 import { getMarketRewardsAPRs } from '@helpers/rewards';
 import { getMarketDataUrlForMarket } from '@helpers/urls';
@@ -83,29 +83,19 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
 
   if (market.type === 'MarketData') return [StateType.Loading];
 
-  const provider = new StaticJsonRpcProvider(rawProvider.connection);
-  const ethcallProvider = new Provider(provider, market.chainInformation.chainId);
-
-  const cometContract = new Contract(market.marketAddress, Comet);
-
-  const [utilization, factorScaleBN]: [BigNumber, BigNumber] = await ethcallProvider.all([
-    cometContract.getUtilization(),
-    cometContract.factorScale(),
-  ]);
-
-  const factorScale = Number(factorScaleBN);
-  const utilizationDescale = factorScale / 1e2;
-
-  const utilizationIntervals = [...Array(101).keys()].map((n) => BigInt(n * utilizationDescale));
-
-  const baseAssetDollarPriceFeed = getBaseAssetPriceFeed(market);
+  const readContract = multicallReader(rawProvider, market.chainInformation);
+  const comet = { address: market.marketAddress as Address, abi: Comet } as const;
 
   const [
+    utilization,
+    rateFactorScale,
     reserves,
-    totalSupplyBN,
-    totalBorrowBN,
+    totalSupply,
+    totalBorrow,
     targetReserves,
     baseTokenPriceInDollars,
+    baseAssetPrice,
+    baseAssetBalanceOfComet,
     borrowKink,
     borrowBase,
     borrowSlopeLow,
@@ -114,34 +104,62 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
     supplyBase,
     supplySlopeLow,
     supplySlopeHigh,
-  ]: BigNumber[] = await ethcallProvider.all([
-    cometContract.getReserves(),
-    cometContract.totalSupply(),
-    cometContract.totalBorrow(),
-    cometContract.targetReserves(),
-    cometContract.getPrice(baseAssetDollarPriceFeed),
-    cometContract.borrowKink(),
-    cometContract.borrowPerSecondInterestRateBase(),
-    cometContract.borrowPerSecondInterestRateSlopeLow(),
-    cometContract.borrowPerSecondInterestRateSlopeHigh(),
-    cometContract.supplyKink(),
-    cometContract.supplyPerSecondInterestRateBase(),
-    cometContract.supplyPerSecondInterestRateSlopeLow(),
-    cometContract.supplyPerSecondInterestRateSlopeHigh(),
+    ...collaterals
+  ] = await Promise.all([
+    readContract({ ...comet, functionName: 'getUtilization' }),
+    readContract({ ...comet, functionName: 'factorScale' }),
+    readContract({ ...comet, functionName: 'getReserves' }),
+    readContract({ ...comet, functionName: 'totalSupply' }),
+    readContract({ ...comet, functionName: 'totalBorrow' }),
+    readContract({ ...comet, functionName: 'targetReserves' }),
+    readContract({ ...comet, functionName: 'getPrice', args: [getBaseAssetPriceFeed(market) as Address] }),
+    readContract({ ...comet, functionName: 'getPrice', args: [market.baseAsset.priceFeed as Address] }),
+    readContract({
+      address: market.baseAsset.address as Address,
+      abi: ERC20,
+      functionName: 'balanceOf',
+      args: [market.marketAddress as Address],
+    }),
+    readContract({ ...comet, functionName: 'borrowKink' }),
+    readContract({ ...comet, functionName: 'borrowPerSecondInterestRateBase' }),
+    readContract({ ...comet, functionName: 'borrowPerSecondInterestRateSlopeLow' }),
+    readContract({ ...comet, functionName: 'borrowPerSecondInterestRateSlopeHigh' }),
+    readContract({ ...comet, functionName: 'supplyKink' }),
+    readContract({ ...comet, functionName: 'supplyPerSecondInterestRateBase' }),
+    readContract({ ...comet, functionName: 'supplyPerSecondInterestRateSlopeLow' }),
+    readContract({ ...comet, functionName: 'supplyPerSecondInterestRateSlopeHigh' }),
+    ...market.collateralAssets.map((asset) =>
+      Promise.all([
+        // A reverting price feed is priced at 0, like in the Sleuth query
+        readContract({ ...comet, functionName: 'getPrice', args: [asset.priceFeed as Address] }).catch(() => 0n),
+        readContract({ ...comet, functionName: 'totalsCollateral', args: [asset.address as Address] }),
+        // getCollateralReserves reverts when the asset's balanceOf reverts or Comet's balance drops
+        // below its recorded supply. Such a collateral shows 0 reserves instead of breaking the page.
+        readContract({
+          ...comet,
+          functionName: 'getCollateralReserves',
+          args: [asset.address as Address],
+        }).catch(() => 0n),
+      ])
+    ),
   ]);
 
-  const rateFactorScale = factorScaleBN.toBigInt();
+  const factorScale = Number(rateFactorScale);
+  const utilizationDescale = factorScale / 1e2;
+
+  const utilizationIntervals = [...Array(101).keys()].map((n) => BigInt(n * utilizationDescale));
+
   const borrowRateModel: RateModel = {
-    kink: borrowKink.toBigInt(),
-    base: borrowBase.toBigInt(),
-    slopeLow: borrowSlopeLow.toBigInt(),
-    slopeHigh: borrowSlopeHigh.toBigInt(),
+    kink: borrowKink,
+    base: borrowBase,
+    slopeLow: borrowSlopeLow,
+    slopeHigh: borrowSlopeHigh,
   };
   const supplyRateModel: RateModel = {
-    kink: supplyKink.toBigInt(),
-    base: supplyBase.toBigInt(),
-    slopeLow: supplySlopeLow.toBigInt(),
-    slopeHigh: supplySlopeHigh.toBigInt(),
+    kink: supplyKink,
+    base: supplyBase,
+    slopeLow: supplySlopeLow,
+    slopeHigh: supplySlopeHigh,
   };
 
   const borrowRates: [bigint, bigint][] = utilizationIntervals.map((interval) => [
@@ -153,64 +171,19 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
     aprAt(interval, supplyRateModel, rateFactorScale),
   ]);
 
-  const baseTokenContract = new Contract(market.baseAsset.address, ERC20);
+  const borrowAPR = aprAt(utilization, borrowRateModel, rateFactorScale);
+  const earnAPR = aprAt(utilization, supplyRateModel, rateFactorScale);
 
-  const priceCalls = market.collateralAssets.map((asset) => cometContract.getPrice(asset.priceFeed));
-  const totalsCollateralCalls = market.collateralAssets.map((asset) => cometContract.totalsCollateral(asset.address));
-  const collateralReservesCalls = market.collateralAssets.map((asset) =>
-    cometContract.getCollateralReserves(asset.address)
-  );
-
-  const [baseTokenPrice, baseAssetBalanceOfComet, ...combinedCalls] = await ethcallProvider.all([
-    cometContract.getPrice(market.baseAsset.priceFeed),
-    baseTokenContract.balanceOf(market.marketAddress),
-    ...totalsCollateralCalls,
-    ...collateralReservesCalls,
-  ]);
-
-  // A reverting price feed reverts the whole multicall, so collateral prices are read on their own
-  // and, if that fails, one by one, with a reverting feed priced at 0 like in the Sleuth query
-  const collateralPrices: BigNumber[] = await ethcallProvider
-    .all(priceCalls)
-    .catch(() =>
-      Promise.all(
-        priceCalls.map((call) =>
-          ethcallProvider
-            .all([call])
-            .then(([price]) => price as BigNumber)
-            .catch(() => BigNumber.from(0))
-        )
-      )
-    );
-
-  const numAssets = market.collateralAssets.length;
-
-  const prices = collateralPrices.map((price) => price.toBigInt());
-  const totalSupplies = combinedCalls.slice(0, numAssets).map((tc) => tc.totalSupplyAsset.toBigInt());
-  const collateralReserves = combinedCalls.slice(numAssets, numAssets * 2).map((cr) => cr.toBigInt());
-
-  const baseAssetPrice = baseTokenPrice.toBigInt();
-
-  const borrowAPR = aprAt(utilization.toBigInt(), borrowRateModel, rateFactorScale);
-  const earnAPR = aprAt(utilization.toBigInt(), supplyRateModel, rateFactorScale);
-
-  const totalSupply = totalSupplyBN.toBigInt();
-  const totalBorrow = totalBorrowBN.toBigInt();
-
-  const collateralAssets: TokenWithMarketState[] = await Promise.all(
-    market.collateralAssets.map(async (asset, index) => {
-      const liquidationPenalty = BigInt(1e18) - asset.liquidationFactor;
-      const tokenWithState: TokenWithMarketState = {
-        ...asset,
-        liquidationPenalty,
-        price: adjustCollateralPrice(market.baseAsset.symbol, baseAssetPrice, prices[index]),
-        reserves: collateralReserves[index],
-        totalSupply: totalSupplies[index],
-      };
-
-      return tokenWithState;
-    })
-  );
+  const collateralAssets: TokenWithMarketState[] = market.collateralAssets.map((asset, index) => {
+    const [price, [totalSupplyAsset], collateralReserves] = collaterals[index];
+    return {
+      ...asset,
+      liquidationPenalty: BigInt(1e18) - asset.liquidationFactor,
+      price: adjustCollateralPrice(market.baseAsset.symbol, baseAssetPrice, price),
+      reserves: collateralReserves,
+      totalSupply: totalSupplyAsset,
+    };
+  });
 
   let marketHistoryAsBuckets: MarketHistoricalBucket[] = [];
   try {
@@ -234,9 +207,9 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
 
   const baseAssetWithState: ProtocolAndMarketsState['baseAsset'] = {
     ...market.baseAsset,
-    balanceOfComet: baseAssetBalanceOfComet.toBigInt(),
+    balanceOfComet: baseAssetBalanceOfComet,
     price: baseAssetPrice,
-    baseAssetPriceInDollars: baseTokenPriceInDollars.toBigInt(),
+    baseAssetPriceInDollars: baseTokenPriceInDollars,
   };
 
   const totalSupplyValueInDollars = (totalSupply * baseAssetWithState.baseAssetPriceInDollars) / 10n ** BigInt(baseAssetWithState.decimals);
@@ -251,12 +224,12 @@ const getState = async (rawProvider: JsonRpcProvider, market: MarketData | Marke
     totalBaseSupplyUsd: totalSupplyValueInDollars,
     factorScale,
     marketHistory: marketHistoryAsBuckets,
-    reserves: reserves.toBigInt(),
+    reserves,
     supplyRates,
-    targetReserves: targetReserves.toBigInt(),
+    targetReserves,
     totalBorrow,
     totalSupply,
-    utilization: utilization.toBigInt(),
+    utilization,
     type: 'ProtocolAndMarketState',
     borrowAPR: borrowAPR,
     earnAPR: earnAPR,

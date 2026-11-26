@@ -37,10 +37,10 @@ export type ScreeningBypassEnvironment = {
  * and no endpoint configured. See `SCREENING_DISABLED`.
  */
 export function isScreeningBypassed({
-  DEV,
-  isDevServer,
-  VITE_SCREENING_ENDPOINT,
-}: ScreeningBypassEnvironment): boolean {
+                                      DEV,
+                                      isDevServer,
+                                      VITE_SCREENING_ENDPOINT,
+                                    }: ScreeningBypassEnvironment): boolean {
   return Boolean(DEV) && isDevServer && !VITE_SCREENING_ENDPOINT;
 }
 
