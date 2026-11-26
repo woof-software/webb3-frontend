@@ -1,5 +1,5 @@
 import { DAYS_PER_YEAR } from '@helpers/constants';
-import { BaseAsset, BaseAssetWithAccountState, Currency, MeterRiskLevel, TokenWithAccountState } from '@types';
+import { BaseAssetWithAccountState, Currency, MeterRiskLevel, TokenWithAccountState } from '@types';
 
 import { adjustValueForAeroAsset } from './baseAssetPrice';
 
@@ -78,14 +78,6 @@ const getCurrencySuffix = (currency: Currency | undefined) => {
 
 export const shouldShowValueInBaseAsset = (baseAssetSymbol: Currency, currencyFlag: Currency) => {
   return baseAssetSymbol === currencyFlag;
-};
-
-export const getTokenDecimals = (currency: Currency, baseAssetToUse: BaseAsset) => {
-  if (currency === 'USD') {
-    return baseAssetToUse.decimals + PRICE_PRECISION;
-  } else {
-    return baseAssetToUse.decimals;
-  }
 };
 
 // TODO: Refactor formatTokenBalance & getTokenValue
