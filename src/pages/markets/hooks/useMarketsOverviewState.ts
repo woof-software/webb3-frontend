@@ -1,5 +1,5 @@
+import { getAddress } from '@ethersproject/address';
 import { useQuery } from '@tanstack/react-query';
-import { getAddress } from 'ethers/lib/utils';
 import { useContext, useMemo } from 'react';
 
 import RewardsStateContext from '@contexts/RewardsStateContext';
