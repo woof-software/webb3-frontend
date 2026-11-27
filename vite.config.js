@@ -93,7 +93,29 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '/fonts': resolve(__dirname, 'node_modules/compound-styles/public/fonts'),
+      // compound-styles declares these fonts as OTF. Chrome falls back through every
+      // @font-face with the same descriptors for glyphs a font lacks, so pointing them at
+      // the WOFF2 copies keeps browsers from downloading the OTF files.
+      '/fonts/NeueHaasGrotDispRound-55Roman.otf': resolve(
+        __dirname,
+        'src/assets/fonts/NeueHaasGrotDispRound-55Roman.woff2',
+      ),
+      '/fonts/NeueHaasGrotDispRound-65Medium.otf': resolve(
+        __dirname,
+        'src/assets/fonts/NeueHaasGrotDispRound-65Medium.woff2',
+      ),
+      '/fonts/NeueHaasGrotTextRound-55Roman.otf': resolve(
+        __dirname,
+        'src/assets/fonts/NeueHaasGrotTextRound-55Roman.woff2',
+      ),
+      '/fonts/NeueHaasGrotTextRound-65Medium.otf': resolve(
+        __dirname,
+        'src/assets/fonts/NeueHaasGrotTextRound-65Medium.woff2',
+      ),
+      '/fonts/NeueHaasGrotTextRound-75Bold.otf': resolve(
+        __dirname,
+        'src/assets/fonts/NeueHaasGrotTextRound-75Bold.woff2',
+      ),
       // Redirect the (transitive) WalletConnect provider to its self-contained UMD
       // bundle, which carries its own WalletConnect 2.21.1 packages. package.json
       // resolves the separately installed WalletConnect packages to 2.21.10 so the
