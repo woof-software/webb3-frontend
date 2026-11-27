@@ -1,4 +1,4 @@
-import { Context, createContext, Dispatch, ReactNode, SetStateAction, useContext, useState } from 'react';
+import { createContext, Dispatch, ReactNode, SetStateAction, useContext, useState } from 'react';
 import { useSearchParams } from 'react-router';
 
 import { MARKET_LOCAL_STORAGE_KEY, PREFERRED_CURRENCY_KEY } from '@helpers/constants';
@@ -32,14 +32,6 @@ const initialCurrencyManagerContext = {
   showCurrencyToggle: false,
   baseAssetSymbol: ''
 };
-
-let CurrencyContext: Context<Currency>;
-
-export function initializeContext(selectedCurrency: Currency) {
-  if (CurrencyContext === undefined) {
-    CurrencyContext = createContext<Currency>(selectedCurrency);
-  }
-}
 
 export const CurrencyManagerContext = createContext<CurrencyManagerContext>(initialCurrencyManagerContext);
 

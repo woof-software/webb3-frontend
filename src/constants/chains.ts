@@ -503,18 +503,6 @@ export const getChainKey = (chainId: number) => {
   return CHAINS[chainId].key;
 };
 
-export const URLS: { [chainId: number]: string } = Object.keys(CHAINS).reduce<{
-  [chainId: number]: string;
-}>((accumulator, chainId) => {
-  const validURL: string = CHAINS[Number(chainId)].url;
-
-  if (validURL) {
-    accumulator[Number(chainId)] = validURL;
-  }
-
-  return accumulator;
-}, {});
-
 export function isUnwrappedCollateralAsset(chainInformation: ChainInformation, assetAddress: string) {
   const unwrappedCollateralAddresses = Object.values(chainInformation.unwrappedCollateralAssets).map(
     (asset) => asset.address
